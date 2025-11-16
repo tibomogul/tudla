@@ -1,4 +1,4 @@
-<%= form_with(model: report, class: "contents", data: { turbo: false, controller: "theme-dark" }) do |form| %>
+<%= form_with(model: report, class: "contents", data: { turbo: false, controller: "theme-dark report-draft", report_draft_url: prepare_draft_reports_path(format: :json) }) do |form| %>
   <% if report.errors.any? %>
     <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
       <h2><%= pluralize(report.errors.count, "error") %> prohibited this report from being saved:</h2>
@@ -34,12 +34,30 @@
 
   <div class="my-5">
     <%= form.label :content %>
-    <%= form.marksmith :content, rows: 20, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": report.errors[:content].none?, "border-red-400 focus:outline-red-600": report.errors[:content].any?}] %>
+    <%= form.marksmith :content, rows: 20, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": report.errors[:content].none?, "border-red-400 focus:outline-red-600": report.errors[:content].any?}], data: { "report-draft-target": "content" } %>
   </div>
 
   <%= form.hidden_field :reportable_id %>
 
   <div class="inline">
     <%= form.submit class: "btn btn-soft btn-primary" %>
+  </div>
+  
+  <!-- Blocking modal shown while AI draft is being prepared -->
+  <div class="fixed inset-0 z-40 flex items-center justify-center bg-base-200/70 backdrop-blur-sm hidden" data-report-draft-target="modal">
+    <div class="bg-base-100 rounded-lg shadow-lg p-6 max-w-md w-full flex flex-col items-center gap-4">
+      <div class="flex items-center gap-3" data-report-draft-target="status">
+        <span class="loading loading-spinner loading-md"></span>
+        <span class="font-medium">Preparing AI draft…</span>
+      </div>
+      <p class="text-sm text-base-content/70 text-center">
+        We’re generating a draft based on your recent activity and previous reports.
+        This will only take a moment.
+      </p>
+      <p class="text-xs text-base-content/60 text-center hidden" data-report-draft-target="notice"></p>
+      <button type="button" class="btn btn-ghost btn-sm mt-2" data-action="report-draft#cancel">
+        Cancel and use blank template
+      </button>
+    </div>
   </div>
 <% end %>

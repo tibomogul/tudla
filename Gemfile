@@ -96,3 +96,6 @@ gem "paper_trail-hashdiff", "~> 0.1.3"
 gem "hashdiff", "~> 1.2"
 
 gem "fast-mcp", "~> 1.0"
+
+gem "langchainrb", "~> 0.18"
+gem "ruby-openai", "~> 6.3"

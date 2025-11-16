@@ -3,14 +3,18 @@ Rails.application.routes.draw do
     member do
       post :submit
     end
+
+    collection do
+      post :prepare_draft
+    end
   end
-  resources :attachments, only: [:create, :destroy] do
+  resources :attachments, only: [ :create, :destroy ] do
     member do
       get :download
     end
   end
-  resources :notes, only: [:create, :edit, :update, :destroy]
-  resources :links, only: [:create, :edit, :update, :destroy]
+  resources :notes, only: [ :create, :edit, :update, :destroy ]
+  resources :links, only: [ :create, :edit, :update, :destroy ]
   resources :teams
   resources :organizations
   resources :tasks do
@@ -45,16 +49,16 @@ Rails.application.routes.draw do
   post "subscribables/:id/subscribe", to: "subscribables#create_subscription", as: :create_subscription
   delete "subscriptions/:id", to: "subscriptions#destroy", as: :destroy_subscription
   devise_for :users,
-    controllers: { 
+    controllers: {
       omniauth_callbacks: "users/omniauth_callbacks",
       registrations: "users/registrations",
       confirmations: "users/confirmations"
     }
-  
-  resource :profile, only: [:show], controller: "profiles"
-  
-  resources :api_tokens, only: [:create, :destroy]
-  
+
+  resource :profile, only: [ :show ], controller: "profiles"
+
+  resources :api_tokens, only: [ :create, :destroy ]
+
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
