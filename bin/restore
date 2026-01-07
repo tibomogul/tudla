@@ -1,0 +1,175 @@
+#!/bin/bash
+# Restore script for PostgreSQL database and Active Storage files
+# Usage: docker compose -f compose-production.yml exec backup /home/user/app/bin/restore [backup_timestamp]
+
+set -e
+
+BACKUP_DIR=${BACKUP_DIR:-/backups}
+RAILS_ENV=${RAILS_ENV:-production}
+APP_PATH=${APP_PATH:-/home/user/app}
+DATABASE_YML="${APP_PATH}/config/database.yml"
+
+# Function to list available backup timestamps
+list_backups() {
+  echo "Available backup timestamps:"
+  ls -1 "${BACKUP_DIR}/database/"*.dump.gz 2>/dev/null | \
+    sed 's/.*_\([0-9]\{8\}_[0-9]\{6\}\)\.dump\.gz/\1/' | \
+    sort -u
+  echo ""
+  echo "Example: $0 20240315_120000"
+}
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 [backup_timestamp]"
+  echo ""
+  list_backups
+  exit 1
+fi
+
+TIMESTAMP=$1
+STORAGE_BACKUP="${BACKUP_DIR}/storage/storage_${TIMESTAMP}.tar.gz"
+
+echo "=== Starting restore from backup: ${TIMESTAMP} ==="
+echo "Environment: ${RAILS_ENV}"
+
+# Parse database names from config/database.yml for the current RAILS_ENV
+if [ ! -f "${DATABASE_YML}" ]; then
+  echo "✗ Database config not found: ${DATABASE_YML}"
+  exit 1
+fi
+
+# Extract database names from database.yml using Ruby (handles ERB and YAML properly)
+# Pass variables via environment to avoid shell interpolation issues
+DATABASES_STR=$(DATABASE_YML="${DATABASE_YML}" RAILS_ENV="${RAILS_ENV}" ruby -ryaml -rerb -e '
+  config = YAML.load(ERB.new(File.read(ENV["DATABASE_YML"])).result, aliases: true)
+  env_config = config[ENV["RAILS_ENV"]]
+  exit 1 unless env_config
+
+  databases = []
+  if env_config.is_a?(Hash) && env_config["database"]
+    # Single database config (e.g., test environment)
+    databases << env_config["database"]
+  elsif env_config.is_a?(Hash)
+    # Multi-database config (e.g., primary, queue, cable, cache)
+    env_config.each do |name, db_config|
+      next unless db_config.is_a?(Hash) && db_config["database"]
+      databases << db_config["database"]
+    end
+  end
+  print databases.join(" ")
+' 2>/dev/null)
+read -ra DATABASES <<< "${DATABASES_STR}"
+
+if [ ${#DATABASES[@]} -eq 0 ]; then
+  echo "✗ No databases found for RAILS_ENV: ${RAILS_ENV}"
+  exit 1
+fi
+
+echo "Found ${#DATABASES[@]} database(s) to restore: ${DATABASES[*]}"
+
+# Check if all database backups exist
+MISSING_BACKUPS=0
+for DB_NAME in "${DATABASES[@]}"; do
+  DB_BACKUP="${BACKUP_DIR}/database/${DB_NAME}_${TIMESTAMP}.dump.gz"
+  if [ ! -f "${DB_BACKUP}" ]; then
+    echo "✗ Database backup not found: ${DB_BACKUP}"
+    MISSING_BACKUPS=1
+  fi
+done
+
+if [ ${MISSING_BACKUPS} -eq 1 ]; then
+  echo ""
+  list_backups
+  exit 1
+fi
+
+# Confirm restore
+echo ""
+echo "⚠ WARNING: This will DROP and recreate the following databases:"
+for DB_NAME in "${DATABASES[@]}"; do
+  echo "  - ${DB_NAME}"
+done
+echo ""
+read -p "Are you sure you want to continue? (yes/no): " -r
+echo
+if [[ ! $REPLY =~ ^yes$ ]]; then
+  echo "Restore cancelled."
+  exit 0
+fi
+
+# Restore PostgreSQL databases
+echo "Restoring PostgreSQL databases..."
+RESTORE_FAILED=0
+
+for DB_NAME in "${DATABASES[@]}"; do
+  DB_BACKUP="${BACKUP_DIR}/database/${DB_NAME}_${TIMESTAMP}.dump.gz"
+  echo "  Restoring ${DB_NAME} from ${DB_BACKUP}..."
+
+  # Decompress backup
+  gunzip -c "${DB_BACKUP}" > /tmp/restore_${DB_NAME}_${TIMESTAMP}.dump
+
+  # Drop existing database
+  PGPASSWORD="${DATABASE_PASSWORD}" dropdb \
+    -h "${DATABASE_HOST}" \
+    -U postgres \
+    --if-exists \
+    "${DB_NAME}" || true
+
+  # Create database
+  PGPASSWORD="${DATABASE_PASSWORD}" createdb \
+    -h "${DATABASE_HOST}" \
+    -U postgres \
+    "${DB_NAME}"
+
+  # Restore database
+  PGPASSWORD="${DATABASE_PASSWORD}" pg_restore \
+    -h "${DATABASE_HOST}" \
+    -U postgres \
+    -d "${DB_NAME}" \
+    --no-owner \
+    --no-privileges \
+    /tmp/restore_${DB_NAME}_${TIMESTAMP}.dump
+
+  if [ $? -eq 0 ]; then
+    echo "  ✓ ${DB_NAME} restored successfully"
+    rm /tmp/restore_${DB_NAME}_${TIMESTAMP}.dump
+  else
+    echo "  ✗ ${DB_NAME} restore failed!"
+    rm -f /tmp/restore_${DB_NAME}_${TIMESTAMP}.dump
+    RESTORE_FAILED=1
+  fi
+done
+
+if [ ${RESTORE_FAILED} -eq 1 ]; then
+  echo "✗ One or more database restores failed!"
+  exit 1
+fi
+
+echo "✓ All databases restored successfully"
+
+# Restore Active Storage files
+if [ -f "${STORAGE_BACKUP}" ]; then
+  echo "Restoring Active Storage files from ${STORAGE_BACKUP}..."
+  
+  # Backup current storage before overwriting
+  if [ -d "${APP_PATH}/storage" ]; then
+    echo "Creating backup of current storage..."
+    mv "${APP_PATH}/storage" "${APP_PATH}/storage.before_restore_$(date +%Y%m%d_%H%M%S)"
+  fi
+  
+  # Extract storage backup
+  tar -xzf "${STORAGE_BACKUP}" -C "${APP_PATH}/"
+  
+  if [ $? -eq 0 ]; then
+    echo "✓ Storage restored successfully"
+  else
+    echo "✗ Storage restore failed!"
+    exit 1
+  fi
+else
+  echo "⚠ Storage backup not found: ${STORAGE_BACKUP}, skipping storage restore"
+fi
+
+echo ""
+echo "=== Restore completed successfully at $(date) ==="
+echo "⚠ Please restart your Rails application for changes to take effect"

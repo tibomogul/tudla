@@ -1,0 +1,40 @@
+<%= turbo_frame_tag dom_id(task) do %>
+    <div class="flex gap-4 mb-4 items-center"
+      data-controller="filters"
+      data-filters-domid-value="<%= dom_id(task) %>">
+        <div>
+            <label class="label text-sm font-semibold">User</label>
+            <select
+                class="select select-bordered select-sm"
+                data-action="change->filters#update"
+                data-filters-target="user">
+                <option value="">All</option>
+                <% @users.each do |u| %>
+                <option value="<%= u.id %>" <%= "selected" if u.id.to_s == @filter_user_id %>>
+                    <%= u.email %>
+                </option>
+                <% end %>
+            </select>
+        </div>
+
+        <div>
+            <label class="label text-sm font-semibold">Period</label>
+            <select
+                class="select select-bordered select-sm"
+                data-action="change->filters#update"
+                data-filters-target="period">
+                <option value="7"  <%= "selected" if @filter_period == "7" %>>Last 7 days</option>
+                <option value="30" <%= "selected" if @filter_period == "30" %>>Last 30 days</option>
+                <option value="all" <%= "selected" if @filter_period == "all" %>>All</option>
+            </select>
+        </div>
+    </div>
+    <%= turbo_stream_from "task_#{@task.id}_history" %>
+
+    <%# TODO: unstyled %>
+    <ul id="task_<%= @task.id %>_history_timeline" class="timeline timeline-vertical">
+    <% @transitions.each do |t| %>
+        <%= render "tasks/transition", transition: t %>
+    <% end %>
+    </ul>
+<% end %>

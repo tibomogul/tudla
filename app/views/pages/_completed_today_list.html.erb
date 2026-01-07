@@ -1,0 +1,19 @@
+<div id="completed_today_list" class="space-y-2">
+  <% @completed_today_tasks.each do |task| %>
+    <div class="card bg-base-100 shadow p-3 opacity-70">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 line-through">
+          <p class="font-medium"><%= link_to display_name_with_nice_to_have(task), task_path(task), class: "hover:underline" %></p>
+        </div>
+        <div class="text-xs text-base-content/60">
+          Completed <%= time_ago_in_words(task.updated_at) %> ago
+        </div>
+      </div>
+      <div class="mt-1 text-sm text-base-content/70">
+        <% if task.project_id && task.scope_id %>
+          <span><%= task.project.name %> &gt; <%= display_name_with_nice_to_have(task.scope) %></span>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

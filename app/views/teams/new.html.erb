@@ -1,0 +1,9 @@
+<% content_for :title, "New team" %>
+
+<div class="md:w-2/3 w-full">
+  <h1 class="font-bold text-4xl">New team</h1>
+
+  <%= render "form", team: @team %>
+
+  <%= link_to "Back to teams", teams_path, class: "btn btn-soft" %>
+</div>

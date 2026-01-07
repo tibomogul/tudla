@@ -1,0 +1,92 @@
+<% content_for :title, "Report" %>
+
+<div class="w-full max-w-4xl">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <% if alert.present? %>
+    <p class="py-2 px-3 bg-red-50 mb-5 text-red-500 font-medium rounded-md inline-block" id="alert"><%= alert %></p>
+  <% end %>
+
+  <div class="flex justify-between items-start mb-6">
+    <div>
+      <h1 class="font-bold text-4xl mb-2">Report</h1>
+      <p class="text-base-content/70">
+        by <%= @report.user.preferred_name || @report.user.username %>
+      </p>
+    </div>
+
+    <% if @report.submitted? %>
+      <span class="badge badge-success badge-lg">Submitted</span>
+    <% else %>
+      <span class="badge badge-warning badge-lg">Draft</span>
+    <% end %>
+  </div>
+
+  <div class="card bg-base-100 shadow-md mb-6">
+    <div class="card-body">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-4 border-b border-base-300">
+        <div>
+          <h3 class="font-semibold text-sm text-base-content/70 mb-1">For</h3>
+          <p class="text-base-content">
+            <%= @report.reportable&.reportable&.class&.name %>: <%= @report.reportable&.reportable&.name %>
+          </p>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-sm text-base-content/70 mb-1">As of</h3>
+          <p class="text-base-content">
+            <% if @report.as_of_at %>
+              <%= @report.format_in_timezone(@report.as_of_at, :long_ordinal) %>
+              <span class="text-xs text-base-content/50">(<%= @report.timezone %>)</span>
+            <% else %>
+              <span class="text-base-content/50">Not specified</span>
+            <% end %>
+          </p>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-sm text-base-content/70 mb-1">Created</h3>
+          <p class="text-base-content">
+            <%= time_ago_in_words(@report.created_at) %> ago
+          </p>
+        </div>
+
+        <% if @report.submitted? %>
+          <div>
+            <h3 class="font-semibold text-sm text-base-content/70 mb-1">Submitted</h3>
+            <p class="text-base-content">
+              <%= time_ago_in_words(@report.submitted_at) %> ago
+            </p>
+          </div>
+        <% end %>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-sm text-base-content/70 mb-3">Content</h3>
+        <div data-controller="theme-dark">
+          <div class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert">
+            <%= render_markdown(@report.content) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    <% if policy(@report).submit? %>
+      <%= button_to "Submit Report", submit_report_path(@report), method: :post, class: "btn btn-primary", data: { turbo_confirm: "Are you sure? Once submitted, the report cannot be edited." } %>
+    <% end %>
+
+    <% if policy(@report).edit? %>
+      <%= link_to "Edit this report", edit_report_path(@report), class: "btn btn-soft" %>
+    <% end %>
+
+    <%= link_to "Back to reports", reports_path, class: "btn btn-soft" %>
+
+    <% if policy(@report).destroy? %>
+      <%= button_to "Delete this report", @report, method: :delete, form_class: "inline-block", class: "btn btn-soft btn-secondary", data: { turbo_confirm: "Are you sure?" } %>
+    <% end %>
+  </div>
+</div>

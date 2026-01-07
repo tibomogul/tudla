@@ -1,0 +1,146 @@
+<li id="<%= dom_id(task) %>" data-task-id="<%= task.id %>" class="flex items-center gap-3 p-3 hover:bg-base-200 rounded-lg transition-colors group">
+  <% show_drag_handle = local_assigns.fetch(:show_drag_handle, false) %>
+  <% update_context = local_assigns.fetch(:update_context, 'list_item') %>
+  
+  <% if show_drag_handle %>
+    <!-- Drag Handle -->
+    <div data-handle class="flex-shrink-0 cursor-grab active:cursor-grabbing text-base-content/40 hover:text-base-content transition-colors">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+      </svg>
+    </div>
+  <% end %>
+
+  <!-- Task Info -->
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2">
+      <%= link_to display_name_with_nice_to_have(task), task, class: "font-medium hover:link truncate" %>
+      <span class="badge badge-xs <%= badge_color(task.current_state) %>">
+        <%= task.current_state.humanize %>
+      </span>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-3 text-xs text-base-content/60 mt-1">
+      <% if task.time_in_current_state %>
+        <span>In <%= task.current_state.humanize %> for <%= distance_of_time_in_words(task.time_in_current_state) %></span>
+      <% end %>
+      
+      <!-- Display Mode -->
+      <span 
+        id="<%= dom_id(task, :estimates_display) %>"
+        class="flex items-center gap-1 <%= task.unassisted_estimate || task.ai_assisted_estimate || task.actual_manhours ? 'opacity-0 group-hover:opacity-100' : 'opacity-50' %> transition-opacity cursor-pointer hover:text-base-content"
+        onclick="document.getElementById('<%= dom_id(task, :estimates_display) %>').classList.add('hidden'); document.getElementById('<%= dom_id(task, :estimates_form) %>').classList.remove('hidden'); document.querySelector('#<%= dom_id(task, :estimates_form) %> input').focus();"
+        title="Click to edit estimates"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span><%= task.unassisted_estimate || '—' %>h</span>
+        <span class="<%= task.ai_assisted_estimate ? 'text-primary' : '' %>">/ <%= task.ai_assisted_estimate || '—' %>h</span>
+        <span class="<%= task.actual_manhours ? 'font-medium' : '' %>">→ <%= task.actual_manhours || '—' %>h</span>
+      </span>
+
+      <!-- Edit Mode (Hidden by default) -->
+      <%= form_with model: task, url: task_path(task), method: :patch, data: { turbo_stream: true }, html: { id: dom_id(task, :estimates_form), class: "hidden flex items-center gap-1" } do |f| %>
+        <%= f.hidden_field :update_context, value: update_context %>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        
+        <%= f.number_field :unassisted_estimate, min: 0, max: 9999, class: "input input-xs w-10 px-1 text-center text-xs", placeholder: "0" %>
+        <span>/</span>
+        <%= f.number_field :ai_assisted_estimate, min: 0, max: 9999, class: "input input-xs w-10 px-1 text-center text-xs", placeholder: "0" %>
+        <span>→</span>
+        <%= f.number_field :actual_manhours, min: 0, max: 9999, class: "input input-xs w-10 px-1 text-center text-xs", placeholder: "0" %>
+        
+        <button type="submit" class="btn btn-xs btn-circle btn-ghost" title="Save">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 text-success">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        </button>
+        
+        <button 
+          type="button" 
+          class="btn btn-xs btn-circle btn-ghost" 
+          title="Cancel"
+          onclick="document.getElementById('<%= dom_id(task, :estimates_form) %>').classList.add('hidden'); document.getElementById('<%= dom_id(task, :estimates_display) %>').classList.remove('hidden');"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 text-error">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Responsible User -->
+  <div class="flex-shrink-0">
+    <%= render "tasks/responsible_user_selector", task: task, show_label: false, button_class: "btn-xs", can_update: policy(task).update?, update_context: update_context %>
+  </div>
+
+  <!-- State Change Dropdown -->
+  <div class="flex-shrink-0 dropdown dropdown-end">
+    <button 
+      tabindex="0" 
+      class="btn btn-ghost btn-sm btn-circle opacity-0 group-hover:opacity-100 transition-opacity"
+      title="Change state"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+      </svg>
+    </button>
+    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300">
+      <li class="menu-title">
+        <span class="text-xs">Change State</span>
+      </li>
+      <% task.state_machine.allowed_transitions.each do |state| %>
+        <% can_transition = task.state_machine.can_transition_to?(state) %>
+        <li <%= 'class=disabled'.html_safe unless can_transition %>>
+          <%= button_to update_state_task_path(task, state: state, update_context: update_context),
+            method: :patch,
+            data: { turbo_stream: true },
+            disabled: !can_transition,
+            class: "flex items-center gap-2 #{'opacity-50' unless can_transition}",
+            title: (!can_transition && state == :in_progress ? "Requires responsible user and estimates" : nil) do %>
+            <span class="badge badge-xs <%= badge_color(state) %>"></span>
+            <%= state.to_s.humanize %>
+            <% unless can_transition %>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 ml-auto">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+      <% if task.state_machine.allowed_transitions.empty? %>
+        <li class="disabled">
+          <a class="text-xs text-base-content/50">No transitions available</a>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <!-- View Action -->
+  <div class="flex-shrink-0">
+    <%= link_to task, class: "btn btn-ghost btn-sm btn-circle opacity-0 group-hover:opacity-100 transition-opacity", title: "View task" do %>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+    <% end %>
+  </div>
+</li>
+
+<script>
+  // Reset estimates to display mode after Turbo Stream update for <%= dom_id(task) %>
+  document.addEventListener('turbo:before-stream-render', function(event) {
+    const display = document.getElementById('<%= dom_id(task, :estimates_display) %>');
+    const form = document.getElementById('<%= dom_id(task, :estimates_form) %>');
+    if (display && form && event.target.target === '<%= dom_id(task) %>') {
+      setTimeout(() => {
+        display.classList.remove('hidden');
+        form.classList.add('hidden');
+      }, 0);
+    }
+  });
+</script>

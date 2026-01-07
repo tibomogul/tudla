@@ -1,0 +1,63 @@
+<div data-controller="user-select" data-user-select-task-id-value="<%= task.id %>">
+  <% if local_assigns[:show_label] != false %>
+    <strong class="block font-medium mb-1">Responsible User:</strong>
+  <% end %>
+  <% can_update = local_assigns[:can_update].nil? ? (defined?(policy) && policy(task).update?) : local_assigns[:can_update] %>
+  <% if can_update %>
+    <div class="relative">
+      <button type="button" 
+              class="btn btn-sm btn-outline <%= local_assigns[:button_class] %>"
+              data-action="click->user-select#toggleDropdown">
+        <span data-user-select-target="selectedDisplay">
+          <%= task.responsible_user ? (task.responsible_user.preferred_name || task.responsible_user.username || task.responsible_user.email) : "None" %>
+        </span>
+        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      
+      <div data-user-select-target="dropdown" 
+           class="hidden absolute z-10 mt-1 w-64 bg-base-100 border border-base-300 rounded-lg shadow-lg">
+        <div class="p-2">
+          <input type="text" 
+                 placeholder="Search by username or name..." 
+                 class="input input-sm input-bordered w-full"
+                 data-user-select-target="search"
+                 data-action="input->user-select#filter">
+        </div>
+        <ul class="max-h-60 overflow-y-auto">
+          <li>
+            <button type="button"
+                    class="w-full text-left px-4 py-2 hover:bg-base-200 text-sm"
+                    data-action="click->user-select#clearSelection">
+              <span class="text-base-content/50">Clear selection</span>
+            </button>
+          </li>
+          <% task.assignable_users.each do |user| %>
+            <li data-user-select-target="option"
+                data-username="<%= user.username %>"
+                data-preferred-name="<%= user.preferred_name %>">
+              <button type="button"
+                      class="w-full text-left px-4 py-2 hover:bg-base-200 text-sm"
+                      data-action="click->user-select#selectUser"
+                      data-user-id="<%= user.id %>"
+                      data-display-name="<%= user.preferred_name || user.username || user.email %>">
+                <div class="font-medium"><%= user.preferred_name || user.username || user.email %></div>
+                <% if user.username && user.preferred_name %>
+                  <div class="text-xs text-base-content/70">@<%= user.username %></div>
+                <% end %>
+              </button>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+      
+      <%= form_with(model: task, url: task_path(task), method: :patch, data: { turbo: true, user_select_target: "form" }) do |form| %>
+        <%= form.hidden_field :responsible_user_id, value: task.responsible_user_id %>
+        <%= form.hidden_field :update_context, value: local_assigns[:update_context] || "details" %>
+      <% end %>
+    </div>
+  <% else %>
+    <span><%= task.responsible_user ? (task.responsible_user.preferred_name || task.responsible_user.username || task.responsible_user.email) : "None" %></span>
+  <% end %>
+</div>

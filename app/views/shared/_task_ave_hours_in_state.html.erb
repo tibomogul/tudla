@@ -1,0 +1,30 @@
+<table class="table table-zebra w-full">
+<thead>
+<tr>
+    <th>State</th>
+    <th>Average Time</th>
+    <th>Min</th>
+    <th>Max</th>
+    <th>Transitions</th>
+</tr>
+</thead>
+<tbody>
+    <% results.each do |r| %>
+        <tr>
+            <td><%= r.state.humanize %></td>
+            <td><%= distance_of_time_in_words(r.avg) if r.avg %></td>
+            <td><%= distance_of_time_in_words(r.min) if r.min %></td>
+            <td><%= distance_of_time_in_words(r.max) if r.max %></td>
+            <td><%= r.count %></td>
+        </tr>
+    <% end %>
+</tbody>
+</table>
+<%= line_chart(
+    results.map { |r| [r.state.humanize, r.avg.to_f / 3600] },
+    module: true,
+    title: "#{name} Avg Hours in State",
+    xtitle: "State",
+    ytitle: "Avg Hours in State",
+    colors: ["#3b82f6"]
+) %>

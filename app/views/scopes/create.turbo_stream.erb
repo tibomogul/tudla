@@ -1,0 +1,8 @@
+<% @scope.project.scopes.reload %>
+<%= turbo_stream.replace dom_id(@scope.project, :scope_list) do %>
+  <%= render partial: "projects/scopes_list", locals: { project: @scope.project } %>
+<% end %>
+
+<%= turbo_stream.replace dom_id(@scope.project, :new_scope_form) do %>
+  <%= render partial: "scopes/quick_add_form", locals: { project: @scope.project } %>
+<% end %>

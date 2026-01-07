@@ -1,0 +1,81 @@
+/* HillChart Library Default Styles */
+:root {
+  /* SVG Container */
+  --hillchart-border: #d1d5db;
+  --hillchart-radius: 6px;
+  --hillchart-bg: #ffffff;
+  
+  /* Hill Elements */
+  --hillchart-hill-bg: #f8f9fa;
+  --hillchart-hill-stroke: #4b5563;
+  --hillchart-hill-stroke-width: 3px;
+  --hillchart-center-line-stroke: #9ca3af;
+  --hillchart-center-line-width: 1px;
+  --hillchart-baseline-stroke: #9ca3af;
+  --hillchart-baseline-width: 1px;
+  --hillchart-label-color: #6b7280;
+  --hillchart-label-font-size: 12px;
+  --hillchart-label-font-weight: 600;
+  
+  /* Dots */
+  --hillchart-dot-stroke: #ffffff;
+  --hillchart-dot-stroke-width: 2px;
+  --hillchart-dot-default-color: #007bff;
+  --hillchart-dot-default-size: 6px;
+  
+  /* Text Labels */
+  --hillchart-text-bg: #ffffff;
+  --hillchart-text-border: #d1d5db;
+  --hillchart-text-border-width: 1px;
+  --hillchart-text-border-radius: 3px;
+  --hillchart-text-color: #374151;
+  --hillchart-text-font-size: 11px;
+  --hillchart-text-font-family: sans-serif;
+  --hillchart-text-min-width: 60px;
+  --hillchart-text-char-width: 7px;
+  --hillchart-text-padding: 10px;
+  
+  /* Layout */
+  --hillchart-margin-ratio: 0.15;
+  --hillchart-gaussian-sigma: 0.3;
+  --hillchart-curve-step: 5px;
+  --hillchart-baseline-offset: 2px;
+  --hillchart-label-offset: 20px;
+  --hillchart-label-min-margin: 10px;
+  
+  /* Controls */
+  --hillchart-controls-spacing: 12px;
+  --hillchart-controls-gap: 8px;
+  
+  /* Buttons */
+  --hillchart-btn-padding: 6px 12px;
+  --hillchart-btn-font-size: 14px;
+  --hillchart-btn-radius: 6px;
+  
+  /* Secondary Buttons (Update, Cancel) */
+  --hillchart-btn-color: #374151;
+  --hillchart-btn-bg: #ffffff;
+  --hillchart-btn-border: #d1d5db;
+  --hillchart-btn-hover-bg: #f9fafb;
+  
+  /* Primary Button (Save) */
+  --hillchart-btn-primary-color: #ffffff;
+  --hillchart-btn-primary-bg: #2563eb;
+  --hillchart-btn-primary-border: #2563eb;
+  --hillchart-btn-primary-hover-bg: #1d4ed8;
+  
+  /* Disabled State */
+  --hillchart-btn-disabled-opacity: 0.5;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hillchart-border: #374151;
+    --hillchart-bg: #1f2937;
+    --hillchart-btn-color: #f9fafb;
+    --hillchart-btn-bg: #374151;
+    --hillchart-btn-border: #4b5563;
+    --hillchart-btn-hover-bg: #4b5563;
+  }
+}

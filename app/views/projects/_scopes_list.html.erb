@@ -1,0 +1,10 @@
+<ul 
+  class="space-y-2" 
+  id="<%= dom_id(project, :scope_list) %>" 
+  data-controller="sortable-scope"
+  data-sortable-scope-reorder-url-value="<%= reorder_scopes_project_path(project) %>"
+>
+  <% project.scopes.order(:project_position).each do |scope| %>
+    <%= render partial: "shared/scope_list_item", locals: { scope: scope, show_drag_handle: true } %>
+  <% end %>
+</ul>

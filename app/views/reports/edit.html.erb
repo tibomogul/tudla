@@ -1,0 +1,24 @@
+<% content_for :title, "Editing report" %>
+
+<div class="md:w-2/3 w-full">
+  <h1 class="font-bold text-4xl mb-6">Editing Report</h1>
+
+  <% if @report.reportable %>
+    <div class="alert alert-info mb-6">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <div>
+        <h3 class="font-bold">Report for:</h3>
+        <div class="text-sm"><%= @report.reportable.reportable.class.name %>: <%= @report.reportable.reportable.name %></div>
+      </div>
+    </div>
+  <% end %>
+
+  <%= render "form", report: @report %>
+
+  <div class="mt-4">
+    <%= link_to "Show this report", @report, class: "btn btn-soft" %>
+    <%= link_to "Back to reports", reports_path, class: "btn btn-soft" %>
+  </div>
+</div>

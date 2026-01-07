@@ -1,0 +1,55 @@
+<% content_for :title, "Showing task" %>
+
+<div class="md:w-2/3 w-full">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <!-- Header with breadcrumbs -->
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-2">
+      <h1 class="font-bold text-2xl"><%= display_name_with_nice_to_have(@task) %></h1>
+    </div>
+    <div class="breadcrumbs hidden p-0 text-sm sm:inline">
+      <ul>
+        <li><%= link_to "Dashboard", user_root_path %></li>
+        <li><%= link_to "Tasks", tasks_path %></li>
+        <li class="opacity-80"><%= "T-#{@task.id}" %></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div role="tablist" class="tabs tabs-boxed my-4">
+    <%= link_to "Details",
+      task_path(@task),
+      class: "tab #{'tab-active' if action_name == 'show'}",
+      data: { turbo_frame: dom_id(@task) } %>
+
+    <%= link_to "History",
+      history_task_path(@task),
+      class: "tab #{'tab-active' if action_name == 'history'}",
+      data: { turbo_frame: dom_id(@task) } %>
+  </div>
+
+  <!-- Content Frame -->
+  <%= turbo_frame_tag dom_id(@task) do %>
+    <%= render partial: "details", locals: { task: @task } %>
+  <% end %>
+
+  <!-- Attachments Section -->
+  <%= render "shared/attachments_section", record: @task, can_upload: policy(@task).update? %>
+
+  <!-- Notes Section -->
+  <%= render "shared/notes_section", record: @task, can_create: policy(@task).update? %>
+
+  <!-- Links Section -->
+  <%= render "shared/links_section", record: @task, can_create: policy(@task).update? %>
+
+  <!-- Actions -->
+  <div class="flex flex-wrap gap-2 mt-6">
+    <%= link_to "Edit this task", edit_task_path(@task), class: "btn btn-soft" if policy(@task).edit? %>
+    <%= link_to "Back to tasks", tasks_path, class: "btn btn-soft" if policy(Task).index? %>
+    <%= button_to "Destroy this task", @task, method: :delete, form_class: "inline-block", class: "btn btn-soft btn-secondary", data: { turbo_confirm: "Are you sure?" } if policy(@task).destroy? %>
+  </div>
+</div>

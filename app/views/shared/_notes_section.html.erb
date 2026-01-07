@@ -1,0 +1,37 @@
+<%
+  # This partial expects:
+  # - record: The model instance (Project, Task, Scope, Team, or Organization)
+  # - can_create: Boolean to show/hide create button (required)
+  # - notable: The notable record (optional - will be fetched if not provided)
+  
+  notable ||= record.notable
+  notes = notable&.notes&.order(created_at: :desc) || Note.none
+%>
+
+<div class="mt-8">
+  <!-- Header with New Note Button -->
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Notes</h2>
+    <div class="flex items-center gap-2">
+      <span class="badge badge-neutral"><%= notes.count %></span>
+      <% if can_create %>
+        <button onclick="new_note_modal.showModal()" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          New Note
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- New Note Modal -->
+  <% if can_create %>
+    <%= render "shared/notes_form", 
+      notable_type: record.class.name, 
+      notable_id: record.id %>
+  <% end %>
+
+  <!-- Notes List -->
+  <%= render "shared/notes_list", notes: notes, show_header: false %>
+</div>

@@ -1,0 +1,9 @@
+<% content_for :title, "New organization" %>
+
+<div class="md:w-2/3 w-full">
+  <h1 class="font-bold text-4xl">New organization</h1>
+
+  <%= render "form", organization: @organization %>
+
+  <%= link_to "Back to organizations", organizations_path, class: "btn btn-soft" %>
+</div>

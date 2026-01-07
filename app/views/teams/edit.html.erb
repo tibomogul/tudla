@@ -1,0 +1,10 @@
+<% content_for :title, "Editing team" %>
+
+<div class="md:w-2/3 w-full">
+  <h1 class="font-bold text-4xl">Editing team</h1>
+
+  <%= render "form", team: @team %>
+
+  <%= link_to "Show this team", @team, class: "btn btn-soft" %>
+  <%= link_to "Back to teams", teams_path, class: "btn btn-soft" %>
+</div>

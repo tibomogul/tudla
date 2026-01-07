@@ -1,0 +1,41 @@
+<h2 class="text-2xl font-bold mb-4">Per-User Task Flow Analytics</h2>
+
+<table class="table table-zebra w-full mb-6">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>State</th>
+      <th>Avg Time</th>
+      <th>Min</th>
+      <th>Max</th>
+      <th>Transitions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @results.each do |r| %>
+      <tr>
+        <td><%= r.user&.email || "Unknown" %></td>
+        <td><%= r.state.humanize %></td>
+        <td><%= distance_of_time_in_words(r.avg) if r.avg %></td>
+        <td><%= distance_of_time_in_words(r.min) if r.min %></td>
+        <td><%= distance_of_time_in_words(r.max) if r.max %></td>
+        <td><%= r.count %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<%= column_chart(
+  # Each bar is a state, stacked by user
+  @series,
+  module: true,
+  stacked: true,
+  xtitle: "State",
+  ytitle: "Avg Hours per User",
+  colors: ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"],
+  xaxis: {
+    type: 'string',
+    # states, order is important
+    categories: @labels
+  }
+) %>

@@ -1,0 +1,25 @@
+<tr id="<%= dom_id(token) %>">
+  <td><%= token.name %></td>
+  <td>
+    <% if token.active && !token.expired? %>
+      <span class="badge badge-success badge-sm">Active</span>
+    <% elsif token.expired? %>
+      <span class="badge badge-error badge-sm">Expired</span>
+    <% else %>
+      <span class="badge badge-ghost badge-sm">Revoked</span>
+    <% end %>
+  </td>
+  <td class="text-sm">
+    <%= token.last_used_at ? time_ago_in_words(token.last_used_at) + " ago" : "Never" %>
+  </td>
+  <td>
+    <% if token.active && !token.expired? %>
+      <%= button_to "Revoke", api_token_path(token), method: :delete, 
+          class: "btn btn-xs btn-error",
+          data: { 
+            turbo_method: :delete,
+            turbo_confirm: "Are you sure you want to revoke this token?"
+          } %>
+    <% end %>
+  </td>
+</tr>

@@ -1,0 +1,37 @@
+<%
+  # This partial expects:
+  # - record: The model instance (Project, Task, Scope, Team, or Organization)
+  # - can_upload: Boolean to show/hide upload form (required)
+  # - attachable: The attachable record (optional - will be fetched if not provided)
+  
+  attachable ||= record.attachable
+  attachments = attachable&.attachments || Attachment.none
+%>
+
+<div class="mt-8">
+  <!-- Header with New Attachment Button -->
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Attachments</h2>
+    <div class="flex items-center gap-2">
+      <span class="badge badge-neutral"><%= attachments.count %></span>
+      <% if can_upload %>
+        <button onclick="upload_attachment_modal.showModal()" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          New Attachment
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <% if can_upload %>
+    <%= render "shared/attachments_upload", 
+      attachable_type: record.class.name, 
+      attachable_id: record.id %>
+  <% end %>
+
+  <!-- Attachments List -->
+  <%= render "shared/attachments_list", attachments: attachments, show_header: false %>
+</div>

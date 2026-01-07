@@ -1,0 +1,9 @@
+<% content_for :title, "New scope" %>
+
+<div class="md:w-2/3 w-full">
+  <h1 class="font-bold text-4xl">New scope</h1>
+
+  <%= render "form", scope: @scope %>
+
+  <%= link_to "Back to scopes", scopes_path, class: "btn btn-soft" %>
+</div>

@@ -1,0 +1,59 @@
+<%
+  # This partial expects:
+  # - notable_type: String (e.g., "Project", "Task")
+  # - notable_id: Integer (the record's ID)
+%>
+
+<dialog id="new_note_modal" class="modal">
+  <div class="modal-box w-11/12 max-w-3xl">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+    
+    <h3 class="font-bold text-lg mb-4">New Note</h3>
+    
+    <%= form_with(
+      model: Note.new,
+      url: notes_path,
+      data: { turbo: true, controller: "theme-dark" }
+    ) do |f| %>
+      <%= hidden_field_tag :notable_type, notable_type %>
+      <%= hidden_field_tag :notable_id, notable_id %>
+      
+      <div class="form-control mb-4">
+        <%= f.label :title, class: "label" do %>
+          <span class="label-text">Title (optional)</span>
+        <% end %>
+        <%= f.text_field :title, 
+          class: "input input-bordered w-full",
+          placeholder: "Brief title for this note" %>
+      </div>
+
+      <div class="form-control mb-4">
+        <%= f.label :content, class: "label" do %>
+          <span class="label-text">Content (Markdown)</span>
+        <% end %>
+        <%= f.marksmith :content, 
+          rows: 12,
+          class: "block shadow-sm rounded-md border px-3 py-2 mt-2 w-full border-gray-400 focus:outline-blue-600",
+          required: true %>
+        <label class="label">
+          <span class="label-text-alt">Supports markdown formatting with live preview</span>
+        </label>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" onclick="new_note_modal.close()" class="btn btn-ghost">Cancel</button>
+        <%= f.button type: :submit, class: "btn btn-primary" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Create Note
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

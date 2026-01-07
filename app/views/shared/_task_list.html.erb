@@ -1,0 +1,11 @@
+<ul class="list" id="<%= local_assigns[:container_id] %>" %>
+    <% block_given = yield %>
+    <% if block_given.nil? || block_given.empty? %>
+    <li class="list-row">Task List</li>
+    <% else %>
+    <%= block_given %>
+    <% end %>
+    <% tasks.each do |task| %>
+      <%= render partial: "shared/task_list_item", locals: { task: task } %>
+    <% end %>
+</ul>

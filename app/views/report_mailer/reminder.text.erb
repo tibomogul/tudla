@@ -1,0 +1,35 @@
+<% if @report_requirement.reminder.negative? %>
+*** REPORT PAST DUE ***
+========================
+
+Hello <%= @user.preferred_name || @user.username %>,
+
+This is a reminder that you have a report that was due on <%= @next_occurrence.to_date %> for:
+
+<%= @reportable.class.name %>: <%= @reportable.name %>
+
+*** THIS REPORT IS NOW PAST DUE ***
+Please submit it as soon as possible.
+
+<% else %>
+Report Reminder
+================
+
+Hello <%= @user.preferred_name || @user.username %>,
+
+This is a reminder that you have a report due on <%= @next_occurrence.to_date %> for:
+
+<%= @reportable.class.name %>: <%= @reportable.name %>
+
+<% end %>
+<% if @report_requirement.template.present? %>
+Report Template:
+----------------
+<%= @report_requirement.template %>
+
+<% end %>
+<% unless @report_requirement.reminder.negative? %>
+Please submit your report by the due date.
+
+<% end %>
+Thank you!

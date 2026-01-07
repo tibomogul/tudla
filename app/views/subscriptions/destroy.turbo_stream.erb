@@ -1,0 +1,3 @@
+<%= turbo_stream.replace @subscribable do %>
+  <%= render partial: "shared/subscribable_subscription", locals: { subscribable: @subscribable } %>
+<% end %>

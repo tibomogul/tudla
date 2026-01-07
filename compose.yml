@@ -1,0 +1,52 @@
+services:
+  db:
+    platform: linux/amd64
+    image: postgres:18.0
+    volumes:
+      - postgres:/var/lib/postgresql
+    environment:
+      POSTGRES_PASSWORD: postgres
+    # env_file:
+    #   - ./env/postgres.env # you can also define env variables like this.
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  rails:
+    platform: linux/amd64
+    tty: true
+    build:
+      context: ./
+      args:
+        build_docker_uid: $DOCKER_UID
+        build_docker_gid: $DOCKER_GID
+        build_timezone: Australia/Brisbane
+        TARGETARCH: linux/amd64
+        RAILS_ENV: development
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PASSWORD: postgres
+      GIT_COMMITTER_NAME: $GIT_COMMITTER_NAME
+      GIT_COMMITTER_EMAIL: $GIT_COMMITTER_EMAIL
+      GIT_AUTHOR_NAME: $GIT_COMMITTER_NAME
+      GIT_AUTHOR_EMAIL: $GIT_COMMITTER_EMAIL
+      SSH_AUTH_SOCK: /run/host-services/ssh-auth.sock
+      TZ: Australia/Brisbane
+    ports:
+      - "3000:3000"
+      - "1080:1080"
+    volumes:
+      - .:/home/user/app # add our local code to dockerfile
+      - type: bind
+        source: $DOCKER_SSH_AUTH_SOCK
+        target: /run/host-services/ssh-auth.sock
+    depends_on:
+      - db # add all dependant container
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  postgres: # named volume

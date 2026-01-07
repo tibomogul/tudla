@@ -1,0 +1,9 @@
+<% content_for :custom_layout do %>
+    <div class="grid grid-cols-12 overflow-auto sm:h-screen">
+        <div class="relative hidden bg-[#FFE9D1] lg:col-span-7 lg:block xl:col-span-8 2xl:col-span-9 dark:bg-[#14181c]">
+        </div>
+        <div class="col-span-12 lg:col-span-5 xl:col-span-4 2xl:col-span-3">
+            <%= render partial: "application/login" %>
+        </div>
+    </div>
+<% end %>

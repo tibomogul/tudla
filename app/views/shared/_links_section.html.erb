@@ -1,0 +1,37 @@
+<%
+  # This partial expects:
+  # - record: The model instance (Project, Task, Scope, Team, or Organization)
+  # - can_create: Boolean to show/hide create button (required)
+  # - linkable: The linkable record (optional - will be fetched if not provided)
+  
+  linkable ||= record.linkable
+  links = linkable&.links&.order(created_at: :desc) || Link.none
+%>
+
+<div class="mt-8">
+  <!-- Header with New Link Button -->
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Links</h2>
+    <div class="flex items-center gap-2">
+      <span class="badge badge-neutral"><%= links.count %></span>
+      <% if can_create %>
+        <button onclick="new_link_modal.showModal()" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          New Link
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- New Link Modal -->
+  <% if can_create %>
+    <%= render "shared/links_form", 
+      linkable_type: record.class.name, 
+      linkable_id: record.id %>
+  <% end %>
+
+  <!-- Links List -->
+  <%= render "shared/links_list", links: links, show_header: false %>
+</div>

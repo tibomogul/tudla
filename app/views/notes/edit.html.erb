@@ -1,0 +1,71 @@
+<div class="md:w-2/3 w-full mx-auto">
+  <div class="mb-4">
+    <%= link_to "← Back", polymorphic_path(@note.notable.notable), class: "btn btn-ghost btn-sm" %>
+  </div>
+
+  <h1 class="font-bold text-4xl mb-6">Edit Note</h1>
+
+  <%= form_with(
+    model: @note,
+    url: note_path(@note),
+    method: :patch,
+    data: { turbo: true, controller: "theme-dark" },
+    class: "space-y-4"
+  ) do |f| %>
+    <% if @note.errors.any? %>
+      <div class="alert alert-error">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div>
+          <h3 class="font-bold">There were some errors:</h3>
+          <ul class="list-disc list-inside">
+            <% @note.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="form-control">
+      <%= f.label :title, class: "label" do %>
+        <span class="label-text">Title (optional)</span>
+      <% end %>
+      <%= f.text_field :title, 
+        class: "input input-bordered w-full",
+        placeholder: "Brief title for this note" %>
+    </div>
+
+    <div class="form-control">
+      <%= f.label :content, class: "label" do %>
+        <span class="label-text">Content (Markdown)</span>
+      <% end %>
+      <%= f.marksmith :content, 
+        rows: 20,
+        class: "block shadow-sm rounded-md border px-3 py-2 mt-2 w-full border-gray-400 focus:outline-blue-600",
+        required: true %>
+      <label class="label">
+        <span class="label-text-alt">Supports markdown formatting with live preview</span>
+      </label>
+    </div>
+
+    <!-- Preview Section -->
+    <% if @note.content.present? %>
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <h2 class="card-title text-sm text-base-content/60">Preview</h2>
+          <%= render_markdown(@note.content) %>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="flex gap-2">
+      <%= f.button type: :submit, class: "btn btn-primary" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+        Update Note
+      <% end %>
+      <%= link_to "Cancel", polymorphic_path(@note.notable.notable), class: "btn btn-ghost" %>
+    </div>
+  <% end %>
+</div>

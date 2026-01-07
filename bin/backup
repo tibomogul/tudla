@@ -1,0 +1,120 @@
+#!/bin/bash
+# Backup script for PostgreSQL database and Active Storage files
+# Usage: docker compose -f compose-production.yml exec backup /home/user/app/bin/backup
+
+set -e
+
+BACKUP_DIR=${BACKUP_DIR:-/backups}
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+RAILS_ENV=${RAILS_ENV:-production}
+APP_PATH=${APP_PATH:-/home/user/app}
+DATABASE_YML="${APP_PATH}/config/database.yml"
+
+echo "=== Starting backup at $(date) ==="
+echo "Environment: ${RAILS_ENV}"
+
+# Create backup directory structure
+mkdir -p "${BACKUP_DIR}/database"
+mkdir -p "${BACKUP_DIR}/storage"
+
+# Parse database names from config/database.yml for the current RAILS_ENV
+if [ ! -f "${DATABASE_YML}" ]; then
+  echo "✗ Database config not found: ${DATABASE_YML}"
+  exit 1
+fi
+
+# Extract database names from database.yml using Ruby (handles ERB and YAML properly)
+# Pass variables via environment to avoid shell interpolation issues
+# Use IFS and read to properly capture space-separated output into array
+DATABASES_STR=$(DATABASE_YML="${DATABASE_YML}" RAILS_ENV="${RAILS_ENV}" ruby -ryaml -rerb -e '
+  config = YAML.load(ERB.new(File.read(ENV["DATABASE_YML"])).result, aliases: true)
+  env_config = config[ENV["RAILS_ENV"]]
+  exit 1 unless env_config
+
+  databases = []
+  if env_config.is_a?(Hash) && env_config["database"]
+    # Single database config (e.g., test environment)
+    databases << env_config["database"]
+  elsif env_config.is_a?(Hash)
+    # Multi-database config (e.g., primary, queue, cable, cache)
+    env_config.each do |name, db_config|
+      next unless db_config.is_a?(Hash) && db_config["database"]
+      databases << db_config["database"]
+    end
+  end
+  print databases.join(" ")
+' 2>/dev/null)
+read -ra DATABASES <<< "${DATABASES_STR}"
+
+if [ ${#DATABASES[@]} -eq 0 ]; then
+  echo "✗ No databases found for RAILS_ENV: ${RAILS_ENV}"
+  exit 1
+fi
+
+echo "Found ${#DATABASES[@]} database(s): ${DATABASES[*]}"
+
+# Backup PostgreSQL databases
+echo "Backing up PostgreSQL databases..."
+BACKUP_FAILED=0
+
+for DB_NAME in "${DATABASES[@]}"; do
+  echo "  Dumping ${DB_NAME}..."
+  PGPASSWORD="${DATABASE_PASSWORD}" pg_dump \
+    -h "${DATABASE_HOST}" \
+    -U postgres \
+    -d "${DB_NAME}" \
+    -F c \
+    -f "${BACKUP_DIR}/database/${DB_NAME}_${TIMESTAMP}.dump"
+
+  if [ $? -eq 0 ]; then
+    gzip "${BACKUP_DIR}/database/${DB_NAME}_${TIMESTAMP}.dump"
+    echo "  ✓ ${DB_NAME} backup completed and compressed"
+  else
+    echo "  ✗ ${DB_NAME} backup failed!"
+    BACKUP_FAILED=1
+  fi
+done
+
+if [ ${BACKUP_FAILED} -eq 1 ]; then
+  echo "✗ One or more database backups failed!"
+  exit 1
+fi
+
+echo "✓ All database backups completed"
+
+# Backup Active Storage files
+echo "Backing up Active Storage files..."
+if [ -d "/home/user/app/storage" ]; then
+  tar -czf "${BACKUP_DIR}/storage/storage_${TIMESTAMP}.tar.gz" \
+    -C /home/user/app storage
+  
+  if [ $? -eq 0 ]; then
+    echo "✓ Storage backup completed: storage_${TIMESTAMP}.tar.gz"
+  else
+    echo "✗ Storage backup failed!"
+    exit 1
+  fi
+else
+  echo "⚠ Storage directory not found, skipping storage backup"
+fi
+
+# Cleanup old backups (older than RETENTION_DAYS)
+echo "Cleaning up old backups (keeping last ${RETENTION_DAYS} days)..."
+find "${BACKUP_DIR}/database" -name "task_manager_*.dump.gz" -mtime +${RETENTION_DAYS} -delete
+find "${BACKUP_DIR}/storage" -name "storage_*.tar.gz" -mtime +${RETENTION_DAYS} -delete
+echo "✓ Cleanup completed"
+
+# Display backup statistics
+echo ""
+echo "=== Backup Statistics ==="
+echo "Database backups:"
+ls -lh "${BACKUP_DIR}/database/" | tail -n +2
+echo ""
+echo "Storage backups:"
+ls -lh "${BACKUP_DIR}/storage/" | tail -n +2
+echo ""
+echo "Total backup disk usage:"
+du -sh "${BACKUP_DIR}"
+echo ""
+echo "=== Backup completed successfully at $(date) ==="

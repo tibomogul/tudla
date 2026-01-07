@@ -1,0 +1,7 @@
+<%= turbo_stream.replace dom_id(@task.scope, :task_list) do %>
+  <%= render partial: "shared/task_list", locals: { tasks: @task.scope.tasks.reload, container_id: dom_id(@task.scope, :task_list) } %>
+<% end %>
+
+<%= turbo_stream.replace dom_id(@task.scope, :new_task_form) do %>
+  <%= render partial: "tasks/quick_add_form", locals: { scope: @task.scope, project: @task.project } %>
+<% end %>

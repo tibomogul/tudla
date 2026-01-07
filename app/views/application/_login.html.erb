@@ -1,0 +1,94 @@
+<div class="flex flex-col items-stretch p-6 md:p-8 lg:p-16">
+    <div class="flex items-center justify-between">
+        <%= image_tag "tudla-wordmark-light.svg", alt: "logo-light", class: "h-5.5 dark:hidden" %>
+        <%= image_tag "tudla-wordmark-dark.svg", alt: "logo-dark", class: "h-5.5 hidden dark:inline" %>
+        <button
+            aria-label="Toggle Theme"
+            class="btn btn-circle btn-outline border-base-300 relative overflow-hidden"
+            data-action="click->theme#toggle">
+            <span
+                class="iconify lucide--sun absolute size-4.5 -translate-y-4 opacity-0 transition-all duration-300 group-data-[theme=light]/html:translate-y-0 group-data-[theme=light]/html:opacity-100"></span>
+            <span
+                class="iconify lucide--moon absolute size-4.5 translate-y-4 opacity-0 transition-all duration-300 group-data-[theme=dark]/html:translate-y-0 group-data-[theme=dark]/html:opacity-100"></span>
+            <span
+                class="iconify lucide--palette absolute size-4.5 opacity-100 group-data-[theme=dark]/html:opacity-0 group-data-[theme=light]/html:opacity-0"></span>
+        </button>
+    </div>
+    <h3 class="mt-8 text-center text-xl font-semibold md:mt-12 lg:mt-24">Login</h3>
+    <h3 class="text-base-content/70 mt-2 text-center text-sm">
+        Login using email and password or through identity providers 
+    </h3>
+    <%= form_with model: User.new, url: user_session_path, local: true, class: "mt-6 md:mt-10" do |form| %>
+        <fieldset class="fieldset">
+            <legend class="fieldset-legend">Email Address</legend>
+            <label class="input w-full focus:outline-0">
+                <span
+                    class="iconify lucide--mail text-base-content/80 size-5"></span>
+                <%= form.email_field :email, class: "grow focus:outline-0", placeholder: "Email Address" %>
+            </label>
+        </fieldset>
+        <fieldset class="fieldset" x-data="{ show: false }">
+            <legend class="fieldset-legend">Password</legend>
+            <label class="input w-full focus:outline-0">
+                <span
+                    class="iconify lucide--key-round text-base-content/80 size-5"></span>
+                <%= form.password_field :password, class: "grow focus:outline-0", placeholder: "Password", id: "password", "x-bind:type": "show ? 'text' : 'password'" %>
+                <label
+                    class="swap btn btn-xs btn-ghost btn-circle text-base-content/60">
+                    <input
+                        type="checkbox"
+                        x-model="show"
+                        aria-label="Show password" />
+                    <span class="iconify lucide--eye swap-off size-4"></span>
+                    <span class="iconify lucide--eye-off swap-on size-4"></span>
+                </label>
+            </label>
+        </fieldset>
+        <div class="text-end">
+            <a
+                class="label-text text-base-content/80 text-xs"
+                href="./auth-forgot-password.html">
+                Forgot Password?
+            </a>
+        </div>
+        <% if ENV["ACCOUNT_REQUIRE_TERMS_AND_CONDITIONS"] == "YES" %>
+            <div class="mt-4 flex items-center gap-3 md:mt-6">
+                <input
+                    class="checkbox checkbox-sm checkbox-primary"
+                    aria-label="Checkbox example"
+                    id="agreement"
+                    type="checkbox" />
+                <label for="agreement" class="text-sm">
+                    I agree with
+                    <span class="text-primary ms-1 cursor-pointer hover:underline">
+                        terms and conditions
+                    </span>
+                </label>
+            </div>
+        <% end %>
+        <%= form.submit "Login", class: "btn btn-primary btn-wide mt-4 max-w-full gap-3 md:mt-6" %>
+    <% end %>
+        <%= button_to user_google_oauth2_omniauth_authorize_path,
+        class: "btn btn-ghost btn-wide border-base-300 mt-4 max-w-full gap-3",
+        data: { turbo: false } do %>
+            <%= image_tag "brand-logo/google-mini.svg", class: "size-6", alt: "google" %>
+            Login with Google
+        <% end %>
+        <%= button_to user_microsoft_graph_omniauth_authorize_path,
+        class: "btn btn-ghost btn-wide border-base-300 mt-4 max-w-full gap-3",
+        data: { turbo: false } do %>
+            <%= image_tag "brand-logo/ms-symbollockup_mssymbol_19.svg", class: "size-6", alt: "google" %>
+            Login with Microsoft
+        <% end %>
+        <% if ENV["ACCOUNT_SIGNUP_ENABLED"] == "YES" %>
+            <p class="text-base-content/80 mt-4 text-center text-sm md:mt-6">
+                Haven't account
+                <a
+                    class="text-primary ms-1 hover:underline"
+                    href="./auth-register.html">
+                    Create One
+                </a>
+            </p>
+        <% end %>
+    </div>
+</div>

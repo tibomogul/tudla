@@ -1,0 +1,12 @@
+<% if subscribable %>
+  <%= turbo_frame_tag "subscribable_subscription_#{subscribable.id}" do %>
+  <div class="flex items-center justify-between">
+      <% subscription = subscribable.subscriptions.where(user: current_user).first %>
+      <% if subscription.nil? %>
+          <%= link_to "Subscribe", create_subscription_path(subscribable), data: { turbo_method: :post }, class: "btn btn-soft" %>
+      <% else %>
+          <%= link_to "Unsubscribe", destroy_subscription_path(subscription), data: { turbo_method: :delete }, class: "btn btn-soft" %>
+      <% end %>
+  </div>
+  <% end %>
+<% end %>

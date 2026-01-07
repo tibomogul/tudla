@@ -1,0 +1,60 @@
+<%
+  # This partial expects:
+  # - linkable_type: String (e.g., "Project", "Task")
+  # - linkable_id: Integer (the record's ID)
+%>
+
+<dialog id="new_link_modal" class="modal">
+  <div class="modal-box">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+    
+    <h3 class="font-bold text-lg mb-4">New Link</h3>
+    
+    <%= form_with(
+      model: Link.new,
+      url: links_path,
+      data: { turbo: true }
+    ) do |f| %>
+      <%= hidden_field_tag :linkable_type, linkable_type %>
+      <%= hidden_field_tag :linkable_id, linkable_id %>
+      
+      <div class="form-control mb-4">
+        <%= f.label :url, class: "label" do %>
+          <span class="label-text">URL</span>
+        <% end %>
+        <%= f.url_field :url, 
+          class: "input input-bordered w-full",
+          placeholder: "https://example.com",
+          required: true %>
+        <label class="label">
+          <span class="label-text-alt">Full URL including http:// or https://</span>
+        </label>
+      </div>
+
+      <div class="form-control mb-4">
+        <%= f.label :description, class: "label" do %>
+          <span class="label-text">Description (optional)</span>
+        <% end %>
+        <%= f.text_area :description, 
+          rows: 3,
+          class: "textarea textarea-bordered w-full",
+          placeholder: "Brief description of this link" %>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" onclick="new_link_modal.close()" class="btn btn-ghost">Cancel</button>
+        <%= f.button type: :submit, class: "btn btn-primary" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Add Link
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

@@ -1,0 +1,82 @@
+<%= turbo_frame_tag dom_id(task) do %>
+  <div id="<%= dom_id task %>" class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <!-- Task Name -->
+      <h2 class="card-title text-2xl mb-4">
+        <%= display_name_with_nice_to_have(task) %>
+      </h2>
+
+      <!-- Current State Badge -->
+      <div class="mb-4">
+        <span class="badge badge-lg <%= badge_color(task.current_state) %>">
+          <%= task.current_state.humanize %>
+        </span>
+        <% if task.time_in_current_state %>
+          <span class="text-sm text-base-content/60 ml-2">
+            (in state for <%= distance_of_time_in_words(task.time_in_current_state) %>)
+          </span>
+        <% end %>
+      </div>
+
+      <!-- Description -->
+      <% if task.description.present? %>
+        <div class="mb-4">
+          <h3 class="font-semibold text-sm text-base-content/70 mb-2">Description</h3>
+          <div data-controller="theme-dark">
+            <div class="marksmith-rendered-body ms:prose ms:prose-sm ms:prose-neutral ms:dark:prose-invert">
+              <%= render_markdown(task.description) %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Metadata Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-base-200 rounded-lg">
+        <% if task.project_id %>
+          <div>
+            <h3 class="font-semibold text-sm text-base-content/70 mb-1">Project</h3>
+            <%= link_to task.project.name, task.project, class: "link link-primary", data: { turbo: false } %>
+          </div>
+        <% end %>
+
+        <% if task.scope_id %>
+          <div>
+            <h3 class="font-semibold text-sm text-base-content/70 mb-1">Scope</h3>
+            <%= link_to display_name_with_nice_to_have(task.scope), task.scope, class: "link link-primary", data: { turbo: false } %>
+          </div>
+        <% end %>
+
+        <div>
+          <h3 class="font-semibold text-sm text-base-content/70 mb-1">Responsible User</h3>
+          <%= render "tasks/responsible_user_selector", task: task, can_update: false, show_label: false %>
+        </div>
+
+        <% if task.created_at %>
+          <div>
+            <h3 class="font-semibold text-sm text-base-content/70 mb-1">Created</h3>
+            <p class="text-sm"><%= time_ago_in_words(task.created_at) %> ago</p>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- State Transition Actions -->
+      <% allowed_states = task.state_machine.allowed_transitions %>
+      <% if allowed_states.any? %>
+        <div class="divider">Available Actions</div>
+        <div class="flex flex-wrap gap-2">
+          <% allowed_states.each do |state| %>
+            <%= button_to update_state_task_path(task, state: state),
+              method: :patch,
+              data: { turbo_stream: true },
+              class: "btn btn-sm #{button_color(state)}" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+              Move to <%= state.to_s.humanize %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

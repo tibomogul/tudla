@@ -1,0 +1,10 @@
+<ul 
+  class="space-y-2" 
+  id="<%= container_id %>" 
+  data-controller="sortable-scope"
+  data-sortable-scope-reorder-url-value="<%= reorder_url %>"
+>
+  <% tasks.each do |task| %>
+    <%= render "shared/task_list_item", task: task, show_drag_handle: true, update_context: "scope_list_item" %>
+  <% end %>
+</ul>

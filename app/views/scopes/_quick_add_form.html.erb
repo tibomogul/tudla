@@ -1,0 +1,16 @@
+<%# Quick-add scope form for a given project %>
+<%# locals: project: %>
+<%= turbo_frame_tag dom_id(project, :new_scope_form) do %>
+  <%= form_with model: Scope.new, url: scopes_path, data: { turbo: true }, html: { id: "#{dom_id(project, :new_scope_form)}_form" } do |f| %>
+    <div class="flex items-center gap-2 mt-3">
+      <%= f.hidden_field :project_id, value: project.id %>
+      <%= f.text_field :name,
+            placeholder: "Add new scope...",
+            class: "input input-bordered input-sm w-full",
+            required: true,
+            pattern: ".*\\S.*",
+            title: "Please enter a scope name (not blank)." %>
+      <%= f.submit "Add", class: "btn btn-sm btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

@@ -1,0 +1,35 @@
+/* === FILLED WEDGE (CSS conic-gradient) donut ===
+- background is a conic-gradient that uses calc(var(--p) * 1%) for the stop
+- we create the donut hole with a pseudo element (fallback friendly)
+- set --bg to match your page background (demo uses gray-100)
+*/
+.pie-wedge {
+--tibo-p: 0;           /* 0..100 (number) */
+--color: #10b981; /* default color */
+--thickness: 40%; /* donut inner inset (0..50%). Adjust to change thickness. */
+--bg: #f3f4f6;    /* fallback hole color — set to page bg for seamless look */
+display: inline-block;
+position: relative;
+border-radius: 9999px;
+/* conic gradient: color up to p%, then transparent */
+background: conic-gradient(var(--color) calc(var(--tibo-p) * 1%), rgba(0,0,0,0) 0deg);
+/* make it consistently sharp by also adding an SVG mask fallback in some browsers */
+-webkit-mask: radial-gradient(farthest-side, transparent calc(var(--thickness)), black calc(var(--thickness)));
+mask: radial-gradient(farthest-side, transparent calc(var(--thickness)), black calc(var(--thickness)));
+overflow: visible;
+}
+
+/* overlay hole fallback — uses page background color (set --bg) */
+.pie-wedge::after{
+content: "";
+position: absolute;
+inset: var(--thickness);
+border-radius: inherit;
+background: var(--bg);
+pointer-events: none;
+}
+
+/* allow data attr for wedge too (experimental) */
+.pie-wedge[data-pct] {
+--tibo-p: attr(data-pct number);
+}

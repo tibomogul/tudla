@@ -1,0 +1,66 @@
+<%= form_with(model: task, class: "contents", data: { turbo: false, controller: "theme-dark" }) do |form| %>
+  <% if task.errors.any? %>
+    <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
+      <h2><%= pluralize(task.errors.count, "error") %> prohibited this task from being saved:</h2>
+
+      <ul class="list-disc ml-6">
+        <% task.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="my-5">
+    <%= form.label :name %>
+    <%= form.text_field :name, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:name].none?, "border-red-400 focus:outline-red-600": task.errors[:name].any?}] %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :description %>
+    <%= form.marksmith :description, rows: 4, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:description].none?, "border-red-400 focus:outline-red-600": task.errors[:description].any?}] %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :responsible_user_id %>
+    <%= form.collection_select :responsible_user_id, @team_members, :id, :preferred_name, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:project_id].none?, "border-red-400 focus:outline-red-600": task.errors[:project_id].any?}] %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :project_id %>
+    <%= form.text_field :project_id, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:project_id].none?, "border-red-400 focus:outline-red-600": task.errors[:project_id].any?}] %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :scope_id %>
+    <%= form.text_field :scope_id, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:scope_id].none?, "border-red-400 focus:outline-red-600": task.errors[:scope_id].any?}] %>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-5">
+    <div>
+      <%= form.label :unassisted_estimate, "Unassisted Estimate (hours)" %>
+      <%= form.number_field :unassisted_estimate, min: 0, max: 9999, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:unassisted_estimate].none?, "border-red-400 focus:outline-red-600": task.errors[:unassisted_estimate].any?}], placeholder: "Hours" %>
+    </div>
+
+    <div>
+      <%= form.label :ai_assisted_estimate, "AI-Assisted Estimate (hours)" %>
+      <%= form.number_field :ai_assisted_estimate, min: 0, max: 9999, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:ai_assisted_estimate].none?, "border-red-400 focus:outline-red-600": task.errors[:ai_assisted_estimate].any?}], placeholder: "Hours" %>
+    </div>
+
+    <div>
+      <%= form.label :actual_manhours, "Actual Manhours" %>
+      <%= form.number_field :actual_manhours, min: 0, max: 9999, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": task.errors[:actual_manhours].none?, "border-red-400 focus:outline-red-600": task.errors[:actual_manhours].any?}], placeholder: "Hours" %>
+    </div>
+  </div>
+
+  <div class="my-5">
+    <label class="flex items-center gap-2 cursor-pointer">
+      <%= form.check_box :nice_to_have, class: "checkbox" %>
+      <span>Nice to have</span>
+    </label>
+  </div>
+
+  <div class="inline">
+    <%= form.submit class: "btn btn-soft btn-primary" %>
+  </div>
+<% end %>

@@ -1,0 +1,105 @@
+<div 
+  data-controller="team-reports" 
+  data-action="keydown@window->team-reports#handleKeydown"
+  class="mt-8"
+>
+  <!-- Header with word limit control -->
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Recent Reports</h2>
+    <div class="flex items-center gap-2">
+      <label for="word-limit" class="text-sm font-medium">Word limit:</label>
+      <select
+        id="word-limit"
+        data-team-reports-target="wordLimit"
+        data-action="change->team-reports#updateWordLimit"
+        class="select select-bordered select-sm"
+      >
+        <option value="25">25 words</option>
+        <option value="50" selected>50 words</option>
+        <option value="100">100 words</option>
+        <option value="200">200 words</option>
+        <option value="500">Full (500+)</option>
+      </select>
+    </div>
+  </div>
+
+  <% if recent_reports.any? %>
+    <div class="space-y-4">
+      <% recent_reports.each do |report| %>
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="card-body p-4">
+            <!-- Report header -->
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex items-center gap-2">
+                <div class="avatar avatar-placeholder">
+                  <div class="bg-neutral text-neutral-content rounded-full size-8">
+                    <span class="text-xs"><%= report.user.username[0..1].upcase %></span>
+                  </div>
+                </div>
+                <div>
+                  <p class="font-semibold text-sm"><%= report.user.preferred_name || report.user.username %></p>
+                  <p class="text-xs text-base-content/70">
+                    <% if report.as_of_at %>
+                      As of <%= report.format_in_timezone(report.as_of_at, :long) %>
+                    <% else %>
+                      No date specified
+                    <% end %>
+                  </p>
+                </div>
+              </div>
+              
+              <!-- View full report button -->
+              <button
+                data-action="click->team-reports#openModal"
+                data-report-id="<%= report.id %>"
+                data-user-name="<%= report.user.preferred_name || report.user.username %>"
+                data-as-of-date="<%= report.as_of_at ? report.format_in_timezone(report.as_of_at, :long) : 'No date' %>"
+                data-report-content-html="<%= render_markdown_inline(report.content).to_str %>"
+                class="btn btn-ghost btn-sm btn-circle"
+                title="View full report"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Truncated content -->
+            <div data-controller="theme-dark">
+              <div 
+                class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert text-sm"
+                data-team-reports-target="content"
+                data-full-content="<%= report.content %>"
+                data-full-html="<%= render_markdown_inline(report.content).to_str %>"
+                data-truncated25="<%= render_markdown_inline(truncate_markdown_at_newline(report.content, 25)).to_str %>"
+                data-truncated50="<%= render_markdown_inline(truncate_markdown_at_newline(report.content, 50)).to_str %>"
+                data-truncated100="<%= render_markdown_inline(truncate_markdown_at_newline(report.content, 100)).to_str %>"
+                data-truncated200="<%= render_markdown_inline(truncate_markdown_at_newline(report.content, 200)).to_str %>"
+                data-truncated500="<%= render_markdown_inline(truncate_markdown_at_newline(report.content, 500)).to_str %>"
+              ></div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="flex gap-4 text-xs text-base-content/60 mt-2 pt-2 border-t border-base-300">
+              <span>Submitted: <%= time_ago_in_words(report.created_at) %> ago</span>
+              <% if report.submitted_at %>
+                <span>•</span>
+                <span>Finalized: <%= time_ago_in_words(report.submitted_at) %> ago</span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="alert alert-info">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <span>No reports have been submitted yet.</span>
+    </div>
+  <% end %>
+
+  <!-- Modal for full report view -->
+  <%= render "shared/report_modal" %>
+</div>

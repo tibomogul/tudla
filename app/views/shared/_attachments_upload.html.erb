@@ -1,0 +1,47 @@
+<!-- Modal for uploading attachments -->
+<dialog id="upload_attachment_modal" class="modal">
+  <div class="modal-box">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+    <h3 class="font-bold text-lg mb-4">Upload Attachment</h3>
+    
+    <%= form_with url: attachments_path, method: :post, multipart: true, class: "space-y-4" do |f| %>
+      <%= hidden_field_tag :attachable_type, attachable_type %>
+      <%= hidden_field_tag :attachable_id, attachable_id %>
+      
+      <div class="form-control w-full">
+        <%= label_tag "attachment_file", "Choose File", class: "label" %>
+        <%= file_field_tag "attachment[file]", 
+          accept: "*/*",
+          required: true,
+          class: "file-input file-input-bordered w-full" %>
+        <label class="label">
+          <span class="label-text-alt">Maximum file size: 100MB</span>
+        </label>
+      </div>
+
+      <div class="form-control w-full">
+        <%= label_tag "attachment_description", "Description (optional)", class: "label" %>
+        <%= text_area_tag "attachment[description]", 
+          nil,
+          rows: 3,
+          placeholder: "Add a description for this file...",
+          class: "textarea textarea-bordered w-full" %>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" onclick="upload_attachment_modal.close()">Cancel</button>
+        <%= button_tag type: "submit", class: "btn btn-primary" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          Upload
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

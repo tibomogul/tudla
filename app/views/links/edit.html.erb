@@ -1,0 +1,62 @@
+<div class="md:w-2/3 w-full mx-auto">
+  <div class="mb-4">
+    <%= link_to "← Back", polymorphic_path(@link.linkable.linkable), class: "btn btn-ghost btn-sm" %>
+  </div>
+
+  <h1 class="font-bold text-4xl mb-6">Edit Link</h1>
+
+  <%= form_with(
+    model: @link,
+    url: link_path(@link),
+    method: :patch,
+    data: { turbo: true },
+    class: "space-y-4"
+  ) do |f| %>
+    <% if @link.errors.any? %>
+      <div class="alert alert-error">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div>
+          <h3 class="font-bold">There were some errors:</h3>
+          <ul class="list-disc list-inside">
+            <% @link.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="form-control">
+      <%= f.label :url, class: "label" do %>
+        <span class="label-text">URL</span>
+      <% end %>
+      <%= f.url_field :url, 
+        class: "input input-bordered w-full",
+        placeholder: "https://example.com",
+        required: true %>
+      <label class="label">
+        <span class="label-text-alt">Full URL including http:// or https://</span>
+      </label>
+    </div>
+
+    <div class="form-control">
+      <%= f.label :description, class: "label" do %>
+        <span class="label-text">Description (optional)</span>
+      <% end %>
+      <%= f.text_area :description, 
+        rows: 3,
+        class: "textarea textarea-bordered w-full",
+        placeholder: "Brief description of this link" %>
+    </div>
+
+    <div class="flex gap-2">
+      <%= f.button type: :submit, class: "btn btn-primary" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+        Update Link
+      <% end %>
+      <%= link_to "Cancel", polymorphic_path(@link.linkable.linkable), class: "btn btn-ghost" %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,15 @@
+<% flash.each do |type, message| %>
+  <div 
+    id="flash_<%= type %>_<%= SecureRandom.hex(4) %>"
+    data-controller="flash"
+    data-flash-target="message"
+    class="toast toast-top toast-end z-50 transition transform duration-500 ease-in-out">
+    
+    <div class="alert <%= flash_class_for(type) %> shadow-lg">
+      <span><%= message %></span>
+      <button
+        data-action="click->flash#dismiss"
+        class="btn btn-ghost btn-xs ml-2">✕</button>
+    </div>
+  </div>
+<% end %>

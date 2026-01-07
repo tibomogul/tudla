@@ -1,0 +1,31 @@
+<div class="mb-6">
+  <%= render "pages/projects_list" %>
+</div>
+
+<div class="mb-8">
+  <div class="flex items-center justify-between">
+    <p class="text-xl font-semibold">My Day</p>
+  </div>
+  <div class="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <div class="xl:col-span-3">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-lg font-medium">Today's List (<span id="today_count"><%= @today_tasks.size %></span>)</h2>
+      </div>
+      <%= render "pages/today_list" %>
+      <div class="mt-4">
+        <details class="collapse collapse-arrow bg-base-100 shadow">
+          <summary class="collapse-title text-md font-medium">Completed Today (<span id="completed_today_count"><%= @completed_today_tasks.size %></span>)</summary>
+          <div class="collapse-content">
+            <%= render "pages/completed_today_list" %>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div class="xl:col-span-2">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-lg font-medium">My Task Backlog (<span id="backlog_count"><%= @backlog_tasks.size %></span>)</h2>
+      </div>
+      <%= render "pages/backlog_list" %>
+    </div>
+  </div>
+</div>

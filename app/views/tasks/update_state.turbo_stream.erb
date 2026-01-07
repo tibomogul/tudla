@@ -1,0 +1,37 @@
+<% if @update_context == "dashboard" %>
+  <%= turbo_stream.replace "today_list" do %>
+    <%= render "pages/today_list" %>
+  <% end %>
+
+  <%= turbo_stream.replace "backlog_list" do %>
+    <%= render "pages/backlog_list" %>
+  <% end %>
+
+  <%= turbo_stream.replace "completed_today_list" do %>
+    <%= render "pages/completed_today_list" %>
+  <% end %>
+
+  <%= turbo_stream.replace "today_count" do %>
+    <span id="today_count"><%= @today_tasks.size %></span>
+  <% end %>
+
+  <%= turbo_stream.replace "backlog_count" do %>
+    <span id="backlog_count"><%= @backlog_tasks.size %></span>
+  <% end %>
+
+  <%= turbo_stream.replace "completed_today_count" do %>
+    <span id="completed_today_count"><%= @completed_today_tasks.size %></span>
+  <% end %>
+<% elsif @update_context == "scope_list_item" %>
+  <%= turbo_stream.replace dom_id(@task) do %>
+    <%= render "shared/task_list_item", task: @task, show_drag_handle: true, update_context: "scope_list_item" %>
+  <% end %>
+<% elsif @update_context == "list_item" %>
+  <%= turbo_stream.replace dom_id(@task) do %>
+    <%= render "shared/task_list_item", task: @task, update_context: "list_item" %>
+  <% end %>
+<% else %>
+  <%= turbo_stream.replace dom_id(@task) do %>
+    <%= render "tasks/details", task: @task %>
+  <% end %>
+<% end %>

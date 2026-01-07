@@ -1,0 +1,29 @@
+<!-- Save as tudla-wordmark-light.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 100" role="img" aria-labelledby="titleDesc" >
+  <title id="titleDesc">Tudla — task management</title>
+  <desc>Wordmark: tud [target emblem] la — navy wordmark on white background</desc>
+
+  <!-- background rect to show safe area (optional) -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+
+  <!-- Wordmark group -->
+  <g font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial" font-weight="700" letter-spacing="0.5">
+    <!-- 'tud' -->
+    <text x="0" y="80" font-size="96" fill="#1A3C8C">tud</text>
+
+    <!-- emblem (target) -->
+    <g transform="translate(164,-15)">
+      <!-- outer ring -->
+      <circle cx="40" cy="64" r="48" fill="#1A3C8C"/>
+      <!-- inner white ring (creates donut) -->
+      <circle cx="40" cy="64" r="30" fill="#FFFFFF"/>
+      <!-- center dot -->
+      <circle cx="40" cy="64" r="16" fill="#FF8A00"/>
+      <!-- optional subtle white inner highlight for depth -->
+      <ellipse cx="46" cy="54" rx="6" ry="3" fill="#FFFFFF" opacity="0.08"/>
+    </g>
+
+    <!-- 'la' placed after emblem -->
+    <text x="264" y="80" font-size="96" fill="#1A3C8C">la</text>
+  </g>
+</svg>

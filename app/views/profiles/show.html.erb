@@ -1,0 +1,189 @@
+<% content_for :title, "My Profile" %>
+
+<div class="max-w-4xl w-full">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <!-- Header with breadcrumbs -->
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="font-bold text-3xl">My Profile</h1>
+    <div class="breadcrumbs hidden p-0 text-sm sm:inline">
+      <ul>
+        <li><%= link_to "Dashboard", user_root_path %></li>
+        <li class="opacity-80">My Profile</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Profile Information Card -->
+  <div class="card bg-base-100 shadow-md mb-6">
+    <div class="card-body">
+      <h2 class="card-title text-xl mb-4">
+        <span class="iconify lucide--user size-5"></span>
+        Profile Information
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Username -->
+        <div>
+          <label class="label">
+            <span class="label-text font-semibold">Username</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <span class="iconify lucide--at-sign size-4 text-base-content/60"></span>
+            <p class="text-base"><%= @user.username %></p>
+          </div>
+        </div>
+
+        <!-- Preferred Name -->
+        <div>
+          <label class="label">
+            <span class="label-text font-semibold">Preferred Name</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <span class="iconify lucide--user size-4 text-base-content/60"></span>
+            <p class="text-base"><%= @user.preferred_name %></p>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="md:col-span-2">
+          <label class="label">
+            <span class="label-text font-semibold">Email</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <span class="iconify lucide--mail size-4 text-base-content/60"></span>
+            <p class="text-base"><%= @user.email %></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Card -->
+  <div class="card bg-base-100 shadow-md mb-6">
+    <div class="card-body">
+      <h2 class="card-title text-xl mb-4">
+        <span class="iconify lucide--shield size-5"></span>
+        Security
+      </h2>
+      
+      <div class="space-y-6">
+        <!-- Password Section -->
+        <div>
+          <label class="label">
+            <span class="label-text font-semibold">Password</span>
+          </label>
+          <p class="text-base-content/60 text-sm mb-3">
+            Keep your account secure by using a strong password
+          </p>
+          <%= link_to edit_user_registration_path, class: "btn btn-primary" do %>
+            <span class="iconify lucide--key size-4"></span>
+            Change my password
+          <% end %>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- API Tokens Section -->
+        <div>
+          <label class="label">
+            <span class="label-text font-semibold">API Tokens</span>
+          </label>
+          <p class="text-base-content/60 text-sm mb-4">
+            Generate tokens for MCP integration with AI assistants like Claude or Cascade
+          </p>
+          
+          <%= form_with model: ApiToken.new, url: api_tokens_path, method: :post, class: "mb-4", data: { turbo_frame: "_top" } do |f| %>
+            <div class="flex gap-2">
+              <%= f.text_field :name, 
+                  class: "input input-bordered flex-1", 
+                  placeholder: "Token name (e.g., Claude Desktop)", 
+                  required: true %>
+              <%= f.submit "Generate Token", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+
+          <% if @api_tokens.any? %>
+            <div class="overflow-x-auto mt-4">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Used</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="api_tokens_list">
+                  <% @api_tokens.each do |token| %>
+                    <%= render "api_tokens/token_row", token: token %>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% else %>
+            <div class="alert alert-info mt-4">
+              <span class="iconify lucide--info size-4"></span>
+              <span>No API tokens yet. Create one to use MCP integration.</span>
+            </div>
+          <% end %>
+
+          <details class="collapse collapse-arrow bg-base-200 mt-4">
+            <summary class="collapse-title text-sm font-medium">
+              How to use API tokens
+            </summary>
+            <div class="collapse-content text-sm">
+              <ol class="list-decimal list-inside space-y-2">
+                <li>Generate a token with a descriptive name</li>
+                <li>Copy the token value (shown only once)</li>
+                <li>Add it to your AI assistant config with: <code class="bg-base-300 px-1 rounded">Authorization: Bearer YOUR_TOKEN</code></li>
+                <li>See <code class="bg-base-300 px-1 rounded">docs/mcp_setup.md</code> for details</li>
+              </ol>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Stats Card (Optional) -->
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <h2 class="card-title text-xl mb-4">
+        <span class="iconify lucide--activity size-5"></span>
+        Account Activity
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Sign-in count</div>
+          <div class="stat-value text-2xl"><%= @user.sign_in_count || 0 %></div>
+        </div>
+        
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Last sign-in</div>
+          <div class="stat-value text-sm">
+            <%= @user.last_sign_in_at ? time_ago_in_words(@user.last_sign_in_at) + " ago" : "Never" %>
+          </div>
+        </div>
+        
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Account created</div>
+          <div class="stat-value text-sm">
+            <%= time_ago_in_words(@user.created_at) %> ago
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex gap-2 mt-6">
+    <%= link_to "Back to Dashboard", user_root_path, class: "btn btn-soft" %>
+  </div>
+
+  <!-- Modal container for displaying newly created token -->
+  <div id="token_modal"></div>
+</div>

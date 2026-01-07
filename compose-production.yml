@@ -1,0 +1,89 @@
+services:
+  db:
+    platform: linux/amd64
+    image: postgres:18.0
+    restart: unless-stopped
+    volumes:
+      - postgres_production:/var/lib/postgresql
+    environment:
+      POSTGRES_PASSWORD: $DATABASE_PASSWORD
+    env_file:
+      - ./.env
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  rails:
+    platform: linux/amd64
+    image: tibomogul/tudla:$CURRENT_COMMIT
+    restart: unless-stopped
+    command: bash -lc "bin/rails server -b 0.0.0.0 -p 3000"
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PASSWORD: $DATABASE_PASSWORD
+      RAILS_ENV: production
+    ports:
+      - "$HOST_PORT:3000"
+    volumes:
+      - storage_production:/home/user/app/storage
+    depends_on:
+      - db # add all dependant container
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  queue:
+    platform: linux/amd64
+    image: tibomogul/tudla:$CURRENT_COMMIT
+    restart: unless-stopped
+    command: bash -lc "bin/jobs"
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PASSWORD: $DATABASE_PASSWORD
+      RAILS_ENV: production
+    volumes:
+      - storage_production:/home/user/app/storage
+    depends_on:
+      - db # add all dependant container
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  backup:
+    platform: linux/amd64
+    image: tibomogul/tudla:$CURRENT_COMMIT
+    user: root
+    restart: unless-stopped
+    command: >
+      bash -lc "
+      (echo 'DATABASE_HOST=db';
+       echo 'DATABASE_PASSWORD=$DATABASE_PASSWORD';
+       echo 'BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}';
+       echo '0 2 * * * . /etc/environment && /home/user/app/bin/backup >> /var/log/backup.log 2>&1') | crontab - &&
+      env | grep -E '^(DATABASE_HOST|DATABASE_PASSWORD|BACKUP_RETENTION_DAYS)=' > /etc/environment &&
+      touch /var/log/backup.log &&
+      cron && tail -f /var/log/backup.log
+      "
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PASSWORD: $DATABASE_PASSWORD
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - storage_production:/home/user/app/storage:ro
+      - backups_production:/backups
+    depends_on:
+      - db
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  postgres_production: # named volume
+  storage_production: # named volume
+  backups_production: # backup storage volume

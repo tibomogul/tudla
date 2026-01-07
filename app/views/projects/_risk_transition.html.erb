@@ -1,0 +1,12 @@
+<li data-controller="fade-in">
+  <div class="timeline-start font-semibold">
+    <%= transition.to_state.humanize %>
+  </div>
+  <div class="timeline-middle badge <%= risk_badge_color(transition.to_state) %>"></div>
+  <div class="timeline-end text-sm text-gray-500">
+    <%= transition.project.format_in_timezone(transition.created_at) %>
+    <% if transition.metadata["user_id"] %>
+      by <%= User.find_by(id: transition.metadata["user_id"])&.email || "Unknown" %>
+    <% end %>
+  </div>
+</li>

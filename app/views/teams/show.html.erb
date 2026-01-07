@@ -1,0 +1,37 @@
+<% content_for :title, "Showing team" %>
+
+<div class="w-full max-w-5xl">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <h1 class="font-bold text-4xl">Showing team</h1>
+
+  <%= render @team %>
+
+  <div class="flex flex-wrap gap-2 mt-4">
+    <% if policy(Report).create? %>
+      <%= link_to new_report_path(reportable_id: @team.id, reportable_type: "Team"), class: "btn btn-primary" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        Create Report
+      <% end %>
+    <% end %>
+    <%= link_to "Edit this team", edit_team_path(@team), class: "btn btn-soft" if policy(@team).edit? %>
+    <%= link_to "Back to teams", teams_path, class: "btn btn-soft" if policy(Team).index? %>
+    <%= button_to "Destroy this team", @team, method: :delete, form_class: "inline-block", class: "btn btn-soft btn-secondary", data: { turbo_confirm: "Are you sure?" } if policy(@team).destroy? %>
+  </div>
+
+  <!-- Recent Reports Section -->
+  <%= render "shared/recent_reports", recent_reports: @recent_reports %>
+
+  <!-- Attachments Section -->
+  <%= render "shared/attachments_section", record: @team, can_upload: policy(@team).update? %>
+
+  <!-- Notes Section -->
+  <%= render "shared/notes_section", record: @team, can_create: policy(@team).update? %>
+
+  <!-- Links Section -->
+  <%= render "shared/links_section", record: @team, can_create: policy(@team).update? %>
+</div>
