@@ -251,12 +251,12 @@ Additional documentation is available in the `docs/` directory:
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [O'Saasy License](https://osaasy.dev/). See the [LICENSE](LICENSE) file for details.
 
 This means:
-- You can use, modify, and distribute this software
-- If you modify and deploy this software as a network service, you must make your source code available
-- Any derivative works must also be licensed under AGPL-3.0
+- You can use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software
+- You must include the copyright notice and permission notice in all copies
+- You may not use the Software to directly compete with the original Licensor by offering it as a SaaS product where the primary value is the functionality of the Software itself
 
 ## Acknowledgments
 
