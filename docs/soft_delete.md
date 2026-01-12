@@ -1,212 +1,392 @@
 # Soft Delete Implementation
 
 ## Overview
-Projects, Scopes, Tasks, Notes, Links, and Attachments use soft delete to preserve data history while removing records from normal queries.
 
-## Implementation Details
+Soft delete preserves data history by marking records as deleted rather than permanently removing them from the database. Records are filtered from normal queries but remain available for auditing, recovery, and compliance purposes.
 
-### Database Schema
-Each soft-deletable model has a `deleted_at` datetime column with a partial index:
-```sql
-ALTER TABLE projects ADD COLUMN deleted_at DATETIME;
-CREATE INDEX index_projects_on_deleted_at ON projects (deleted_at) WHERE deleted_at IS NULL;
-```
+## Models with Soft Delete
 
-The partial index (`WHERE deleted_at IS NULL`) only indexes non-deleted records, optimizing the most common queries.
+The following 10 models include the `SoftDeletable` concern:
+
+| Model | File | Notes |
+|-------|------|-------|
+| Project | `app/models/project.rb` | Includes Statesman state machine |
+| Scope | `app/models/scope.rb` | |
+| Task | `app/models/task.rb` | Includes Statesman state machine |
+| Note | `app/models/note.rb` | |
+| Link | `app/models/link.rb` | |
+| Attachment | `app/models/attachment.rb` | |
+| Organization | `app/models/organization.rb` | |
+| Team | `app/models/team.rb` | |
+| Report | `app/models/report.rb` | |
+| ApiToken | `app/models/api_token.rb` | Dual-state: revocation + soft delete |
+
+## Implementation
 
 ### SoftDeletable Concern
+
 Location: `app/models/concerns/soft_deletable.rb`
 
-**Features:**
-- `scope :active` - Returns non-deleted records (must be explicitly used)
-- `scope :with_deleted` - Include soft-deleted records in query
-- `scope :only_deleted` - Return only soft-deleted records
-- `soft_delete` - Mark record as deleted (sets `deleted_at` timestamp)
-- `restore` - Restore a soft-deleted record (clears `deleted_at`)
-- `deleted?` - Check if record is soft deleted
-- `destroy` - Override to perform soft delete instead of hard delete
-- `destroy!` - Hard delete (actually remove from database)
-
-**IMPORTANT:** No `default_scope` - You must explicitly use `.active` in all queries
-
-### Models with Soft Delete (10 total)
-1. **Project** (`app/models/project.rb`)
-2. **Scope** (`app/models/scope.rb`)
-3. **Task** (`app/models/task.rb`)
-4. **Note** (`app/models/note.rb`)
-5. **Link** (`app/models/link.rb`)
-6. **Attachment** (`app/models/attachment.rb`)
-7. **Organization** (`app/models/organization.rb`)
-8. **Team** (`app/models/team.rb`)
-9. **Report** (`app/models/report.rb`)
-10. **ApiToken** (`app/models/api_token.rb`) - Special behavior: dual-state with `active` column
-
-## Usage
-
-### Querying Records
 ```ruby
-# MUST explicitly use .active scope to exclude soft-deleted records
-Project.active.all                    # Only active projects
-Task.active.where(project_id: 1)      # Only active tasks
+module SoftDeletable
+  extend ActiveSupport::Concern
 
-# Include soft-deleted records
-Project.with_deleted.all              # All projects (active + deleted)
-Task.only_deleted.all                 # Only soft-deleted tasks
-```
+  included do
+    scope :active, -> { where(deleted_at: nil) }
+    scope :with_deleted, -> { unscope(where: :deleted_at) }
+    scope :only_deleted, -> { unscope(where: :deleted_at).where.not(deleted_at: nil) }
+  end
 
-### Deleting Records
-```ruby
-# Soft delete (recommended)
-project.destroy                # Sets deleted_at timestamp
-task.destroy                   # Archived, still in database
+  def soft_delete
+    update_column(:deleted_at, Time.current)
+  end
 
-# Hard delete (permanent removal)
-project.destroy!               # Permanently removes from database
-```
+  def restore
+    update_column(:deleted_at, nil)
+  end
 
-### Restoring Records
-```ruby
-# Find and restore a soft-deleted record
-project = Project.only_deleted.find(id)
-project.restore                # Clears deleted_at, makes it active again
-```
+  def deleted?
+    deleted_at.present?
+  end
 
-## Controller Behavior
+  def destroy
+    soft_delete
+  end
 
-### Destroy Actions
-Controllers use `destroy` (soft delete) instead of `destroy!`:
-```ruby
-# ProjectsController, ScopesController, TasksController
-def destroy
-  @record.destroy
-  redirect_to records_path, notice: "Record was successfully archived."
-end
-```
-
-### Index and Show Actions
-All queries automatically filter soft-deleted records via `policy_scope`:
-```ruby
-def index
-  @projects = policy_scope(Project)  # Only active projects
-end
-
-def show
-  @project = Project.find(params[:id])  # Only finds active projects
-end
-```
-
-## Policy Integration
-
-Pundit policies automatically respect soft delete via the default scope:
-```ruby
-class ProjectPolicy::Scope
-  def resolve
-    # scope already filters soft-deleted via default_scope
-    scope.where(id: accessible_project_ids)
+  def destroy!
+    super  # Hard delete
   end
 end
 ```
 
-## MCP Tools Integration
+### Key Design Decision: No default_scope
 
-MCP tools automatically filter soft-deleted records:
+**There is NO `default_scope`.** All queries must explicitly use `.active` to filter soft-deleted records.
+
+**Why:**
+- Conflicts with Statesman's `ActiveRecordQueries` adapter (unique index checks fail)
+- Causes issues with Rails 8 `insert_all` / `upsert` operations
+- Causes problems with `after_commit` broadcasts during seeding
+- Makes filtering explicit and intentional
+
+### Database Schema
+
+Each soft-deletable model has a `deleted_at` datetime column with a partial index:
+
+```sql
+ALTER TABLE projects ADD COLUMN deleted_at DATETIME;
+CREATE INDEX index_projects_on_deleted_at ON projects (deleted_at) 
+  WHERE deleted_at IS NULL;
+```
+
+The partial index only indexes non-deleted records, optimizing the most common queries.
+
+**Migration file:** `db/migrate/20251106000000_add_soft_delete_to_models.rb`
+- Uses `disable_ddl_transaction!` for production safety
+- Creates indexes with `algorithm: :concurrently` to avoid table locks
+
+## Usage
+
+### Querying Records
+
 ```ruby
-# ListTasksTool
-def call(...)
-  tasks = Task.all           # default_scope filters deleted
-  tasks = scope_tasks_by_user(tasks)
-  format_tasks(tasks)
+# REQUIRED: Explicitly use .active to exclude soft-deleted records
+Project.active.all
+Task.active.where(project_id: 1)
+
+# Include soft-deleted records
+Project.with_deleted.all
+
+# Only soft-deleted records
+Project.only_deleted.all
+
+# WARNING: Without .active, soft-deleted records ARE included
+Project.all  # Includes deleted records!
+```
+
+### Deleting Records
+
+```ruby
+# Soft delete (sets deleted_at timestamp)
+project.destroy
+
+# Hard delete (permanently removes from database)
+project.destroy!
+```
+
+### Restoring Records
+
+```ruby
+project = Project.only_deleted.find(id)
+project.restore  # Clears deleted_at
+project.deleted?  # => false
+```
+
+## Integration Requirements
+
+Because there is no `default_scope`, you **must explicitly use `.active`** in:
+
+### Controllers
+```ruby
+# Via policy_scope (policies add .active)
+@projects = policy_scope(Project)
+
+# Direct queries
+@tasks = Task.active.where(user_id: current_user.id)
+```
+
+### Policies
+All Pundit policy scopes explicitly call `.active`:
+```ruby
+class ProjectPolicy::Scope
+  def resolve
+    # ... permission logic ...
+    scope.active.where(id: project_ids)
+  end
 end
 ```
 
-## Performance Considerations
+### MCP Tools
+All MCP tools explicitly call `.active`:
+```ruby
+def call(limit: 50)
+  projects = Project.active.limit(limit)
+  # ...
+end
+```
 
-### Indexes
+### Associations
+Associations do NOT automatically filter:
+```ruby
+# Must explicitly filter
+project.tasks.active
+
+# Without .active, includes deleted tasks
+project.tasks
+```
+
+## Controller Behavior
+
+Most controllers use soft delete (`destroy`):
+
+| Controller | Method | Message |
+|------------|--------|---------|
+| ProjectsController | `destroy` | "archived" |
+| ScopesController | `destroy` | "archived" |
+| TasksController | `destroy` | "archived" |
+| OrganizationsController | `destroy` | "archived" |
+| TeamsController | `destroy` | "archived" |
+| ReportsController | `destroy` | "archived" |
+| ApiTokensController | `destroy` | "archived" |
+| NotesController | `destroy` | "deleted" |
+| LinksController | `destroy` | "deleted" |
+
+**Exception:** `AttachmentsController` uses `destroy!` (hard delete) for file cleanup.
+
+## Special Model Behaviors
+
+### Statesman Integration (Task & Project)
+
+Soft delete is fully compatible with Statesman's `ActiveRecordQueries` adapter:
+
+```ruby
+class Task < ApplicationRecord
+  include Statesman::Adapters::ActiveRecordQueries[
+    transition_class: TaskTransition,
+    initial_state: :new
+  ]
+  include SoftDeletable  # After Statesman
+end
+```
+
+**Combined usage:**
+```ruby
+Task.active.in_state(:in_progress)
+Task.active.not_in_state(:done, :blocked)
+Project.active.in_state(:green)
+```
+
+### ApiToken Dual-State
+
+ApiToken combines revocation (`active` column) with soft deletion (`deleted_at` column):
+
+```ruby
+# Soft delete AND revoke
+token.destroy  # Sets active=false AND deleted_at=Time.current
+
+# Revoke only (token remains visible in list)
+token.revoke!  # Sets active=false only
+
+# Authentication checks both states
+ApiToken.authenticate(token_string)  # Requires active=true AND deleted_at IS NULL
+```
+
+**Overridden `active` scope:**
+```ruby
+scope :active, -> { 
+  where(deleted_at: nil)
+    .where(active: true)
+    .where("expires_at IS NULL OR expires_at > ?", Time.current) 
+}
+```
+
+## Performance
+
+### Partial Indexes
+
 Partial indexes on `deleted_at IS NULL` ensure optimal performance:
 - Only non-deleted records are indexed
 - Queries for active records use the index efficiently
 - Minimal storage overhead
 
 ### Query Performance
-```sql
--- Fast: Uses partial index
-SELECT * FROM projects WHERE deleted_at IS NULL;
 
--- Also fast: Implicit default scope
-SELECT * FROM projects;  -- Rails adds WHERE deleted_at IS NULL
+```ruby
+# Fast: Uses partial index
+Project.active.where(name: 'Test')
 
--- Slower: Full table scan
-SELECT * FROM projects WHERE deleted_at IS NOT NULL;  -- No index
+# Slower: No index on deleted records (full table scan)
+Project.only_deleted.all
 ```
 
-## Associations
+## Adding Soft Delete to New Models
 
-Soft delete automatically applies to associations:
+### 1. Create Migration
+
 ```ruby
-project.scopes     # Only active scopes (default_scope applies)
-scope.tasks        # Only active tasks
-```
+class AddSoftDeleteToMyModel < ActiveRecord::Migration[8.1]
+  disable_ddl_transaction!
 
-## Broadcasts and Callbacks
-
-After-commit callbacks still fire for soft delete:
-```ruby
-# Note model
-after_commit :broadcast_note_update, on: [:destroy]
-
-# When note.destroy is called (soft delete):
-# 1. deleted_at is set
-# 2. after_commit callback fires
-# 3. Broadcast updates the UI
-```
-
-## Migration
-
-To add soft delete to a new model:
-
-1. **Create migration:**
-```ruby
-add_column :model_name, :deleted_at, :datetime
-add_index :model_name, :deleted_at, where: "deleted_at IS NULL"
-```
-
-2. **Include concern in model:**
-```ruby
-class MyModel < ApplicationRecord
-  include SoftDeletable
-  # ... rest of model
+  def change
+    add_column :my_models, :deleted_at, :datetime
+    add_index :my_models, :deleted_at, 
+      where: "deleted_at IS NULL", 
+      algorithm: :concurrently
+  end
 end
 ```
 
-3. **Update controller destroy action:**
+### 2. Include Concern
+
+```ruby
+class MyModel < ApplicationRecord
+  include SoftDeletable
+end
+```
+
+**For Statesman models**, include Statesman adapter first:
+```ruby
+class MyModel < ApplicationRecord
+  include Statesman::Adapters::ActiveRecordQueries[
+    transition_class: MyTransition,
+    initial_state: :initial_state
+  ]
+  include SoftDeletable  # After Statesman
+end
+```
+
+### 3. Update Controller
+
 ```ruby
 def destroy
-  @record.destroy  # Use destroy, not destroy!
+  @record.destroy  # Not destroy!
   redirect_to records_path, notice: "Record was successfully archived."
 end
 ```
 
+### 4. Update Policy Scope
+
+```ruby
+class MyModelPolicy::Scope
+  def resolve
+    scope.active.where(...)  # Add .active
+  end
+end
+```
+
+## Cleanup Old Records
+
+To permanently delete old soft-deleted records:
+
+```ruby
+# In a rake task or console
+Project.only_deleted
+  .where('deleted_at < ?', 90.days.ago)
+  .find_each(&:destroy!)
+```
+
 ## Troubleshooting
 
-### Record Not Found Error
+### Record Not Found
+
 If you get `ActiveRecord::RecordNotFound` for a deleted record:
 ```ruby
 # Use with_deleted scope
 record = Model.with_deleted.find(id)
 ```
 
-### Accessing Deleted Records in Tests
+### Deleted Records Appearing
+
+If deleted records appear in queries, ensure `.active` is used:
 ```ruby
-# In RSpec/test files
-deleted_task = Task.only_deleted.find(id)
-deleted_task.restore  # Make it active again
+# Wrong
+Project.where(team_id: 1)
+
+# Correct
+Project.active.where(team_id: 1)
 ```
 
-### Bypassing Soft Delete
-```ruby
-# To query all records including deleted
-Model.with_deleted.where(...)
+### Permanently Delete a Record
 
-# To permanently delete
-record.destroy!  # Use with caution!
+```ruby
+record.destroy!  # Hard delete (use with caution)
 ```
+
+## Migration & Deployment
+
+### Run Migration
+
+```bash
+docker compose exec rails bash -lc "bin/rails db:migrate"
+```
+
+### Verify Migration
+
+```bash
+docker compose exec rails bash -lc "bin/rails db:migrate:status"
+```
+
+### Test in Console
+
+```ruby
+# Soft delete
+project = Project.first
+project.destroy
+project.deleted?  # => true
+
+# Verify filtering
+Project.active.count  # Excludes deleted
+Project.with_deleted.count  # Includes deleted
+
+# Restore
+project.restore
+project.deleted?  # => false
+```
+
+### Rollback (if needed)
+
+```bash
+docker compose exec rails bash -lc "bin/rails db:rollback"
+```
+
+**Warning:** Rollback will permanently delete any soft-deleted records!
+
+## Benefits
+
+- **Data Preservation:** Records are never permanently lost
+- **Audit Trail:** Keep history of deleted records
+- **Easy Recovery:** Restore accidentally deleted records
+- **Performance:** Partial indexes ensure fast queries on active records
+- **Statesman Compatible:** Full `ActiveRecordQueries` support
+- **Rails 8 Compatible:** No conflicts with `insert_all` or broadcasts
+- **Explicit:** `.active` scope makes filtering visible and intentional

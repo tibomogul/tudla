@@ -1,92 +1,29 @@
 # Model Context Protocol (MCP) Setup
 
-This document describes how to set up and use the Task Manager MCP integration using the fast-mcp gem with Rails.
+This document describes how to set up and use the MCP integration for AI assistants to interact with the task management system.
 
-## Overview
+## Quick Start
 
-The Task Manager uses fast-mcp's Rails integration to provide AI assistants with tools to interact with your task management system. The implementation follows Rails conventions with individual tool classes and automatic discovery.
+### 1. Start the Rails App
 
-## Architecture
-
-- **Framework**: fast-mcp gem with Rails integration
-- **Tools Location**: `app/tools/` directory
-- **Resources Location**: `app/resources/` directory
-- **Configuration**: `config/initializers/fast_mcp.rb`
-- **Transport**: HTTP via Rack middleware (SSE and JSON-RPC)
-- **Authentication**: Bearer token via Authorization header
-
-## Available Tools
-
-### Task Tools
-- **ListTasksTool** - List and filter tasks by project, scope, user, state, today status
-- **GetTaskTool** - Get task details including state history and allowed transitions
-- **CreateTaskTool** - Create new task with all attributes
-- **UpdateTaskTool** - Update task attributes
-- **TransitionTaskStateTool** - Change task state via state machine (validates transitions)
-- **AssignTaskTool** - Assign task to user
-
-### Scope Tools
-- **ListScopesTool** - List and filter scopes by project
-- **GetScopeTool** - Get scope details with tasks and completion percentage
-- **CreateScopeTool** - Create new scope in project
-- **UpdateScopeTool** - Update scope attributes
-
-### Project Tools
-- **ListProjectsTool** - List all projects
-- **GetProjectTool** - Get project details with scopes and tasks
-
-### Audit Tools
-- **ListUserChangesTool** - List changes made by current user from PaperTrail audit log (defaults to last 24 hours)
-
-## Authentication
-
-The MCP server uses API tokens for authentication. Each user can generate their own tokens.
-
-### Generating API Tokens
-
-1. Log in to the Task Manager web application
-2. Navigate to your profile page (click your name in the topbar)
-3. Scroll to the "API Tokens" section under Security
-4. Enter a token name and click "Generate Token"
-5. Copy the token from the modal (it will only be shown once)
-
-### Using Tokens
-
-Include the token in the Authorization header:
-
-```
-Authorization: Bearer your-token-here
+```bash
+docker compose up
 ```
 
-When authenticated, users will only see tasks, scopes, and projects they have access to based on their project memberships.
+### 2. Generate an API Token
 
-## Configuration
+1. Visit http://localhost:3000
+2. Log in with your account
+3. Click your name in the topbar to go to your profile
+4. Scroll to the "API Tokens" section under Security
+5. Enter a name (e.g., "Claude Desktop") and click "Generate Token"
+6. Copy the token from the modal (shown only once)
 
-### Server Configuration
+### 3. Configure Your AI Assistant
 
-The MCP server is configured in `config/initializers/fast_mcp.rb`:
+#### Claude Desktop
 
-```ruby
-FastMcp.mount_in_rails(
-  Rails.application,
-  name: 'task-manager',
-  version: '1.0.0',
-  path_prefix: '/mcp',
-  messages_route: 'messages',
-  sse_route: 'sse'
-)
-```
-
-### Endpoints
-
-- **HTTP Messages**: `http://localhost:3000/mcp/messages` (POST)
-- **SSE Stream**: `http://localhost:3000/mcp/sse` (GET)
-
-## Client Configuration
-
-### For Claude Desktop
-
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -104,7 +41,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
-### For Cascade/Windsurf
+#### Cascade/Windsurf
 
 Add to your MCP configuration:
 
@@ -124,100 +61,163 @@ Add to your MCP configuration:
 }
 ```
 
-### For Docker Deployment
+### 4. Test It
 
-When using Docker, update the URL to point to your Docker host:
+Restart your AI assistant, then try:
+- "List my tasks"
+- "Show me project 1"
+- "Create a task called 'Test MCP integration'"
+- "What changes have I made in the last 24 hours?"
 
-```json
-{
-  "mcpServers": {
-    "task-manager": {
-      "transport": {
-        "type": "sse",
-        "url": "http://localhost:3000/mcp/sse",
-        "headers": {
-          "Authorization": "Bearer YOUR_TOKEN_HERE"
-        }
-      }
-    }
-  }
-}
-```
+## Architecture
 
-## Development
+| Component | Location | Description |
+|-----------|----------|-------------|
+| Configuration | `config/initializers/fast_mcp.rb` | MCP server setup |
+| Tools | `app/tools/` | Individual tool classes |
+| Resources | `app/resources/` | Resource classes (base only) |
+| Authentication | `lib/mcp_auth_middleware.rb` | Bearer token middleware |
+| Base Tool | `app/tools/application_tool.rb` | Shared tool logic |
 
-### Starting the Server
+### Endpoints
 
-The MCP server runs as part of your Rails application:
+- **SSE Stream**: `http://localhost:3000/mcp/sse` (GET)
+- **HTTP Messages**: `http://localhost:3000/mcp/messages` (POST)
 
-```bash
-# Development
-docker compose up
+## Available Tools
 
-# Access at http://localhost:3000
-# MCP endpoints at http://localhost:3000/mcp/
-```
+### Task Tools (6)
 
-### Creating New Tools
+| Tool | Description | Read-Only |
+|------|-------------|-----------|
+| `ListTasksTool` | List/filter tasks by project, scope, user, state, today status | Yes |
+| `GetTaskTool` | Get task details with state history and allowed transitions | Yes |
+| `CreateTaskTool` | Create new task | No |
+| `UpdateTaskTool` | Update task attributes | No |
+| `TransitionTaskStateTool` | Change task state via state machine | No |
+| `AssignTaskTool` | Assign task to user | No |
 
-Generate a new tool:
+### Scope Tools (4)
+
+| Tool | Description | Read-Only |
+|------|-------------|-----------|
+| `ListScopesTool` | List/filter scopes by project | Yes |
+| `GetScopeTool` | Get scope details with tasks and completion percentage | Yes |
+| `CreateScopeTool` | Create new scope | No |
+| `UpdateScopeTool` | Update scope attributes | No |
+
+### Project Tools (2)
+
+| Tool | Description | Read-Only |
+|------|-------------|-----------|
+| `ListProjectsTool` | List all accessible projects | Yes |
+| `GetProjectTool` | Get project details with scopes and tasks | Yes |
+
+### Audit Tools (1)
+
+| Tool | Description | Read-Only |
+|------|-------------|-----------|
+| `ListUserChangesTool` | List changes from PaperTrail audit log | Yes |
+
+**Total: 13 tools** (all in `app/tools/`)
+
+## Authentication
+
+### How It Works
+
+1. User generates API token via profile page
+2. Token included in `Authorization: Bearer <token>` header
+3. `McpAuthMiddleware` validates token and sets `Thread.current[:mcp_current_user]`
+4. Tools access user via `current_user` method
+5. All queries scoped to authenticated user's permissions via Pundit policies
+
+### Token Management
+
+- **Generate**: Profile page → Security → API Tokens
+- **Revoke**: Click "Revoke" on token row
+- **Delete**: Click "Delete" to soft-delete (archive)
+
+### Token States
+
+| State | Can Authenticate | Visible in List |
+|-------|------------------|-----------------|
+| Active | Yes | Yes |
+| Revoked | No | Yes |
+| Deleted | No | No |
+| Expired | No | Yes |
+
+## Creating New Tools
+
+### Using Generator
 
 ```bash
 docker compose exec rails bash -lc "rails generate fast_mcp:tool MyTool"
 ```
 
-Or create manually in `app/tools/`:
+### Manual Creation
+
+Create `app/tools/my_tool.rb`:
 
 ```ruby
-# app/tools/my_tool.rb
 class MyTool < ApplicationTool
   description "Description of what this tool does"
 
   annotations(
     title: "My Tool",
-    read_only_hint: true  # or false if it modifies data
+    read_only_hint: true  # false if it modifies data
   )
 
   arguments do
-    required(:param1).filled(:string).description("Parameter description")
+    required(:param1).filled(:string).description("Required parameter")
     optional(:param2).filled(:integer).description("Optional parameter")
   end
 
   def call(param1:, param2: nil)
-    # Your implementation
-    # Access current_user for scoping
+    # Access current_user for the authenticated user
     # Use scope_tasks_by_user, scope_scopes_by_user, scope_projects_by_user
+    # Use authorize(record, :action?) for Pundit authorization
     
-    "Result"
+    "Result string"
   end
 end
 ```
 
-### Authentication in Tools
+### ApplicationTool Methods
 
-All tools inherit from `ApplicationTool` which provides:
+| Method | Description |
+|--------|-------------|
+| `current_user` | Returns authenticated user (or nil) |
+| `authorize(record, :action?)` | Pundit authorization check |
+| `scope_tasks_by_user(tasks)` | Filter tasks by user permissions |
+| `scope_scopes_by_user(scopes)` | Filter scopes by user permissions |
+| `scope_projects_by_user(projects)` | Filter projects by user permissions |
 
-- `current_user` - Returns the authenticated user (or nil)
-- `scope_tasks_by_user(tasks)` - Scope tasks by user permissions
-- `scope_scopes_by_user(scopes)` - Scope scopes by user permissions
-- `scope_projects_by_user(projects)` - Scope projects by user permissions
+## State Machine
+
+Tasks use a Statesman state machine with these transitions:
+
+```
+new → in_progress
+in_progress → in_review, blocked
+in_review → done, blocked
+blocked → in_progress
+done → in_review (reopen)
+```
+
+`TransitionTaskStateTool` enforces these rules and returns an error for invalid transitions.
 
 ## Testing
 
-### Using MCP Inspector
-
-Test your tools with the official MCP inspector:
+### MCP Inspector
 
 ```bash
-# Test with SSE transport
 npx @modelcontextprotocol/inspector
-# Then select SSE and enter: http://localhost:3000/mcp/sse
-# Add your token in the headers section
+# Select SSE transport
+# URL: http://localhost:3000/mcp/sse
+# Add Authorization header with your token
 ```
 
-### Manual Testing
-
-You can also test the HTTP endpoint directly:
+### Manual HTTP Test
 
 ```bash
 curl -X POST http://localhost:3000/mcp/messages \
@@ -232,81 +232,89 @@ curl -X POST http://localhost:3000/mcp/messages \
 
 ## Usage Examples
 
-Once configured, your AI assistant will have access to these tools:
-
-- "List all tasks in project 5"
-- "Create a new task called 'Fix login bug' in project 3"
-- "Show me details for task 42"
-- "Transition task 42 to in_progress"
-- "Assign task 15 to user 7"
-- "List all scopes in project 2"
-- "Create a scope called 'User Authentication' in project 1"
-- "What's the status of scope 8?"
-- "What changes have I made in the last 24 hours?"
-- "Show me all my changes from 2025-11-01 to 2025-11-03"
-
-## State Machine
-
-Tasks use a Statesman state machine with these transitions:
-
-- **new** → in_progress
-- **in_progress** → in_review, blocked
-- **in_review** → done, blocked
-- **blocked** → in_progress
-- **done** → in_review (for reopening)
-
-The `TransitionTaskStateTool` enforces these rules and returns an error for invalid transitions.
+| Request | Tool Used |
+|---------|-----------|
+| "List all tasks in project 5" | ListTasksTool |
+| "Create a task called 'Fix login bug'" | CreateTaskTool |
+| "Show me details for task 42" | GetTaskTool |
+| "Transition task 42 to in_progress" | TransitionTaskStateTool |
+| "Assign task 15 to user 7" | AssignTaskTool |
+| "List all scopes in project 2" | ListScopesTool |
+| "What changes have I made today?" | ListUserChangesTool |
+| "Show team 3's changes this week" | ListUserChangesTool (with team_id) |
 
 ## Troubleshooting
 
-### Tools not appearing
+### Tools Not Appearing
 
-1. Restart your Rails application
+1. Verify Rails app is running
 2. Check `config/initializers/fast_mcp.rb` is loaded
 3. Verify tools inherit from `ApplicationTool`
 4. Check Rails logs for errors
 
-### Authentication errors
+### Authentication Errors
 
-1. Verify token is valid: Check profile page → API Tokens section
+1. Verify token exists: Profile → API Tokens
 2. Ensure token is active and not expired
-3. Check Authorization header format: `Bearer YOUR_TOKEN`
-4. Verify token belongs to a user with project access
+3. Check header format: `Authorization: Bearer YOUR_TOKEN`
+4. Check Rails logs for "MCP Auth" messages
 
-### Permission errors
+### Permission Errors
 
-Users can only see resources they have access to:
+Users only see resources they have access to:
 - Tasks they're assigned to or in their projects
 - Scopes in their projects
 - Projects they're members of
 
 Check `user_party_roles` table for project memberships.
 
+### Invalid State Transition
+
+Check allowed transitions:
+```ruby
+task.state_machine.allowed_transitions
+```
+
 ## Security Considerations
 
 - API tokens provide full access to the user's data
 - Tokens should be kept secure and not shared
-- Tokens can be revoked at any time via `/api_tokens`
+- Tokens can be revoked at any time
 - Consider setting expiration dates on tokens
-- All operations are scoped to the authenticated user's permissions
+- All operations scoped to authenticated user's permissions
 - State machine validations prevent invalid transitions
 
-## Comparison with Previous Implementation
+## Configuration Reference
 
-The previous implementation used a monolithic server file. The new Rails-based approach:
+### Server Configuration
 
-✅ **Benefits:**
-- Individual tool classes (Rails convention)
-- Automatic tool discovery
-- Built-in HTTP support via Rack middleware
-- No custom server process needed
-- Integrates seamlessly with Rails app
-- Easier to test and maintain
-- Proper error handling via exceptions
+`config/initializers/fast_mcp.rb`:
 
-📝 **Migration Notes:**
-- Old `mcp/task_manager_server.rb` removed
-- Old `bin/mcp-server` removed
-- Old custom HTTP server removed
-- Tools now in `app/tools/` directory
-- Authentication via API tokens instead of request-level auth
+```ruby
+FastMcp.mount_in_rails(
+  Rails.application,
+  name: Rails.application.class.module_parent_name.underscore.dasherize,
+  version: "1.0.0",
+  path_prefix: "/mcp",
+  messages_route: "messages",
+  sse_route: "sse",
+  allowed_origins: ["localhost", /localhost:\d+/, "127.0.0.1", "[::1]"],
+  localhost_only: false
+) do |server|
+  Rails.application.config.after_initialize do
+    server.register_tools(*ApplicationTool.descendants)
+    server.register_resources(*ApplicationResource.descendants)
+  end
+end
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `config/initializers/fast_mcp.rb` | MCP server configuration |
+| `app/tools/application_tool.rb` | Base tool class with auth/scoping |
+| `app/tools/concerns/mcp_formatters.rb` | Shared formatting helpers |
+| `lib/mcp_auth_middleware.rb` | Token authentication middleware |
+| `app/models/api_token.rb` | API token model |
+| `app/controllers/api_tokens_controller.rb` | Token management |

@@ -8,7 +8,8 @@ TO DO:
 - [x] Add ability to create notes and attachments to tasks, scopes and projects
 - [x] cache the states in the parent object
 - [x] Add paper trail to models so we have audit trail. check how changes in the markdown fields are stored
-- [ ] Add MCP server functionality
+- [x] soft-delete only
+- [x] Add MCP server functionality
 - [ ] Emit events to subscribers
 - [ ] Generate daily update from today's tasks
     - [ ] Show calendar if available
@@ -20,7 +21,6 @@ TO DO:
 - Rails API throttling
 - [ ] Put Notes, Links and Attachments in their own tabs. Use shared partials.
 - [ ] Assign colors to scopes and show the different colors in the hill chart and the scope list
-- [ ] soft-delete only
 - [ ] PaperTrail history view, restore functionality
 - [ ] database partitioning
 - [ ] Be able to invite users to the system and assign roles (workaround: admin does manually via console)
