@@ -89,10 +89,16 @@ AZURE_APPLICATION_CLIENT_SECRET=your_azure_client_secret
 
 ```bash
 # Start Docker containers
-docker compose up
+docker compose up -d
 
-# In another terminal, set up the database
-docker compose exec rails bin/setup
+# Get into the container
+docker compose exec rails bash -l 
+
+# Set up the database
+$ bin/setup
+
+# Start the development server
+$ bin/dev
 ```
 
 ### 4. Access the application
@@ -101,12 +107,6 @@ docker compose exec rails bin/setup
 - **Mailcatcher**: http://localhost:1080 (for development emails)
 
 ## Development
-
-### Running the development server
-
-```bash
-docker compose up
-```
 
 ### Running Tests
 

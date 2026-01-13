@@ -1,7 +1,7 @@
 class TasksController < ApplicationController
   include ActionView::RecordIdentifier
   include DashboardLists
-  before_action :set_task, only: %i[ show edit update destroy update_state history move_to_today move_to_backlog ]
+  before_action :set_task, only: %i[ show edit update destroy update_state history move_to_today move_to_backlog integration_tab ]
 
   # GET /tasks or /tasks.json
   def index
@@ -54,7 +54,7 @@ class TasksController < ApplicationController
   def update
     authorize @task
     update_context = params[:task]&.dig(:update_context) || params[:update_context] || "details"
-    
+
     respond_to do |format|
       if @task.update(task_params)
         format.turbo_stream do
@@ -199,6 +199,21 @@ class TasksController < ApplicationController
 
     if turbo_frame_request?
       render partial: "history", locals: { task: @task, transitions: @transitions }
+    end
+  end
+
+  # GET /tasks/1/integration_tab?tab_definition_id=xxx
+  def integration_tab
+    @tab_definition_id = params[:tab_definition_id].to_sym
+    @tab_def = TudlaContracts::Integrations::Registry.views_for_slot("task_show_tab").find { |t| t.id == @tab_definition_id }
+
+    if @tab_def.nil?
+      head :not_found
+      return
+    end
+
+    if turbo_frame_request?
+      render partial: "integration_tab", locals: { task: @task, tab_def: @tab_def }
     end
   end
 

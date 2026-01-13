@@ -1,8 +1,8 @@
-<div class="mb-6">
+<div class="mt-6">
   <%= render "pages/projects_list" %>
 </div>
 
-<div class="mb-8">
+<div class="mt-6">
   <div class="flex items-center justify-between">
     <p class="text-xl font-semibold">My Day</p>
   </div>
@@ -29,3 +29,18 @@
     </div>
   </div>
 </div>
+
+<% TudlaContracts::Integrations::Registry.views_for_slot("dashboard_section").each do |tab_def| %>
+  <div class="mt-6 grid grid-cols-12 gap-6">
+    <div class="col-span-12">
+      <div class="card bg-base-100 shadow">
+        <div class="card-body px-0 pb-0">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-medium"><%= tab_def.label %></h2>
+          </div>
+          <%= render tab_def.component_class.new(user_id: current_user.id) %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

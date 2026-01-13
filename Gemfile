@@ -96,3 +96,11 @@ gem "paper_trail-hashdiff", "~> 0.1.3"
 gem "hashdiff", "~> 1.2"
 
 gem "fast-mcp", "~> 1.0"
+
+gem "view_component", "~> 4.0"
+
+gem "tudla_contracts", git: "https://github.com/tibomogul/tudla_contracts", branch: "main"
+
+# Optional gems for feature integration
+# These gems generally require tudla_contracts to be installed
+# gem "tudla_hubstaff", git: "https://github.com/tibomogul/tudla_hubstaff", branch: "main"

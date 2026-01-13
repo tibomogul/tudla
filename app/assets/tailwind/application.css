@@ -10,3 +10,7 @@
 @plugin "./daisyui-theme.mjs"{
   /* custom theme here */
 }
+
+/* Import the CSS for your feature engines. This is enabled by Tailwind experimental engine support.
+   Here is a sample for Hubstaff  */
+/* @import "../builds/tailwind/tudla_hubstaff" */
