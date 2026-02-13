@@ -1,0 +1,18 @@
+<div class="card bg-base-100 shadow">
+  <div class="card-body">
+    <% if title.present? %>
+      <h3 class="card-title text-lg mb-4"><%= title %></h3>
+    <% end %>
+
+    <div class="mb-4" data-controller="list-filter" data-list-filter-url-value="<%= filter_url %>" data-list-filter-param-value="<%= filter_param %>" data-list-filter-frame-value="<%= frame_id %>">
+      <input type="text"
+             placeholder="<%= filter_placeholder %>"
+             value="<%= current_filter %>"
+             class="input input-bordered input-sm w-full"
+             data-list-filter-target="input"
+             data-action="input->list-filter#filter" />
+    </div>
+
+    <%= content %>
+  </div>
+</div>

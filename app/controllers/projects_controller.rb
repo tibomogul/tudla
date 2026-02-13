@@ -4,7 +4,15 @@ class ProjectsController < ApplicationController
 
   # GET /projects or /projects.json
   def index
-    @projects = policy_scope(Project)
+    load_paginated_index_projects
+
+    if turbo_frame_request_id == "projects_index_list"
+      render partial: "projects/projects_index_content", locals: {
+        pagy_projects: @pagy_projects,
+        projects: @projects
+      }
+      nil
+    end
   end
 
   # GET /projects/1 or /projects/1.json
@@ -195,5 +203,26 @@ class ProjectsController < ApplicationController
     # Only allow a list of trusted parameters through.
     def project_params
       params.expect(project: [ :name, :description, :team_id ])
+    end
+
+    def load_paginated_index_projects
+      # Eager load :team to avoid N+1 queries in the view.
+      # Use SQL subqueries to compute tasks_count and scopes_count per project in a single query,
+      # avoiding N+1 from calling project.tasks.count / project.scopes.count in the loop.
+      # Both subqueries exclude soft-deleted records (deleted_at IS NULL).
+      projects = policy_scope(Project)
+                  .includes(:team)
+                  .select(
+                    "projects.*",
+                    "(SELECT COUNT(*) FROM tasks WHERE tasks.project_id = projects.id AND tasks.deleted_at IS NULL) AS tasks_count",
+                    "(SELECT COUNT(*) FROM scopes WHERE scopes.project_id = projects.id AND scopes.deleted_at IS NULL) AS scopes_count"
+                  )
+                  .order(:name)
+
+      if params[:project_name].present?
+        projects = projects.where("projects.name ILIKE ?", "%#{params[:project_name]}%")
+      end
+
+      @pagy_projects, @projects = pagy(:offset, projects, limit: 20)
     end
 end

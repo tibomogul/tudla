@@ -1,0 +1,35 @@
+<%= turbo_frame_tag "projects_list" do %>
+  <% if projects.any? %>
+    <div class="space-y-2">
+      <% projects.each do |project| %>
+        <div class="flex items-center justify-between p-3 rounded-lg hover:bg-base-200 transition-colors">
+          <div class="flex-1">
+            <%= link_to project_path(project), class: "font-medium hover:underline", data: { turbo_frame: "_top" } do %>
+              <%= project.name %>
+            <% end %>
+            <% if project.team %>
+              <span class="text-sm text-gray-500 ml-2">
+                <%= project.team.name %>
+              </span>
+            <% end %>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-outline <%= risk_badge_color(project.risk_current_state) %>">
+              <%= project.risk_current_state.to_s.humanize %>
+            </span>
+            <%# tasks_count is a SQL-computed attribute from the controller (not project.tasks.count) to avoid N+1 queries %>
+            <span class="text-sm text-gray-500">
+              <%= project.tasks_count %> tasks
+            </span>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="text-gray-500 text-center py-4">No projects found</p>
+  <% end %>
+
+  <div class="mt-4 flex justify-center">
+    <%= pagy_daisyui_nav(pagy_projects, turbo_frame: "projects_list") %>
+  </div>
+<% end %>

@@ -61,6 +61,7 @@ end
 
 group :test do
   gem "simplecov", require: false
+  gem "capybara"
 end
 
 # gem "devise", "~> 4.9"
@@ -98,6 +99,8 @@ gem "hashdiff", "~> 1.2"
 gem "fast-mcp", "~> 1.0"
 
 gem "view_component", "~> 4.0"
+
+gem "pagy", "~> 43.2"
 
 gem "tudla_contracts", git: "https://github.com/tibomogul/tudla_contracts", branch: "main"
 

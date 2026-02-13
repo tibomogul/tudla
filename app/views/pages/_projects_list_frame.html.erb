@@ -1,0 +1,13 @@
+<%= render(PaginatedListComponent.new(
+  filter_url: user_root_path,
+  frame_id: "projects_list",
+  filter_param: "project_name",
+  filter_placeholder: "Filter projects by name...",
+  title: "My Projects",
+  current_filter: project_name_filter
+)) do %>
+  <%= render partial: "pages/projects_list_content", locals: {
+    pagy_projects: pagy_projects,
+    projects: projects
+  } %>
+<% end %>

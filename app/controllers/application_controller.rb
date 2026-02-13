@@ -10,6 +10,7 @@ class ApplicationController < ActionController::Base
 
   include Pundit::Authorization
   include ActionView::RecordIdentifier
+  include Pagy::Method
 
   protected
 

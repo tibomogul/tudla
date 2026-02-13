@@ -1,5 +1,9 @@
 <div class="mt-6">
-  <%= render "pages/projects_list" %>
+  <%= render partial: "pages/projects_list_frame", locals: {
+    pagy_projects: @pagy_projects,
+    projects: @projects,
+    project_name_filter: params[:project_name]
+  } %>
 </div>
 
 <div class="mt-6">
