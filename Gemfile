@@ -96,7 +96,7 @@ gem "paper_trail-hashdiff", "~> 0.1.3"
 
 gem "hashdiff", "~> 1.2"
 
-gem "fast-mcp", "~> 1.0"
+gem "mcp"
 
 gem "view_component", "~> 4.0"
 

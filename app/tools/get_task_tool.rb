@@ -8,11 +8,14 @@ class GetTaskTool < ApplicationTool
     read_only_hint: true
   )
 
-  arguments do
-    required(:task_id).filled(:integer).description("ID of the task to retrieve")
-  end
+  input_schema(
+    properties: {
+      task_id: { type: "integer", description: "ID of the task to retrieve" }
+    },
+    required: [ "task_id" ]
+  )
 
-  def call(task_id:)
+  def execute(task_id:)
     tasks = Task.where(id: task_id)
     tasks = scope_tasks_by_user(tasks)
     task = tasks.first

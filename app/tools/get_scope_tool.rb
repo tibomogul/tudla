@@ -8,11 +8,14 @@ class GetScopeTool < ApplicationTool
     read_only_hint: true
   )
 
-  arguments do
-    required(:scope_id).filled(:integer).description("ID of the scope to retrieve")
-  end
+  input_schema(
+    properties: {
+      scope_id: { type: "integer", description: "ID of the scope to retrieve" }
+    },
+    required: [ "scope_id" ]
+  )
 
-  def call(scope_id:)
+  def execute(scope_id:)
     scopes = Scope.where(id: scope_id)
     scopes = scope_scopes_by_user(scopes)
     scope = scopes.first

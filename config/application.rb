@@ -2,9 +2,6 @@ require_relative "boot"
 
 require "rails/all"
 
-# Require MCP auth middleware before it's used
-require_relative "../lib/mcp_auth_middleware"
-
 # Pick the frameworks you want:
 require "active_model/railtie"
 require "active_job/railtie"
@@ -31,9 +28,6 @@ module TaskManager
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
-    
-    # Add MCP authentication middleware after Warden to avoid conflicts
-    config.middleware.insert_after Warden::Manager, McpAuthMiddleware
 
     # Configuration for the application, engines, and railties goes here.
     #

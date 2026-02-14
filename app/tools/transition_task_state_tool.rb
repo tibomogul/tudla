@@ -8,19 +8,22 @@ class TransitionTaskStateTool < ApplicationTool
     read_only_hint: false
   )
 
-  arguments do
-    required(:task_id).filled(:integer).description("ID of the task to transition")
-    required(:state).filled(:string).description("Target state (new, in_progress, in_review, done, blocked)")
-    optional(:user_id).filled(:integer).description("ID of the user performing the transition (optional)")
-  end
+  input_schema(
+    properties: {
+      task_id: { type: "integer", description: "ID of the task to transition" },
+      state: { type: "string", description: "Target state (new, in_progress, in_review, done, blocked)" },
+      user_id: { type: "integer", description: "ID of the user performing the transition (optional)" }
+    },
+    required: %w[task_id state]
+  )
 
-  def call(task_id:, state:, user_id: nil)
+  def execute(task_id:, state:, user_id: nil)
     tasks = Task.where(id: task_id)
     tasks = scope_tasks_by_user(tasks)
     task = tasks.first
 
     raise "Task not found with ID: #{task_id}" unless task
-    
+
     # Authorize using Pundit - user must have update permission
     authorize(task, :update?)
 
@@ -33,7 +36,7 @@ class TransitionTaskStateTool < ApplicationTool
       task.state_machine.transition_to!(new_state, metadata)
       task.reload
 
-      "Task state transitioned successfully to #{new_state}!\n\n#{GetTaskTool.new.call(task_id: task.id)}"
+      "Task state transitioned successfully to #{new_state}!\n\n#{call_tool(GetTaskTool, task_id: task.id)}"
     else
       allowed = task.state_machine.allowed_transitions.join(", ")
       raise "Cannot transition from #{task.current_state} to #{new_state}. Allowed transitions: #{allowed}"

@@ -1,4 +1,25 @@
 Rails.application.routes.draw do
+  # MCP Streamable HTTP endpoint (official mcp gem)
+  post "/mcp", to: "mcp#handle"
+
+  # MCP discovery (/.well-known/mcp)
+  get "/.well-known/mcp", to: "mcp_discovery#show"
+
+  # OAuth/OIDC discovery — rmcp probes all of these path variants.
+  # Returning metadata prevents "No authorization support detected" errors.
+  get "/.well-known/oauth-authorization-server", to: "mcp_discovery#oauth_metadata"
+  get "/.well-known/oauth-authorization-server/mcp", to: "mcp_discovery#oauth_metadata"
+  get "/.well-known/openid-configuration/mcp", to: "mcp_discovery#oauth_metadata"
+  get "/mcp/.well-known/openid-configuration", to: "mcp_discovery#oauth_metadata"
+  get "/.well-known/oauth-protected-resource", to: "mcp_discovery#prm"
+  get "/.well-known/oauth-protected-resource/mcp", to: "mcp_discovery#prm"
+  get "/mcp/.well-known/oauth-protected-resource", to: "mcp_discovery#prm"
+
+  # OAuth endpoints namespaced under /mcp to avoid collision with OmniAuth/Devise.
+  # These reject all requests with a clear "use Bearer token" message.
+  get "/mcp/oauth/authorize", to: "mcp_discovery#oauth_authorize"
+  post "/mcp/oauth/token", to: "mcp_discovery#oauth_token"
+
   resources :reports do
     member do
       post :submit

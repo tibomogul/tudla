@@ -8,16 +8,18 @@ class ListTasksTool < ApplicationTool
     read_only_hint: true
   )
 
-  arguments do
-    optional(:project_id).filled(:integer).description("Filter by project ID")
-    optional(:scope_id).filled(:integer).description("Filter by scope ID")
-    optional(:responsible_user_id).filled(:integer).description("Filter by responsible user ID")
-    optional(:state).filled(:string).description("Filter by state (new, in_progress, in_review, done, blocked)")
-    optional(:in_today).filled(:bool).description("Filter by tasks scheduled for today")
-    optional(:limit).filled(:integer).description("Maximum number of tasks to return (default: 50)")
-  end
+  input_schema(
+    properties: {
+      project_id: { type: "integer", description: "Filter by project ID" },
+      scope_id: { type: "integer", description: "Filter by scope ID" },
+      responsible_user_id: { type: "integer", description: "Filter by responsible user ID" },
+      state: { type: "string", description: "Filter by state (new, in_progress, in_review, done, blocked)" },
+      in_today: { type: "boolean", description: "Filter by tasks scheduled for today" },
+      limit: { type: "integer", description: "Maximum number of tasks to return (default: 50)" }
+    }
+  )
 
-  def call(project_id: nil, scope_id: nil, responsible_user_id: nil, state: nil, in_today: nil, limit: 50)
+  def execute(project_id: nil, scope_id: nil, responsible_user_id: nil, state: nil, in_today: nil, limit: 50)
     tasks = Task.active
     tasks = scope_tasks_by_user(tasks)
     tasks = tasks.where(project_id: project_id) if project_id

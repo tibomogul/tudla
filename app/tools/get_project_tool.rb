@@ -8,11 +8,14 @@ class GetProjectTool < ApplicationTool
     read_only_hint: true
   )
 
-  arguments do
-    required(:project_id).filled(:integer).description("ID of the project to retrieve")
-  end
+  input_schema(
+    properties: {
+      project_id: { type: "integer", description: "ID of the project to retrieve" }
+    },
+    required: [ "project_id" ]
+  )
 
-  def call(project_id:)
+  def execute(project_id:)
     projects = Project.where(id: project_id)
     projects = scope_projects_by_user(projects)
     project = projects.first

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class ListUserChangesTool < ApplicationTool
-  description "List changes from PaperTrail audit log. Shows current user's changes by default. " \
+  description "List changes from PaperTrail audit log (Tasks, Scopes, Projects, Notes, Links, Attachments). Shows current user's changes by default. " \
               "If team_id is specified, shows changes by all team members (user must be associated with team or its organization)."
 
   annotations(
@@ -9,14 +9,16 @@ class ListUserChangesTool < ApplicationTool
     read_only_hint: true
   )
 
-  arguments do
-    optional(:start_time).filled(:string).description("Start datetime (ISO8601 format, e.g., '2025-11-03T00:00:00Z'). Defaults to 24 hours ago.")
-    optional(:end_time).filled(:string).description("End datetime (ISO8601 format, e.g., '2025-11-04T00:00:00Z'). Defaults to now.")
-    optional(:team_id).filled(:integer).description("Show changes by all team members on team-related items (Tasks/Scopes/Projects in team's projects). Requires user to be associated with team or its organization.")
-    optional(:limit).filled(:integer).description("Maximum number of versions to return (default: 100)")
-  end
+  input_schema(
+    properties: {
+      start_time: { type: "string", description: "Start datetime (ISO8601 format, e.g., '2025-11-03T00:00:00Z'). Defaults to 24 hours ago." },
+      end_time: { type: "string", description: "End datetime (ISO8601 format, e.g., '2025-11-04T00:00:00Z'). Defaults to now." },
+      team_id: { type: "integer", description: "Show changes by all team members on team-related items (Tasks/Scopes/Projects/Notes/Links/Attachments in team's projects). Requires user to be associated with team or its organization." },
+      limit: { type: "integer", description: "Maximum number of versions to return (default: 100)" }
+    }
+  )
 
-  def call(start_time: nil, end_time: nil, team_id: nil, limit: 100)
+  def execute(start_time: nil, end_time: nil, team_id: nil, limit: 100)
     # Parse datetime parameters with defaults
     end_datetime = parse_datetime(end_time) || Time.current
     start_datetime = parse_datetime(start_time) || 24.hours.ago
@@ -31,7 +33,7 @@ class ListUserChangesTool < ApplicationTool
     if team_id
       team = Team.find_by(id: team_id)
       raise "Team with ID #{team_id} not found" unless team
-      
+
       # Check if user is associated with team or its organization
       unless user_authorized_for_team?(team)
         raise "Not authorized to view changes for Team #{team_id}. " \
@@ -47,7 +49,7 @@ class ListUserChangesTool < ApplicationTool
         .where(whodunnit: team_user_ids)
         .where(created_at: start_datetime..end_datetime)
         .order(created_at: :desc)
-      
+
       # Filter by team-related items
       versions = filter_by_team(versions, team)
     else
@@ -105,7 +107,7 @@ class ListUserChangesTool < ApplicationTool
     # Get user who made the change
     user = User.find_by(id: version.whodunnit)
     user_info = user ? format_user(user) : "User ID #{version.whodunnit}"
-    
+
     output = <<~TEXT
       Timestamp: #{format_datetime(version.created_at)}
       User: #{user_info}
@@ -113,6 +115,11 @@ class ListUserChangesTool < ApplicationTool
       Item Type: #{version.item_type}
       Item ID: #{version.item_id}
     TEXT
+
+    # Add context for associated records (show what parent record they belong to)
+    if %w[Note Link Attachment].include?(version.item_type)
+      output += format_associated_record_context(version)
+    end
 
     if version.object_changes.present?
       output += "\nChanges:\n"
@@ -192,24 +199,79 @@ class ListUserChangesTool < ApplicationTool
     )
   end
 
-  # Filter versions to only include changes related to the team
-  # This includes:
-  # - Tasks that belong to projects in the team
-  # - Scopes that belong to projects in the team
-  # - Projects that belong to the team
+  # Resolve the parent record context for Note, Link, or Attachment versions
+  # All three use the same polymorphic pattern: record → join_table → parent
+  def format_associated_record_context(version)
+    mapping = {
+      "Note" => { model: Note, association: :notable },
+      "Link" => { model: Link, association: :linkable },
+      "Attachment" => { model: Attachment, association: :attachable }
+    }
+    config = mapping[version.item_type]
+    return "" unless config
+
+    item = config[:model].unscoped.find_by(id: version.item_id)
+    return "" unless item
+
+    join_record = item.public_send(config[:association])
+    return "" unless join_record&.public_send(config[:association])
+
+    record = join_record.public_send(config[:association])
+    parent_name = record.respond_to?(:name) ? record.name : record.respond_to?(:title) ? record.title : nil
+    context = "Parent: #{record.class.name} ##{record.id}"
+    context += " (#{parent_name})" if parent_name.present?
+    context + "\n"
+  end
+
+  # Filter versions to only include changes related to the team.
+  # Uses relation subqueries (.select(:id)) so the DB does all the heavy
+  # lifting in a single query — no IDs are materialised into Ruby.
+  # Respects .active (soft-delete) on every model that supports it.
   def filter_by_team(versions, team)
-    # Get all project IDs for the team
-    project_ids = team.projects.pluck(:id)
-    
-    # Filter versions where:
-    # 1. Item is a Task with project_id in team's projects
-    # 2. Item is a Scope with project_id in team's projects
-    # 3. Item is a Project with id in team's projects
-    versions.where(
-      "(item_type = 'Task' AND item_id IN (SELECT id FROM tasks WHERE project_id IN (?))) OR " \
-      "(item_type = 'Scope' AND item_id IN (SELECT id FROM scopes WHERE project_id IN (?))) OR " \
-      "(item_type = 'Project' AND item_id IN (?))",
-      project_ids, project_ids, project_ids
-    )
+    project_rel = team.projects.active
+    return versions.none unless project_rel.exists?
+
+    project_ids = project_rel.select(:id)
+    task_rel    = Task.active.where(project_id: project_ids).select(:id)
+    scope_rel   = Scope.active.where(project_id: project_ids).select(:id)
+
+    # Resolve Notes/Links/Attachments via their polymorphic join tables
+    parent_map = { "Task" => task_rel, "Scope" => scope_rel, "Project" => project_ids }
+    note_rel       = polymorphic_item_rel(Notable,    :notable,    parent_map, Note,       :notable_id)
+    link_rel       = polymorphic_item_rel(Linkable,   :linkable,   parent_map, Link,       :linkable_id)
+    attachment_rel = polymorphic_item_rel(Attachable, :attachable, parent_map, Attachment, :attachable_id)
+
+    # Build a single OR via Arel so the base versions conditions are not
+    # duplicated across branches — produces clean, EXPLAINable SQL.
+    vt = PaperTrail::Version.arel_table
+    type_rels = {
+      "Task" => task_rel, "Scope" => scope_rel, "Project" => project_ids,
+      "Note" => note_rel, "Link" => link_rel, "Attachment" => attachment_rel
+    }
+
+    arel_or = type_rels.map { |type, rel|
+      vt[:item_type].eq(type).and(vt[:item_id].in(rel.arel))
+    }.reduce(:or) || vt[:id].eq(nil)
+
+    versions.where(arel_or)
+  end
+
+  # Build a relation subquery for a polymorphic association
+  # (Note→Notable, Link→Linkable, Attachment→Attachable).
+  # Returns an ActiveRecord::Relation with .select(:id) — never materialised.
+  # Join tables (Notable/Linkable/Attachable) have no soft-delete column;
+  # .active is applied only on the leaf item model.
+  def polymorphic_item_rel(join_model, prefix, parent_map, item_model, fk)
+    type_col = :"#{prefix}_type"
+    id_col   = :"#{prefix}_id"
+
+    scopes = parent_map.map { |type, rel|
+      join_model.where(type_col => type, id_col => rel)
+    }
+
+    return item_model.none.select(:id) if scopes.empty?
+
+    join_rel = scopes.reduce(:or).select(:id)
+    item_model.active.where(fk => join_rel).select(:id)
   end
 end

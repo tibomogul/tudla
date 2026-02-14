@@ -13,7 +13,7 @@ Rails 8.0.3 task management application with PostgreSQL database, Tailwind CSS, 
 - **Caching**: Solid Cache
 - **WebSockets**: Solid Cable
 - **Containerization**: Docker Compose
-- **MCP Integration**: fast-mcp gem ~> 1.0 for Model Context Protocol
+- **MCP Integration**: Official `mcp` gem (Streamable HTTP) for Model Context Protocol
 
 ## Development Setup
 ```bash
@@ -284,17 +284,17 @@ end
 ## Model Context Protocol (MCP) Integration
 
 ### Overview
-MCP integration enables AI assistants to interact with the Task Manager via standardized tools using the fast-mcp gem.
+MCP integration enables AI assistants to interact with the Task Manager via standardized tools using the official `mcp` gem (Ruby SDK, maintained by Anthropic + Shopify).
 
 ### Architecture
-- **Framework**: fast-mcp gem (~> 1.0) with Rails integration
-- **Tools**: Individual classes in `app/tools/` directory
-- **Configuration**: `config/initializers/fast_mcp.rb`
-- **Transport**: HTTP via Rack middleware (SSE + JSON-RPC)
-- **Authentication**: API token via Authorization header
+- **Framework**: Official `mcp` gem (Streamable HTTP transport)
+- **Controller**: `McpController` handles POST `/mcp` with `MCP::Server#handle_json`
+- **Tools**: Individual classes in `app/tools/` inheriting from `ApplicationTool < MCP::Tool`
+- **Transport**: Streamable HTTP (POST `/mcp`) — no SSE, no middleware
+- **Authentication**: Bearer token in controller `before_action`, passed via `server_context[:user]`
 - **Documentation**: `docs/mcp_setup.md`, `docs/mcp_quick_start.md`
 
-### Available Tools (13 total)
+### Available Tools (12 total)
 
 #### Task Tools
 - **ListTasksTool**: List/filter tasks by project, scope, user, state, today status
@@ -315,50 +315,46 @@ MCP integration enables AI assistants to interact with the Task Manager via stan
 - **GetProjectTool**: Get project details with scopes and tasks
 
 #### Audit Tools
-- **ListUserChangesTool**: List changes made by current user from PaperTrail audit log with optional time range (defaults to last 24 hours)
+- **ListUserChangesTool**: List changes from PaperTrail audit log with optional time range and team filtering
 
-### Endpoints
+### Endpoint
 
 The MCP server runs as part of the Rails application:
-- **HTTP Messages**: `http://localhost:3000/mcp/messages` (POST)
-- **SSE Stream**: `http://localhost:3000/mcp/sse` (GET)
+- **Streamable HTTP**: `POST http://localhost:3000/mcp`
 
 ### Authentication & Authorization
 
 - **API Tokens**: Users generate tokens via profile page (Security → API Tokens)
-- **Token-based Auth**: Bearer token in Authorization header
-- **User Scoping**: All queries scoped to authenticated user's permissions
+- **Bearer Token Auth**: `Authorization: Bearer <token>` header
+- **Unauthenticated Handshake**: `initialize`, `ping`, `tools/list` work without auth
+- **Auth Required**: `tools/call` requires valid Bearer token (tool raises error if missing)
+- **User Scoping**: All queries scoped to authenticated user's permissions via Pundit
 - **Project Access**: Based on `user_party_roles` (Organization → Team → Project)
 
 ### Configuration Example
 
-For AI assistants (Claude, Cascade, etc.):
+For AI assistants (Claude, Cascade, Kiro, etc.):
 ```json
 {
   "mcpServers": {
     "task-manager": {
-      "transport": {
-        "type": "sse",
-        "url": "http://localhost:3000/mcp/sse",
-        "headers": {
-          "Authorization": "Bearer YOUR_TOKEN_HERE"
-        }
+      "type": "http",
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN_HERE"
       }
     }
   }
 }
 ```
 
-### Rails Integration Pattern
+### Tool Pattern (ApplicationTool Delegation)
 
-Tools follow Rails conventions:
-- Inherit from `ApplicationTool` (alias for `ActionTool::Base`)
-- Automatic discovery and registration
-- Use standard Rails models and ActiveRecord
-- Integrated error handling
-- Access to `current_user` and scoping helpers
-
-### Example Tool Structure
+Tools use a delegation pattern: `MCP::Tool.call` (class method) creates an instance and delegates to `#execute`:
+- `self.call(server_context:, **args)` — entry point called by MCP gem framework
+- `#execute(**args)` — tool logic, defined by each subclass (instance method)
+- `MCP::Tool::Response` wrapping and error handling in `ApplicationTool.call`
+- Cross-tool calls via `call_tool(ToolClass, **args)`
 
 ```ruby
 class MyTool < ApplicationTool
@@ -369,13 +365,16 @@ class MyTool < ApplicationTool
     read_only_hint: true
   )
   
-  arguments do
-    required(:param).filled(:string).description("Param description")
-  end
+  input_schema(
+    properties: {
+      param: { type: "string", description: "Param description" }
+    },
+    required: ["param"]
+  )
   
-  def call(param:)
-    # Access current_user, scope_tasks_by_user, etc.
-    # Return result string
+  def execute(param:)
+    # Access current_user, scope_tasks_by_user, authorize, call_tool, etc.
+    # Return result string (ApplicationTool wraps in MCP::Tool::Response)
   end
 end
 ```
