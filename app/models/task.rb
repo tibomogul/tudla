@@ -15,15 +15,18 @@ class Task < ApplicationRecord
   has_many :links, through: :linkable
 
   has_many :task_transitions, autosave: false
-  
+
   # Include Statesman adapter (now compatible without default_scope)
   include Statesman::Adapters::ActiveRecordQueries[
     transition_class: TaskTransition,
     initial_state: :new
   ]
-  
+
   # Include soft delete
   include SoftDeletable
+
+  # Include estimate rollup caching to scopes/projects
+  include EstimateCacheable
 
   after_commit :broadcast_task_update, if: :persisted?
 

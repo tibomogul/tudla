@@ -389,6 +389,22 @@ end
 - "What changes have I made in the last 24 hours?"
 - "Show me all my changes from 2025-11-01 to 2025-11-03"
 
+### Estimate Rollup Caching
+- **Concern**: `EstimateCacheable` (`app/models/concerns/estimate_cacheable.rb`), included in `Task`
+- **Purpose**: Denormalized cache of task estimate sums on `scopes` and `projects` tables
+- **Cached Columns** (on both `scopes` and `projects`):
+  - `cached_unassisted_estimate` (integer, default: 0)
+  - `cached_ai_assisted_estimate` (integer, default: 0)
+  - `cached_actual_manhours` (integer, default: 0)
+- **Rollup Logic**: Projects get ALL task totals (scoped + unscoped); Scopes get only their tasks' totals
+- **Triggers**: Recalculates parent caches on task create, update (estimates or parent change), soft delete, and restore
+- **Handles reassignment**: When a task moves between scopes/projects, both old and new parents are recalculated
+- **Soft delete compatibility**: Overrides `destroy` and `restore` since `SoftDeletable#update_column` bypasses callbacks
+- **Recalculation**: Uses SQL `SUM` via `Task.recalculate_estimates_for(record)` with `.active` scope
+- **Backfill**: `bin/rails estimate_cache:backfill` rake task for one-time population
+- **Display**: Read-only "Time Estimates" card in `scopes/_scope.html.erb` and `projects/_risk_details.html.erb`
+- **Specs**: `spec/models/estimate_cacheable_spec.rb` (12 examples)
+
 ## Development Notes
 - Uses modern browser requirements
 - Tailwind CSS + DaisyUI for styling

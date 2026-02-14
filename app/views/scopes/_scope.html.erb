@@ -57,4 +57,38 @@
       </div>
     </div>
   </div>
+
+  <!-- Estimates Card -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4">
+      <h3 class="font-semibold text-base mb-3 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Time Estimates
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <p class="text-sm font-medium text-base-content/70 mb-1">Unassisted Estimate</p>
+          <p class="text-lg font-semibold">
+            <%= scope.cached_unassisted_estimate > 0 ? "#{scope.cached_unassisted_estimate} hrs" : "—" %>
+          </p>
+        </div>
+
+        <div>
+          <p class="text-sm font-medium text-base-content/70 mb-1">AI-Assisted Estimate</p>
+          <p class="text-lg font-semibold text-primary">
+            <%= scope.cached_ai_assisted_estimate > 0 ? "#{scope.cached_ai_assisted_estimate} hrs" : "—" %>
+          </p>
+        </div>
+
+        <div>
+          <p class="text-sm font-medium text-base-content/70 mb-1">Actual Manhours</p>
+          <p class="text-lg font-semibold">
+            <%= scope.cached_actual_manhours > 0 ? "#{scope.cached_actual_manhours} hrs" : "—" %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
