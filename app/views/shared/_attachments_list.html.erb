@@ -1,6 +1,7 @@
 <%
   # Optional parameter to hide header (default: true)
   show_header = local_assigns.fetch(:show_header, true)
+  ordered_attachments = attachments.order(created_at: :desc)
 %>
 
 <div class="<%= 'mt-8' if show_header %>">
@@ -13,8 +14,8 @@
   <% end %>
 
   <% if attachments.any? %>
-    <div class="space-y-2">
-      <% attachments.order(created_at: :desc).each do |attachment| %>
+    <div data-controller="attachment-preview" class="space-y-2">
+      <% ordered_attachments.each do |attachment| %>
         <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
           <div class="card-body p-4">
             <div class="flex items-start gap-4">
@@ -50,6 +51,17 @@
 
                   <!-- Actions -->
                   <div class="flex gap-1 flex-shrink-0">
+                    <% if attachment.previewable? %>
+                      <button class="btn btn-ghost btn-sm btn-circle"
+                        title="Preview"
+                        data-action="click->attachment-preview#open"
+                        data-attachment-id="<%= attachment.id %>">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </button>
+                    <% end %>
                     <%= link_to download_attachment_path(attachment), 
                       class: "btn btn-ghost btn-sm btn-circle",
                       title: "Download" do %>
@@ -77,6 +89,9 @@
           </div>
         </div>
       <% end %>
+
+      <!-- Preview Carousel Modal -->
+      <%= render AttachmentPreviewCarouselComponent.new(attachments: ordered_attachments) %>
     </div>
   <% else %>
     <div class="text-center py-12 text-base-content/60">

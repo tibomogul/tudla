@@ -28,4 +28,30 @@ class Attachment < ApplicationRecord
 
     "#{size.round(2)} #{units[unit_index]}"
   end
+
+  # Helper method to get content type
+  def content_type
+    file.content_type if file.attached?
+  end
+
+  # Whether the attachment can be previewed in the browser
+  def previewable?
+    image? || pdf? || video? || audio?
+  end
+
+  def image?
+    content_type&.start_with?("image/")
+  end
+
+  def pdf?
+    content_type == "application/pdf"
+  end
+
+  def video?
+    content_type&.start_with?("video/")
+  end
+
+  def audio?
+    content_type&.start_with?("audio/")
+  end
 end

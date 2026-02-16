@@ -28,6 +28,7 @@ Rails.application.routes.draw do
   resources :attachments, only: [ :create, :destroy ] do
     member do
       get :download
+      get :preview
     end
   end
   resources :notes, only: [ :create, :edit, :update, :destroy ]

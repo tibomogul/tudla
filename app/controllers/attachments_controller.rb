@@ -1,7 +1,7 @@
 class AttachmentsController < ApplicationController
   include ActionView::RecordIdentifier
 
-  before_action :set_attachment, only: %i[destroy download]
+  before_action :set_attachment, only: %i[destroy download preview]
   before_action :set_attachable, only: %i[create]
 
   # POST /attachments
@@ -29,6 +29,11 @@ class AttachmentsController < ApplicationController
   def download
     authorize @attachment
     redirect_to rails_blob_path(@attachment.file, disposition: "attachment"), allow_other_host: true
+  end
+
+  # GET /attachments/1/preview
+  def preview
+    redirect_to rails_blob_path(@attachment.file, disposition: "inline"), allow_other_host: true
   end
 
   private

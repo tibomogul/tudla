@@ -18,12 +18,16 @@ class AttachmentPolicy < ApplicationPolicy
     can_access_attachable?
   end
 
+  def preview?
+    download?
+  end
+
   private
 
   def can_access_attachable?
     attachable_obj = attachment.attachable
     return false unless attachable_obj
-    
+
     # For delegated types, we need to get the actual record
     # Use the polymorphic attributes directly if the delegated type accessor doesn't work
     attachable_record = begin
@@ -32,7 +36,7 @@ class AttachmentPolicy < ApplicationPolicy
       # If delegated type fails, manually fetch the record
       attachable_obj.attachable_type&.constantize&.find_by(id: attachable_obj.attachable_id)
     end
-    
+
     return false unless attachable_record
 
     # Use class name comparison to avoid class reloading issues in development
@@ -55,13 +59,13 @@ class AttachmentPolicy < ApplicationPolicy
   def user_has_project_access?(project)
     # Check direct project access first
     return true if UserPartyRole.exists?(user: user, party: project)
-    
+
     # If project has a team, check team and org access
     if project.team
       return true if UserPartyRole.exists?(user: user, party: project.team)
       return true if UserPartyRole.exists?(user: user, party: project.team.organization)
     end
-    
+
     false
   end
 

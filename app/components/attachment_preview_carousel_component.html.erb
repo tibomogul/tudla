@@ -1,0 +1,92 @@
+<dialog id="attachment_preview_carousel_modal" class="modal"
+  data-attachment-preview-target="dialog">
+
+  <div class="modal-box w-11/12 max-w-5xl h-[85vh] flex flex-col p-0">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-base-300 flex-shrink-0">
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <span class="badge badge-neutral" data-attachment-preview-target="counter"></span>
+        <div class="min-w-0 flex-1">
+          <h3 class="font-semibold text-base truncate" data-attachment-preview-target="filename"></h3>
+          <div class="flex gap-3 text-xs text-base-content/70">
+            <span data-attachment-preview-target="filesize"></span>
+            <span>&bull;</span>
+            <span data-attachment-preview-target="uploader"></span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <a data-attachment-preview-target="downloadLink" class="btn btn-ghost btn-sm btn-circle" title="Download">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+        </a>
+        <form method="dialog">
+          <button class="btn btn-ghost btn-sm btn-circle" title="Close">✕</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Carousel area -->
+    <div class="flex-1 min-h-0 relative overflow-hidden bg-base-200 group">
+      <% previewable_attachments.each_with_index do |attachment, index| %>
+        <div class="w-full h-full flex items-center justify-center <%= 'hidden' unless index == 0 %>"
+          data-attachment-preview-target="slide"
+          data-attachment-id="<%= attachment.id %>"
+          data-filename="<%= attachment.filename %>"
+          data-filesize="<%= attachment.file_size %>"
+          data-uploader="<%= attachment.user.preferred_name || attachment.user.username %>"
+          data-download-url="<%= download_attachment_path(attachment) %>"
+          data-preview-url="<%= preview_attachment_path(attachment) %>"
+          data-preview-type="<%= preview_element_tag(attachment) %>">
+
+          <% if attachment.image? %>
+            <img
+              class="max-w-full max-h-full object-contain"
+              alt="<%= attachment.filename %>" />
+          <% elsif attachment.pdf? %>
+            <iframe
+              class="w-full h-full border-0"
+              title="<%= attachment.filename %>"></iframe>
+          <% elsif attachment.video? %>
+            <video
+              class="max-w-full max-h-full"
+              controls
+              preload="none">
+            </video>
+          <% elsif attachment.audio? %>
+            <div class="flex flex-col items-center gap-4 p-8">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-base-content/30">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
+              </svg>
+              <audio controls preload="none" class="w-full max-w-md"></audio>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <!-- Navigation arrows -->
+      <% if previewable_attachments.size > 1 %>
+        <button class="btn btn-sm btn-circle bg-base-100/70 hover:bg-base-100 border-none shadow-md absolute left-2 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          data-action="attachment-preview#prev"
+          title="Previous">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+        <button class="btn btn-sm btn-circle bg-base-100/70 hover:bg-base-100 border-none shadow-md absolute right-2 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          data-action="attachment-preview#next"
+          title="Next">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Click outside to close -->
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
