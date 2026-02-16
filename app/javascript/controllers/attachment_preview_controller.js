@@ -37,13 +37,17 @@ export default class extends Controller {
   }
 
   close() {
+    this.dialogTarget.close()
+  }
+
+  handleDialogClose() {
     this.pauseAllMedia()
     this.clearAllTransforms()
     this.scale = 1
     this.panX = 0
     this.panY = 0
+    this.isPanning = false
     this.updateZoomLevel()
-    this.dialogTarget.close()
     document.removeEventListener("keydown", this.boundKeyHandler)
   }
 
@@ -247,7 +251,7 @@ export default class extends Controller {
 
   panStart(event) {
     if (!this.isZoomable || this.scale <= 1) return
-    if (event.target.closest("button")) return
+    if (event.target.closest("button, video, audio, input, select, textarea")) return
 
     event.preventDefault()
     this.isPanning = true

@@ -1,7 +1,7 @@
 <%
   # Optional parameter to hide header (default: true)
   show_header = local_assigns.fetch(:show_header, true)
-  ordered_attachments = attachments
+  ordered_attachments = attachments.includes(:user, file_attachment: :blob).order(created_at: :desc)
 %>
 
 <div class="<%= 'mt-8' if show_header %>">

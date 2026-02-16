@@ -36,6 +36,8 @@ class Attachment < ApplicationRecord
 
   # Whether the attachment can be previewed in the browser
   def previewable?
+    return false unless content_type
+
     image? || pdf? || video? || audio?
   end
 
