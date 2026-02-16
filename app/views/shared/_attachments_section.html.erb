@@ -5,7 +5,7 @@
   # - attachable: The attachable record (optional - will be fetched if not provided)
   
   attachable ||= record.attachable
-  attachments = attachable&.attachments || Attachment.none
+  attachments = attachable&.attachments&.for_display || Attachment.none
 %>
 
 <div class="mt-8">
