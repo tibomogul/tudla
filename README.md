@@ -66,23 +66,17 @@ cd tudla
 
 ### 2. Configure environment variables
 
-Create a `.env` file in the project root with the following variables:
+Create a `.env` file in the project root. See the [Environment Variables](#environment-variables) section for the full reference. At minimum for development:
 
 ```bash
-# Docker configuration. Use your host user ID and group ID
+# Docker configuration (required)
 DOCKER_UID=1000
 DOCKER_GID=1000
 DOCKER_SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock
 
-# Git configuration (for commits inside container)
+# Git configuration (required for commits inside container)
 GIT_COMMITTER_NAME="Your Name"
 GIT_COMMITTER_EMAIL="your.email@example.com"
-
-# OAuth (optional - for social login)
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-AZURE_APPLICATION_CLIENT_ID=your_azure_client_id
-AZURE_APPLICATION_CLIENT_SECRET=your_azure_client_secret
 ```
 
 ### 3. Start the application
@@ -224,6 +218,102 @@ docker compose -f compose-production.yml exec backup /home/user/app/bin/restore 
 For detailed backup documentation, see:
 - [Full guide](docs/backup_and_restore.md)
 - [Quick reference](docs/backup_quick_reference.md)
+
+## Environment Variables
+
+All environment variables used by the application, organized by category. Create a `.env` file in the project root for Docker Compose to pick up.
+
+### Docker & Build
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `DOCKER_UID` | Yes | Development | — | Host user ID for correct file permissions in volume mounts |
+| `DOCKER_GID` | Yes | Development | — | Host group ID for correct file permissions in volume mounts |
+| `DOCKER_SSH_AUTH_SOCK` | Yes | Development | — | Path to host SSH auth socket for agent forwarding |
+| `GIT_COMMITTER_NAME` | Yes | Development | — | Git committer name inside the container |
+| `GIT_COMMITTER_EMAIL` | Yes | Development | — | Git committer email inside the container |
+| `CURRENT_COMMIT` | Yes | Production | — | Git SHA used to tag the Docker image for deployment |
+| `HOST_PORT` | Yes | Production | — | Host port mapped to the Rails container (e.g. `3000`) |
+
+### Database
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `DATABASE_HOST` | No | All | `localhost` | PostgreSQL host (set to `db` by Docker Compose) |
+| `DATABASE_PASSWORD` | Yes | Production | — | PostgreSQL password (development defaults to `postgres`) |
+| `RAILS_MAX_THREADS` | No | All | `5` (db) / `3` (puma) | Database connection pool size and Puma thread count |
+
+### Rails
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `RAILS_ENV` | No | All | `development` | Rails environment (`development`, `test`, `production`) |
+| `RAILS_LOG_LEVEL` | No | Production | `info` | Log level (`debug`, `info`, `warn`, `error`, `fatal`) |
+| `SECRET_KEY_BASE` | Yes | Production | — | Secret key for session cookies and encryption |
+| `PORT` | No | All | `3000` | Port Puma listens on |
+| `PIDFILE` | No | All | — | Custom PID file path for Puma |
+
+### ActionCable (WebSockets)
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `ACTION_CABLE_ALLOWED_ORIGIN` | Yes | Production | — | Production domain for WebSocket origin checking (e.g. `tudla.example.com`) |
+
+### Email (SMTP)
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `ACTION_MAILER_ADDRESS` | No | Production | `127.0.0.1` | SMTP server address. If unset, defaults to localhost (Mailcatcher in dev) |
+| `ACTION_MAILER_PORT` | No | Production | `1025` | SMTP server port |
+| `ACTION_MAILER_USERNAME` | No | Production | — | SMTP authentication username |
+| `ACTION_MAILER_PASSWORD` | No | Production | — | SMTP authentication password |
+| `ACTION_MAILER_DEFAULT_FROM` | No | All | `from@example.com` | Default "From" address for outgoing emails |
+| `ACTION_MAILER_DEFAULT_URL_OPTIONS_HOST` | Yes | Production | — | Host used in mailer URL generation (e.g. `tudla.example.com`) |
+
+### Authentication (OAuth)
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `GOOGLE_CLIENT_ID` | No | All | — | Google OAuth 2.0 client ID |
+| `GOOGLE_CLIENT_SECRET` | No | All | — | Google OAuth 2.0 client secret |
+| `AZURE_APPLICATION_CLIENT_ID` | No | All | — | Microsoft Azure AD client ID |
+| `AZURE_APPLICATION_CLIENT_SECRET` | No | All | — | Microsoft Azure AD client secret |
+| `NEW_OAUTH_USER_STRATEGY` | No | All | — | Set to `CREATE` to auto-create users on first OAuth login |
+
+### Account & UI
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `ACCOUNT_SIGNUP_ENABLED` | No | All | — | Set to `YES` to show the sign-up link on the login page |
+| `ACCOUNT_REQUIRE_TERMS_AND_CONDITIONS` | No | All | — | Set to `YES` to require T&C acceptance at login |
+
+### Background Jobs (Solid Queue)
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `JOB_CONCURRENCY` | No | All | `1` | Number of Solid Queue worker processes |
+| `SOLID_QUEUE_IN_PUMA` | No | Production | — | Set to run Solid Queue supervisor inside Puma (single-server deployments) |
+
+### Slack Integration
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `SLACK_WEBHOOK` | No | All | — | Slack incoming webhook URL for report delivery |
+| `SLACK_CHANNEL` | No | All | — | Slack channel for report delivery |
+| `SLACK_BOT_TOKEN` | No | All | — | Slack Bot token (alternative to webhook, see [Slack docs](docs/slack_integration.md)) |
+
+### Backup
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `BACKUP_RETENTION_DAYS` | No | Production | `7` | Number of days to retain backup files |
+| `BACKUP_SCHEDULE` | No | Production | Daily at 2:00 AM | Cron schedule for automated backups |
+
+### Testing & CI
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `CI` | No | Test | — | Set by CI systems; enables eager loading in test environment |
 
 ## Documentation
 

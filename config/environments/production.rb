@@ -79,6 +79,15 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
+  # ActionCable: allow WebSocket connections from the production domain.
+  # Set ACTION_CABLE_ALLOWED_ORIGIN to your production URL (e.g. "tudla.middleearth.myddns.me")
+  if (cable_origin = ENV["ACTION_CABLE_ALLOWED_ORIGIN"])
+    config.action_cable.allowed_request_origins = [
+      "https://#{cable_origin}",
+      "wss://#{cable_origin}"
+    ]
+  end
+
   # Enable DNS rebinding protection and other `Host` header attacks.
   # config.hosts = [
   #   "example.com",     # Allow requests from example.com
