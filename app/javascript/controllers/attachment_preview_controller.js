@@ -173,7 +173,7 @@ export default class extends Controller {
     if (this.scale === 1 && this.panX === 0 && this.panY === 0) {
       el.style.transform = ""
     } else {
-      el.style.transform = `scale(${this.scale}) translate(${this.panX}px, ${this.panY}px)`
+      el.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`
     }
     el.style.transformOrigin = "center center"
   }
@@ -235,6 +235,7 @@ export default class extends Controller {
     if (!this.isZoomable || this.scale <= 1) return
     if (event.target.closest("button")) return
 
+    event.preventDefault()
     this.isPanning = true
     this.panStartX = event.clientX
     this.panStartY = event.clientY
@@ -251,8 +252,8 @@ export default class extends Controller {
     if (!this.isPanning) return
     event.preventDefault()
 
-    const dx = (event.clientX - this.panStartX) / this.scale
-    const dy = (event.clientY - this.panStartY) / this.scale
+    const dx = event.clientX - this.panStartX
+    const dy = event.clientY - this.panStartY
     this.panX = this.panStartPanX + dx
     this.panY = this.panStartPanY + dy
     this.applyTransform()
@@ -261,7 +262,16 @@ export default class extends Controller {
   panEnd(event) {
     if (!this.isPanning) return
     this.isPanning = false
+
+    if (this.hasCarouselAreaTarget && event.pointerId != null) {
+      try { this.carouselAreaTarget.releasePointerCapture(event.pointerId) } catch (_) {}
+    }
+
     this.updateCursor()
+  }
+
+  panCancel(event) {
+    this.panEnd(event)
   }
 
   updateCursor() {

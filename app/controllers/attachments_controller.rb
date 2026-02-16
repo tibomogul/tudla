@@ -33,6 +33,11 @@ class AttachmentsController < ApplicationController
 
   # GET /attachments/1/preview
   def preview
+    unless @attachment.previewable?
+      head :not_found
+      return
+    end
+
     redirect_to rails_blob_path(@attachment.file, disposition: "inline"), allow_other_host: true
   end
 

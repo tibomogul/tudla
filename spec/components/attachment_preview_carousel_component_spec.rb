@@ -10,6 +10,7 @@ RSpec.describe AttachmentPreviewCarouselComponent, type: :component do
   def build_attachment(id:, content_type:, filename: "file.ext", file_size: "1.5 MB")
     double("Attachment",
       id: id,
+      to_param: id.to_s,
       filename: filename,
       file_size: file_size,
       content_type: content_type,

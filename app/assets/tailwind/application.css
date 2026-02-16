@@ -14,13 +14,3 @@
 /* Import the CSS for your feature engines. This is enabled by Tailwind experimental engine support.
    Here is a sample for Hubstaff  */
 /* @import "../builds/tailwind/tudla_hubstaff" */
-
-@layer components {
-  .modal-box-preview {
-    width: 95vw !important;
-    max-width: 90rem !important;
-    height: 90vh !important;
-    max-height: 90vh !important;
-    overflow: hidden !important;
-  }
-}
