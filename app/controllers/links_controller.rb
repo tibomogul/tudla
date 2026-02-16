@@ -1,6 +1,6 @@
 class LinksController < ApplicationController
-  before_action :set_linkable, only: [:create]
-  before_action :set_link, only: [:edit, :update, :destroy]
+  before_action :set_linkable, only: [ :create ]
+  before_action :set_link, only: [ :edit, :update, :destroy ]
 
   def create
     @link = @linkable.links.build(link_params)
@@ -52,7 +52,7 @@ class LinksController < ApplicationController
   end
 
   def set_link
-    @link = Link.find(params[:id])
+    @link = Link.active.find(params[:id])
   end
 
   def link_params

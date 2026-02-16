@@ -5,7 +5,7 @@
   # - linkable: The linkable record (optional - will be fetched if not provided)
   
   linkable ||= record.linkable
-  links = linkable&.links&.order(created_at: :desc) || Link.none
+  links = linkable&.links&.active&.order(created_at: :desc) || Link.none
 %>
 
 <div class="mt-8">

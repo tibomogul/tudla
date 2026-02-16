@@ -5,7 +5,7 @@
   # - notable: The notable record (optional - will be fetched if not provided)
   
   notable ||= record.notable
-  notes = notable&.notes&.order(created_at: :desc) || Note.none
+  notes = notable&.notes&.active&.order(created_at: :desc) || Note.none
 %>
 
 <div class="mt-8">

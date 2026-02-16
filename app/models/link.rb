@@ -32,7 +32,7 @@ class Link < ApplicationRecord
       "#{record.class.name.underscore}_#{record.id}_links",
       target: "#{record.class.name.underscore}_#{record.id}_links",
       partial: "shared/links_list",
-      locals: { links: linkable.links.order(created_at: :desc), show_header: false }
+      locals: { links: linkable.links.active.order(created_at: :desc), show_header: false }
     )
   rescue => e
     Rails.logger.error("Failed to broadcast link update: #{e.message}")

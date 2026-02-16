@@ -1,6 +1,6 @@
 class NotesController < ApplicationController
-  before_action :set_notable, only: [:create]
-  before_action :set_note, only: [:edit, :update, :destroy]
+  before_action :set_notable, only: [ :create ]
+  before_action :set_note, only: [ :edit, :update, :destroy ]
 
   def create
     @note = @notable.notes.build(note_params)
@@ -52,7 +52,7 @@ class NotesController < ApplicationController
   end
 
   def set_note
-    @note = Note.find(params[:id])
+    @note = Note.active.find(params[:id])
   end
 
   def note_params

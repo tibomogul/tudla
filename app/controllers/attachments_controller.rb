@@ -20,7 +20,7 @@ class AttachmentsController < ApplicationController
   # DELETE /attachments/1
   def destroy
     attachable_record = @attachment.attachable.attachable
-    @attachment.destroy!
+    @attachment.destroy
 
     redirect_to polymorphic_path(attachable_record), notice: "Attachment was successfully deleted.", status: :see_other
   end
@@ -43,7 +43,7 @@ class AttachmentsController < ApplicationController
   private
 
   def set_attachment
-    @attachment = Attachment.find(params.expect(:id))
+    @attachment = Attachment.active.find(params.expect(:id))
     authorize @attachment
   end
 

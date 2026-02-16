@@ -22,7 +22,7 @@ class Note < ApplicationRecord
       "#{record.class.name.underscore}_#{record.id}_notes",
       target: "#{record.class.name.underscore}_#{record.id}_notes",
       partial: "shared/notes_list",
-      locals: { notes: notable.notes.order(created_at: :desc), show_header: false }
+      locals: { notes: notable.notes.active.order(created_at: :desc), show_header: false }
     )
   rescue => e
     Rails.logger.error("Failed to broadcast note update: #{e.message}")
