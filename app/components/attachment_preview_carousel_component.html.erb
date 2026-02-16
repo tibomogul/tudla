@@ -1,4 +1,4 @@
-<dialog id="attachment_preview_carousel_modal" class="modal"
+<dialog id="<%= modal_id %>" class="modal"
   data-attachment-preview-target="dialog">
 
   <div class="modal-box flex flex-col p-0" style="width: 95vw; max-width: 90rem; height: 90vh; max-height: 90vh; overflow: hidden;">
@@ -54,32 +54,37 @@
           data-attachment-id="<%= attachment.id %>"
           data-filename="<%= attachment.filename %>"
           data-filesize="<%= attachment.file_size %>"
-          data-uploader="<%= attachment.user.preferred_name || attachment.user.username %>"
+          data-uploader="<%= attachment.user&.preferred_name || attachment.user&.username || 'Unknown' %>"
           data-download-url="<%= download_attachment_path(attachment) %>"
           data-preview-url="<%= preview_attachment_path(attachment) %>"
           data-preview-type="<%= preview_element_tag(attachment) %>">
 
+          <% first_slide = index == 0 %>
           <% if attachment.image? %>
             <img
               class="max-w-full max-h-full object-contain select-none"
               alt="<%= attachment.filename %>"
-              draggable="false" />
+              draggable="false"
+              <% if first_slide %>src="<%= preview_attachment_path(attachment) %>"<% end %> />
           <% elsif attachment.pdf? %>
             <iframe
               class="w-full h-full border-0"
-              title="<%= attachment.filename %>"></iframe>
+              title="<%= attachment.filename %>"
+              <% if first_slide %>src="<%= preview_attachment_path(attachment) %>"<% end %>></iframe>
           <% elsif attachment.video? %>
             <video
               class="max-w-full max-h-full"
               controls
-              preload="none">
+              preload="none"
+              <% if first_slide %>src="<%= preview_attachment_path(attachment) %>"<% end %>>
             </video>
           <% elsif attachment.audio? %>
             <div class="flex flex-col items-center gap-4 p-8">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-base-content/30">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
               </svg>
-              <audio controls preload="none" class="w-full max-w-md"></audio>
+              <audio controls preload="none" class="w-full max-w-md"
+                <% if first_slide %>src="<%= preview_attachment_path(attachment) %>"<% end %>></audio>
             </div>
           <% end %>
         </div>

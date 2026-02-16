@@ -91,7 +91,7 @@
       <% end %>
 
       <!-- Preview Carousel Modal -->
-      <%= render AttachmentPreviewCarouselComponent.new(attachments: ordered_attachments) %>
+      <%= render AttachmentPreviewCarouselComponent.new(attachments: ordered_attachments, context_id: attachments.object_id.to_s) %>
     </div>
   <% else %>
     <div class="text-center py-12 text-base-content/60">

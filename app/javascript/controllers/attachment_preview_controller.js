@@ -38,7 +38,11 @@ export default class extends Controller {
 
   close() {
     this.pauseAllMedia()
-    this.zoomReset()
+    this.clearAllTransforms()
+    this.scale = 1
+    this.panX = 0
+    this.panY = 0
+    this.updateZoomLevel()
     this.dialogTarget.close()
     document.removeEventListener("keydown", this.boundKeyHandler)
   }
@@ -197,6 +201,16 @@ export default class extends Controller {
     if (zoomLabel) {
       zoomLabel.classList.toggle("opacity-30", !isZoomable)
     }
+  }
+
+  clearAllTransforms() {
+    this.slideTargets.forEach((slide) => {
+      const el = this.getZoomableElement(slide)
+      if (el) {
+        el.style.transform = ""
+        el.style.transformOrigin = ""
+      }
+    })
   }
 
   getZoomableElement(slide) {

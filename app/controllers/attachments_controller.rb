@@ -27,7 +27,6 @@ class AttachmentsController < ApplicationController
 
   # GET /attachments/1/download
   def download
-    authorize @attachment
     redirect_to rails_blob_path(@attachment.file, disposition: "attachment"), allow_other_host: true
   end
 
