@@ -66,8 +66,8 @@ RSpec.describe "Attachments", type: :request do
   end
 
   describe "DELETE /attachments/:id" do
-    context "when authenticated and authorized" do
-      before { sign_in authorized_user }
+    context "when authenticated as the uploader" do
+      before { sign_in uploader }
 
       it "soft-deletes the attachment (sets deleted_at, record persists)" do
         attachment = image_attachment
@@ -92,7 +92,17 @@ RSpec.describe "Attachments", type: :request do
       end
     end
 
-    context "when authenticated but unauthorized" do
+    context "when authenticated as non-owner org member" do
+      before { sign_in authorized_user }
+
+      it "raises Pundit::NotAuthorizedError" do
+        expect {
+          delete attachment_path(image_attachment)
+        }.to raise_error(Pundit::NotAuthorizedError)
+      end
+    end
+
+    context "when authenticated but unauthorized for the project" do
       before { sign_in unauthorized_user }
 
       it "raises Pundit::NotAuthorizedError" do
@@ -110,7 +120,7 @@ RSpec.describe "Attachments", type: :request do
     end
 
     context "when attachment is already soft-deleted" do
-      before { sign_in authorized_user }
+      before { sign_in uploader }
 
       it "returns 404" do
         attachment = image_attachment
@@ -132,7 +142,7 @@ RSpec.describe "Attachments", type: :request do
       attachment
     end
 
-    before { sign_in authorized_user }
+    before { sign_in uploader }
 
     it "soft-deletes and redirects to the scope" do
       delete attachment_path(scope_attachment)
@@ -159,7 +169,7 @@ RSpec.describe "Attachments", type: :request do
       attachment
     end
 
-    before { sign_in authorized_user }
+    before { sign_in uploader }
 
     it "soft-deletes and redirects to the task" do
       delete attachment_path(task_attachment)

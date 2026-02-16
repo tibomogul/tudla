@@ -11,7 +11,7 @@ class AttachmentPolicy < ApplicationPolicy
   end
 
   def destroy?
-    can_access_attachable?
+    can_access_attachable? && attachment.user == user
   end
 
   def download?
