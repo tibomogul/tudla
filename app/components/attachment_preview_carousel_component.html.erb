@@ -1,7 +1,7 @@
 <dialog id="attachment_preview_carousel_modal" class="modal"
   data-attachment-preview-target="dialog">
 
-  <div class="modal-box w-11/12 max-w-5xl h-[85vh] flex flex-col p-0">
+  <div class="modal-box modal-box-preview flex flex-col p-0">
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-base-300 flex-shrink-0">
       <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -15,7 +15,24 @@
           </div>
         </div>
       </div>
-      <div class="flex items-center gap-1 flex-shrink-0">
+      <div class="flex items-center gap-1 flex-shrink-0" data-attachment-preview-target="zoomToolbar">
+        <button class="btn btn-ghost btn-sm btn-circle" data-action="attachment-preview#zoomOut" title="Zoom out">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6" />
+          </svg>
+        </button>
+        <span class="text-xs font-mono min-w-[3.5rem] text-center" data-attachment-preview-target="zoomLevel">100%</span>
+        <button class="btn btn-ghost btn-sm btn-circle" data-action="attachment-preview#zoomIn" title="Zoom in">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
+          </svg>
+        </button>
+        <button class="btn btn-ghost btn-sm btn-circle" data-action="attachment-preview#zoomReset" title="Reset zoom">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+          </svg>
+        </button>
+        <div class="divider divider-horizontal mx-0"></div>
         <a data-attachment-preview-target="downloadLink" class="btn btn-ghost btn-sm btn-circle" title="Download">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -28,7 +45,9 @@
     </div>
 
     <!-- Carousel area -->
-    <div class="flex-1 min-h-0 relative overflow-hidden bg-base-200 group">
+    <div class="flex-1 min-h-0 relative overflow-hidden bg-base-200 group"
+      data-attachment-preview-target="carouselArea"
+      data-action="wheel->attachment-preview#handleWheel dblclick->attachment-preview#handleDblClick pointerdown->attachment-preview#panStart pointermove->attachment-preview#panMove pointerup->attachment-preview#panEnd pointerleave->attachment-preview#panEnd">
       <% previewable_attachments.each_with_index do |attachment, index| %>
         <div class="w-full h-full flex items-center justify-center <%= 'hidden' unless index == 0 %>"
           data-attachment-preview-target="slide"

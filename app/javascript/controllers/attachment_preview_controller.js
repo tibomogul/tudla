@@ -1,12 +1,28 @@
 import { Controller } from "@hotwired/stimulus"
 
+const MIN_SCALE = 0.25
+const MAX_SCALE = 5
+const SCALE_STEP = 0.25
+const WHEEL_SCALE_STEP = 0.1
+const ZOOMABLE_TYPES = ["img", "video"]
+
 export default class extends Controller {
-  static targets = ["dialog", "slide", "counter", "filename", "filesize", "uploader", "downloadLink"]
+  static targets = ["dialog", "slide", "counter", "filename", "filesize", "uploader", "downloadLink", "zoomLevel", "zoomToolbar", "carouselArea"]
   static values = { index: Number }
 
   connect() {
     this.boundKeyHandler = this.handleKeydown.bind(this)
+    this.scale = 1
+    this.panX = 0
+    this.panY = 0
+    this.isPanning = false
+    this.panStartX = 0
+    this.panStartY = 0
+    this.panStartPanX = 0
+    this.panStartPanY = 0
   }
+
+  // ── Modal lifecycle ──
 
   open(event) {
     const attachmentId = event.currentTarget.dataset.attachmentId
@@ -14,12 +30,7 @@ export default class extends Controller {
       (slide) => slide.dataset.attachmentId === attachmentId
     )
 
-    if (slideIndex >= 0) {
-      this.indexValue = slideIndex
-    } else {
-      this.indexValue = 0
-    }
-
+    this.indexValue = slideIndex >= 0 ? slideIndex : 0
     this.showSlide()
     this.dialogTarget.showModal()
     document.addEventListener("keydown", this.boundKeyHandler)
@@ -27,9 +38,12 @@ export default class extends Controller {
 
   close() {
     this.pauseAllMedia()
+    this.zoomReset()
     this.dialogTarget.close()
     document.removeEventListener("keydown", this.boundKeyHandler)
   }
+
+  // ── Navigation ──
 
   next() {
     this.pauseCurrentMedia()
@@ -44,6 +58,8 @@ export default class extends Controller {
   }
 
   showSlide() {
+    this.zoomReset()
+
     this.slideTargets.forEach((slide, i) => {
       slide.classList.toggle("hidden", i !== this.indexValue)
     })
@@ -53,7 +69,11 @@ export default class extends Controller {
 
     this.loadContent(current)
     this.updateHeader(current)
+    this.updateZoomToolbarVisibility(current)
+    this.updateCursor()
   }
+
+  // ── Content loading ──
 
   loadContent(slide) {
     const previewUrl = slide.dataset.previewUrl
@@ -80,6 +100,8 @@ export default class extends Controller {
     }
   }
 
+  // ── Header updates ──
+
   updateHeader(slide) {
     const total = this.slideTargets.length
 
@@ -100,6 +122,159 @@ export default class extends Controller {
     }
   }
 
+  // ── Zoom ──
+
+  get currentSlideType() {
+    const current = this.slideTargets[this.indexValue]
+    return current ? current.dataset.previewType : null
+  }
+
+  get isZoomable() {
+    return ZOOMABLE_TYPES.includes(this.currentSlideType)
+  }
+
+  zoomIn() {
+    if (!this.isZoomable) return
+    this.setScale(Math.min(this.scale + SCALE_STEP, MAX_SCALE))
+  }
+
+  zoomOut() {
+    if (!this.isZoomable) return
+    this.setScale(Math.max(this.scale - SCALE_STEP, MIN_SCALE))
+  }
+
+  zoomReset() {
+    this.scale = 1
+    this.panX = 0
+    this.panY = 0
+    this.applyTransform()
+    this.updateZoomLevel()
+    this.updateCursor()
+  }
+
+  setScale(newScale) {
+    this.scale = Math.round(newScale * 100) / 100
+    if (this.scale <= 1) {
+      this.panX = 0
+      this.panY = 0
+    }
+    this.applyTransform()
+    this.updateZoomLevel()
+    this.updateCursor()
+  }
+
+  applyTransform() {
+    const current = this.slideTargets[this.indexValue]
+    if (!current) return
+
+    const el = this.getZoomableElement(current)
+    if (!el) return
+
+    if (this.scale === 1 && this.panX === 0 && this.panY === 0) {
+      el.style.transform = ""
+    } else {
+      el.style.transform = `scale(${this.scale}) translate(${this.panX}px, ${this.panY}px)`
+    }
+    el.style.transformOrigin = "center center"
+  }
+
+  updateZoomLevel() {
+    if (this.hasZoomLevelTarget) {
+      this.zoomLevelTarget.textContent = `${Math.round(this.scale * 100)}%`
+    }
+  }
+
+  updateZoomToolbarVisibility(slide) {
+    if (!this.hasZoomToolbarTarget) return
+    const zoomButtons = this.zoomToolbarTarget.querySelectorAll("[data-action*='zoom']")
+    const zoomLabel = this.hasZoomLevelTarget ? this.zoomLevelTarget : null
+    const isZoomable = ZOOMABLE_TYPES.includes(slide.dataset.previewType)
+
+    zoomButtons.forEach((btn) => {
+      btn.classList.toggle("btn-disabled", !isZoomable)
+      btn.disabled = !isZoomable
+    })
+    if (zoomLabel) {
+      zoomLabel.classList.toggle("opacity-30", !isZoomable)
+    }
+  }
+
+  getZoomableElement(slide) {
+    const type = slide.dataset.previewType
+    if (type === "img") return slide.querySelector("img")
+    if (type === "video") return slide.querySelector("video")
+    return null
+  }
+
+  // ── Mouse wheel zoom ──
+
+  handleWheel(event) {
+    if (!this.isZoomable) return
+    event.preventDefault()
+
+    const delta = event.deltaY > 0 ? -WHEEL_SCALE_STEP : WHEEL_SCALE_STEP
+    const newScale = Math.max(MIN_SCALE, Math.min(this.scale + delta, MAX_SCALE))
+    this.setScale(newScale)
+  }
+
+  // ── Double-click toggle zoom ──
+
+  handleDblClick(event) {
+    if (!this.isZoomable) return
+
+    if (this.scale > 1) {
+      this.zoomReset()
+    } else {
+      this.setScale(2)
+    }
+  }
+
+  // ── Pan (drag) ──
+
+  panStart(event) {
+    if (!this.isZoomable || this.scale <= 1) return
+    if (event.target.closest("button")) return
+
+    this.isPanning = true
+    this.panStartX = event.clientX
+    this.panStartY = event.clientY
+    this.panStartPanX = this.panX
+    this.panStartPanY = this.panY
+
+    if (this.hasCarouselAreaTarget) {
+      this.carouselAreaTarget.style.cursor = "grabbing"
+      this.carouselAreaTarget.setPointerCapture(event.pointerId)
+    }
+  }
+
+  panMove(event) {
+    if (!this.isPanning) return
+    event.preventDefault()
+
+    const dx = (event.clientX - this.panStartX) / this.scale
+    const dy = (event.clientY - this.panStartY) / this.scale
+    this.panX = this.panStartPanX + dx
+    this.panY = this.panStartPanY + dy
+    this.applyTransform()
+  }
+
+  panEnd(event) {
+    if (!this.isPanning) return
+    this.isPanning = false
+    this.updateCursor()
+  }
+
+  updateCursor() {
+    if (!this.hasCarouselAreaTarget) return
+    if (this.isZoomable && this.scale > 1) {
+      this.carouselAreaTarget.style.cursor = "grab"
+    } else {
+      this.carouselAreaTarget.style.cursor = ""
+    }
+  }
+
+  // ── Media controls ──
+
   pauseCurrentMedia() {
     const current = this.slideTargets[this.indexValue]
     if (!current) return
@@ -117,6 +292,8 @@ export default class extends Controller {
     if (audio) audio.pause()
   }
 
+  // ── Keyboard ──
+
   handleKeydown(event) {
     if (event.key === "ArrowRight") {
       event.preventDefault()
@@ -126,6 +303,15 @@ export default class extends Controller {
       this.prev()
     } else if (event.key === "Escape") {
       this.close()
+    } else if (event.key === "+" || event.key === "=") {
+      event.preventDefault()
+      this.zoomIn()
+    } else if (event.key === "-") {
+      event.preventDefault()
+      this.zoomOut()
+    } else if (event.key === "0") {
+      event.preventDefault()
+      this.zoomReset()
     }
   }
 
