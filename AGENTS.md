@@ -1,233 +1,189 @@
 # AGENTS.md
 
+**Generated:** 2026-02-28 | **Commit:** 91047b7 | **Branch:** main
+
 ## Project Overview
-Rails 8.0.3 task management application with PostgreSQL database, Tailwind CSS, and Docker containerization.
+Rails 8.1 task management app ("Tudla") for Shape Up methodology teams. PostgreSQL, Tailwind CSS + DaisyUI 5, Hotwire (Turbo + Stimulus), Docker.
 
 ## Tech Stack
-- **Framework**: Ruby on Rails 8.0.3
-- **Ruby Version**: 3.3.4
-- **Database**: PostgreSQL
-- **Frontend**: Tailwind CSS, Stimulus, Turbo, Importmap
-- **State Machine**: Statesman gem ~> 13.0.0
+- **Framework**: Ruby on Rails 8.1 (Ruby 3.3.4)
+- **Database**: PostgreSQL 18 (multi-database: primary, queue, cable, cache)
+- **Frontend**: Tailwind CSS + DaisyUI 5, Stimulus, Turbo, Importmap
+- **State Machine**: Statesman ~> 13.0.0
+- **Auth**: Devise (email/password + Google/Microsoft OAuth), Pundit (authorization)
+- **Audit**: PaperTrail ~> 17.0 (HashDiff adapter)
 - **Background Jobs**: Solid Queue
 - **Caching**: Solid Cache
-- **WebSockets**: Solid Cable
+- **WebSockets**: Solid Cable (async dev, solid_cable production)
+- **Markdown**: Commonmarker ~> 2.5 + Marksmith ~> 0.4.7
+- **Components**: ViewComponent
+- **Pagination**: Pagy
+- **MCP**: Official `mcp` gem (Streamable HTTP)
 - **Containerization**: Docker Compose
-- **MCP Integration**: Official `mcp` gem (Streamable HTTP) for Model Context Protocol
+
+## Sub-Knowledge Bases
+- `app/tools/AGENTS.md` — MCP tool patterns, ApplicationTool conventions, adding new tools
+- `app/models/AGENTS.md` — Model layer: concerns, associations, delegated types, state machines
+- `spec/AGENTS.md` — Test framework, factories, running specs
 
 ## Development Setup
 ```bash
-# Database setup
-docker compose exec rails bin/setup
-
-# Start development server
-docker compose up
-
-# Access application at http://localhost:3000
-# Mailcatcher at http://localhost:1080
+docker compose up -d
+docker compose exec rails bash -l
+$ bin/setup              # Creates all DBs, migrates, seeds
+$ bin/dev                # Starts web + CSS + jobs + mailcatcher
+# App: http://localhost:3000 | Mail: http://localhost:1080
 ```
 
 ## Project Structure
 ```
 app/
-├── controllers/     # Rails controllers
-├── models/         # ActiveRecord models  
-├── views/          # ERB templates
-├── assets/         # CSS, images
-└── javascript/     # Stimulus controllers
+├── components/      # ViewComponent classes (2)
+├── controllers/     # Rails controllers (17 + concerns/)
+├── helpers/         # View helpers (8)
+├── javascript/      # Stimulus controllers (15)
+├── jobs/            # Solid Queue jobs (2)
+├── models/          # ActiveRecord models (25 + concerns/) → see app/models/AGENTS.md
+├── policies/        # Pundit authorization (10)
+├── services/        # Business logic POROs (3)
+├── state_machines/  # Statesman definitions (2)
+├── tools/           # MCP tools (13 + concerns/) → see app/tools/AGENTS.md
+└── views/           # ERB templates (19 dirs, 116 files)
 
 config/
-├── routes.rb       # URL routing
-├── database.yml    # DB configuration
-└── environments/   # Environment configs
+├── routes.rb        # Resources + MCP + OAuth discovery
+├── database.yml     # Multi-database (primary, queue, cable, cache)
+├── recurring.yml    # Solid Queue recurring jobs
+└── initializers/    # Devise, Statesman, PaperTrail, Slack, StrongMigrations (13)
 
-db/
-├── schema.rb       # Database schema
-└── seeds.rb        # Seed data
+db/                  # 41 migrations + schema files
+docs/                # 19 implementation + operational docs
+lib/                 # CustomFailure (Devise) + rake tasks
+spec/                # RSpec specs → see spec/AGENTS.md
 ```
 
 ## Key Files
-- `Gemfile` - Ruby dependencies
-- `compose.yml` - Docker services (Rails app + PostgreSQL)
-- `Dockerfile` - Multi-stage container build
-- `Procfile.dev` - Development processes
-- `config/routes.rb` - Currently minimal, only health check
+- `Gemfile` — Dependencies (Rails 8.1, Statesman, Pundit, Devise, PaperTrail, mcp)
+- `compose.yml` — Docker services (Rails + PostgreSQL 18)
+- `Dockerfile` — Multi-stage build with configurable UID/GID, SSH forwarding
+- `Procfile.dev` — 4 processes: web, css (tailwind), que (solid_queue), mai (mailcatcher)
+- `config/routes.rb` — All resources + MCP endpoints + OAuth discovery
 
 ## Database Schema
 
 ### Multi-Database Configuration
 - **Primary DB** (`task_manager_development`): Main application data
-- **Queue DB** (`task_manager_development_queue`): Solid Queue tables (11 tables for background jobs)
-- **Cable DB** (`task_manager_development_cable`): Solid Cable tables (WebSocket message storage)
+- **Queue DB** (`task_manager_development_queue`): Solid Queue (11 tables)
+- **Cable DB** (`task_manager_development_cable`): Solid Cable (WebSocket storage)
 - **Cache DB** (`task_manager_production_cache`): Solid Cache (production only)
 
 **Setup**: `bin/setup` automatically creates and loads schemas for all databases
 
 ### Key Tables (Primary DB)
-- **tasks**: Main task records with responsible_user_id, project_id, scope_id, state tracking
-- **users**: User accounts with Devise authentication (username, preferred_name, email)
-- **projects**: Project organization with team associations
-- **teams**: Team structure within organizations
-- **task_transitions**: State machine transitions for tasks
-- **project_risk_transitions**: Risk state transitions for projects
+- **tasks**: responsible_user_id, project_id, scope_id, state, estimates, positions
+- **users**: Devise authentication (username, preferred_name, email, OAuth)
+- **projects**: team_id, risk_state, cached estimates
+- **scopes**: project_id, cached estimates, positions
+- **teams**: organization_id
+- **organizations**: timezone (default: "Australia/Brisbane")
+- **task_transitions / project_risk_transitions**: Statesman audit trail (JSONB metadata)
 - **user_party_roles**: Polymorphic role assignments (user → organization/team/project)
+- **notes / links / attachments**: Polymorphic via delegated_type containers
+- **reports / report_requirements**: Reporting with IceCube scheduling
+- **subscriptions / events / notifications**: Subscription/notification system
+- **api_tokens**: MCP Bearer token auth (dual-state: active + deleted_at)
 
 ## Key Features
 
 ### Task Management
-- **Responsible User Assignment**: 
-  - Searchable dropdown for assigning users to tasks
-  - Filters by username then preferred_name
-  - Uses `assignable_users` method (task owner, project team members, project users)
-  - Policy-based permissions via Pundit TaskPolicy
-  - Context-aware updates (details view vs list item view)
+- **State Machine**: new → in_progress → in_review → done (with blocked state)
+- **Guard**: Moving to `in_progress` requires `responsible_user`, `unassisted_estimate`, `ai_assisted_estimate`
+- **Responsible User Assignment**: Searchable dropdown via `assignable_users` method
+- **Dashboard**: Today list, backlog, completed today — drag-and-drop reordering (SortableJS)
+- **Time Tracking**: `time_in_current_state` calculated from transitions
 
 ### State Machine (Statesman Gem)
-Uses Statesman gem ~> 13.0.0 for robust state management with full audit trail.
 
-#### State Machine Definition (`app/state_machines/task_state_machine.rb`)
-```ruby
-class TaskStateMachine
-  include Statesman::Machine
-  
-  # States
-  state :new, initial: true
-  state :in_progress
-  state :in_review
-  state :done
-  state :blocked
-  
-  # Valid Transitions
-  transition from: :new,         to: [:in_progress]
-  transition from: :in_progress, to: [:in_review, :blocked]
-  transition from: :in_review,   to: [:done, :blocked]
-  transition from: :blocked,     to: [:in_progress]
-  transition from: :done,        to: [:in_review]  # for reopen
-  
-  # Guards
-  guard_transition(to: :in_progress) do |task, transition|
-    task.responsible_user.present?  # requires assigned user
-  end
-end
+#### Task States & Transitions
+```
+new → in_progress → in_review → done
+       ↘ blocked ↗            ↘ blocked ↗
+done → in_review (reopen)
 ```
 
-#### Task Model Integration (`app/models/task.rb`)
-- **Statesman Adapter**: Includes `Statesman::Adapters::ActiveRecordQueries` for efficient querying
-  - Provides class-level query methods: `Task.in_state(:new)`, `Task.not_in_state(:done)`
-  - Used in controllers and MCP tools for filtering tasks by state
-- **Association**: `has_many :task_transitions` (autosave: false)
-- **State Machine Instance**: `state_machine` method returns `TaskStateMachine` instance
-- **Current State**: Delegates `current_state` to state machine
-- **Time Tracking**: `time_in_current_state` calculates duration in current state
-- **Broadcasts**: After commit callback broadcasts task updates via Turbo Streams
-
-#### Project Risk State Machine (`app/models/project.rb`)
-- **Statesman Adapter**: Includes `Statesman::Adapters::ActiveRecordQueries` for efficient querying
-  - Provides class-level query methods: `Project.in_state(:green)`, `Project.not_in_state(:red)`
-  - Used in controllers and MCP tools for filtering projects by risk state
-- **Association**: `has_many :project_risk_transitions` (autosave: false)
-- **State Machine Instance**: `risk_state_machine` method returns `ProjectRiskStateMachine` instance
-- **Current State**: `risk_current_state` method with fallback to `risk_state` column
-- **Time Tracking**: `time_in_current_risk_state` calculates duration in current risk state
-- **Broadcasts**: After commit callback using named method `broadcast_project_update` with ActionCable guard
-
-#### TaskTransition Model (`app/models/task_transition.rb`)
-- **Belongs to**: task (inverse_of: :task_transitions)
-- **Metadata**: JSONB field stores transition context (e.g., `user_id`)
-- **Audit Trail**: Tracks all state changes with timestamps
-- **Most Recent**: Boolean flag marks current state (unique index on task_id + most_recent)
-- **Sort Key**: Integer for ordering transitions
-- **Broadcasts**: After commit callback appends transition to history timeline
-- **Cleanup**: After destroy callback updates most_recent flag on remaining transitions
-
-#### Database Schema (`task_transitions` table)
-```ruby
-t.string :to_state, null: false
-t.jsonb :metadata, default: {}      # Stores user_id, etc.
-t.integer :sort_key, null: false    # Ordering
-t.bigint :task_id, null: false      # FK to tasks
-t.boolean :most_recent, null: false # Current state marker
-t.timestamps
-
-# Indexes
-- (task_id, sort_key) UNIQUE
-- (task_id, most_recent) UNIQUE WHERE most_recent
-- metadata GIN index for JSONB queries
+#### Project Risk States
 ```
-
-#### State Transitions in Controllers (`tasks_controller.rb#update_state`)
-```ruby
-# Route: PATCH /tasks/:id/update_state
-def update_state
-  new_state = params[:state].to_sym
-  @update_context = params[:update_context] || "dashboard"
-  
-  if @task.state_machine.can_transition_to?(new_state)
-    @task.state_machine.transition_to!(new_state, user_id: current_user.id)
-    # Context-aware response
-  end
-end
+green ↔ yellow ↔ red (all transitions valid)
 ```
-
-#### Context-Aware Rendering
-- **Dashboard context**: Updates all lists (today, backlog, completed) + counts
-- **Details context**: Updates only task details view
-- **View helpers**: `badge_color(state)` and `button_color(state)` for DaisyUI styling
-- **Allowed transitions**: Use `task.state_machine.allowed_transitions` to show available actions
-- **User attribution**: Stores `user_id` in transition metadata for audit trail
-
-#### State Display Colors (DaisyUI classes)
-- **new**: badge-primary / btn-neutral
-- **in_progress**: badge-info / btn-info
-- **in_review**: badge-warning / btn-warning
-- **done**: badge-success / btn-success
-- **blocked**: badge-error / btn-error
 
 #### Key Methods
-- `task.current_state` - Returns current state symbol
-- `task.state_machine.can_transition_to?(state)` - Check if transition is valid
-- `task.state_machine.transition_to!(state, metadata)` - Perform transition
-- `task.state_machine.allowed_transitions` - List of valid next states
-- `task.time_in_current_state` - Duration in current state (Time or nil)
-- `task.task_transitions.order(:sort_key)` - All transitions chronologically
+- `task.current_state` / `task.state_machine.allowed_transitions`
+- `task.state_machine.can_transition_to?(state)` / `transition_to!(state, metadata)`
+- `Task.in_state(:new)` / `Task.not_in_state(:done)` (Statesman query adapter)
+- Metadata stores `user_id`: `transition_to!(:in_progress, user_id: current_user.id)`
 
-#### History View
-- Route: GET /tasks/:id/history
-- Filterable by user_id and time period (7/30/90 days or all)
-- Uses JSONB query: `WHERE metadata ->> 'user_id' = ?`
-- Broadcasts new transitions to `task_#{task.id}_history` stream
+#### State Display Colors (DaisyUI)
+- new: badge-primary / btn-neutral
+- in_progress: badge-info / btn-info
+- in_review: badge-warning / btn-warning
+- done: badge-success / btn-success
+- blocked: badge-error / btn-error
 
 ### Authorization
-- Pundit policies for all resources (TaskPolicy, ProjectPolicy, etc.)
-- Role-based access control via user_party_roles
-- Hierarchy: Organization → Team → Project
-- Context-sensitive permission checks (handles Devise/Warden unavailability in broadcasts)
+- **Pundit policies** for all resources (10 policies with Scope inner classes)
+- **Hierarchy**: Organization → Team → Project
+- **UserPartyRole**: Polymorphic join (user → org/team/project) with role (admin/member)
+- **Context-safe**: Handles Devise/Warden unavailability in broadcast contexts
+- **Project creation**: Org admins → any team; Team admins → their team only
+
+### Delegated Types (Polymorphic Composition)
+5 containers using Rails `delegated_type`:
+- **Notable** → Note: Project, Scope, Task, Team, Organization
+- **Linkable** → Link: Project, Scope, Task, Team, Organization
+- **Attachable** → Attachment (Active Storage): Project, Scope, Task, Team, Organization
+- **Subscribable** → Subscription: Project, Scope, Task
+- **Reportable** → Report: Project, Team
+
+### Services (POROs)
+- **SlackService** — Posts reports to Slack (webhook or Bot token), timezone-aware formatting
+- **TaskFlowAnalyzer** — State duration analytics, per-user cycle times from TaskTransition data
+- **ReportRequirementReminderScheduler** — Schedules reminder jobs via IceCube + Solid Queue
+
+### ViewComponents
+- **PaginatedListComponent** — Reusable paginated list with search filtering (Stimulus `list-filter`)
+- **AttachmentPreviewCarouselComponent** — Image/PDF/video/audio carousel with zoom/pan
+
+### Background Jobs
+- **PostReportToSlackJob** — Async Slack posting via SlackService
+- **ReportRequirementReminderJob** — Report deadline reminders
 
 ## Development Patterns
 
 ### Turbo Stream Context Management
 - Controllers accept `update_context` parameter to determine response format
-- Example contexts: "details", "list_item", "dashboard"
-- Prevents incorrect partial rendering (e.g., details replacing list items)
+- Contexts: `"details"` (default), `"list_item"`, `"scope_list_item"`, `"dashboard"`
+- Passed via hidden fields in forms, extracted in controllers with fallback
+- Prevents incorrect partial rendering (e.g., details partial replacing list item)
 
 ### Reusable Partials
-- **`tasks/_responsible_user_selector.html.erb`**: 
-  - Accepts `can_update`, `show_label`, `button_class`, `update_context` parameters
-  - Used in details, list items, and broadcast contexts
+- **`tasks/_responsible_user_selector.html.erb`**: Accepts `can_update`, `show_label`, `button_class`, `update_context`
+- **`shared/_task_list_item.html.erb`**: Used in dashboard, scope views, and broadcasts
+- **`shared/_notes_list.html.erb`**, **`_links_list.html.erb`**, **`_attachments_list.html.erb`**: Polymorphic attachment UI
 
 ### Stimulus Controllers
-- **`user_select_controller.js`**: Searchable dropdown with real-time filtering
-- Auto-loaded from `app/javascript/controllers/`
-- Handles form submission via Turbo
+- **user_select** — Searchable dropdown with real-time filtering
+- **sortable** / **sortable_scope** — Drag-and-drop reordering via SortableJS
+- **list_filter** — Real-time search with 300ms debounce
+- **hillchart** — Shape Up hill chart visualization
+- **flash** — Auto-dismiss messages after 5 seconds
+- Auto-loaded from `app/javascript/controllers/` via `eagerLoadControllersFrom`
 
 ### Broadcast Pattern (Console/Runner Safe)
-All models with broadcasts use **named methods with ActionCable guards** to work in all contexts (web, console, runner, tests):
-
+All 6 broadcast models use **named methods with ActionCable guards**:
 ```ruby
 after_commit :broadcast_method_name, if: :persisted?
 
 private
-
 def broadcast_method_name
   return unless ActionCable.server.pubsub.respond_to?(:broadcast)
   broadcast_replace_to ...
@@ -237,103 +193,62 @@ end
 ```
 
 **Models with safe broadcasts (6 total)**:
-- `Project` - broadcast_project_update
-- `Task` - broadcast_task_update
-- `ProjectRiskTransition` - broadcast_transition
-- `TaskTransition` - broadcast_transition
-- `Link` - broadcast_link_update
-- `Note` - broadcast_note_update
+- `Task` → broadcast_task_update (replace to "tasks" stream)
+- `Project` → broadcast_project_update (replace to "projects" stream)
+- `TaskTransition` → broadcast_transition (append to "task_{id}_history")
+- `ProjectRiskTransition` → broadcast_transition (append to "project_{id}_risk_history")
+- `Note` → broadcast_note_update (replace to "{type}_{id}_notes")
+- `Link` → broadcast_link_update (replace to "{type}_{id}_links")
 
 **Key Points**:
-- ✅ Named methods instead of inline lambdas (inline lambdas fail in console)
-- ✅ ActionCable availability check prevents errors in non-web contexts
-- ✅ `if: :persisted?` guard ensures record is saved
-- ✅ Error handling with logging for debugging
-- Model callbacks (`after_commit`) render without Devise/Warden context
-- Partials used in broadcasts should set `can_update: false`
-- Avoid policy checks in broadcast-rendered partials
-
-### Timezone Handling
-- **Organization Timezone**: Each organization has a `timezone` field (default: "Australia/Brisbane")
-- **Model Methods**: Task, Project, and Report models include `timezone` and `format_in_timezone` methods
-- **Display**: All time display uses organization timezone via `format_in_timezone`
-- **Editing**: Form inputs convert to/from organization timezone (not user's browser timezone)
-- **Controllers**: ReportsController parses datetime inputs in organization timezone
-- **SlackService**: Formats dates in organization timezone when posting reports
-- **Hierarchy**: Task → Project → Team → Organization, Report → Reportable → Organization
-- **Documentation**: See `docs/timezone_handling.md` for detailed implementation
+- ✅ Named methods (inline lambdas fail in console)
+- ✅ ActionCable guard prevents errors in non-web contexts
+- ✅ Partials in broadcasts set `can_update: false` (no Devise context)
+- ✅ Avoid policy checks in broadcast-rendered partials
 
 ### Soft Delete Implementation
-- Models: Project, Scope, Task, Note, Link, Attachment, Organization, Team, Report, ApiToken (10 total)
-- Concern: SoftDeletable (app/models/concerns/soft_deletable.rb)
-- **NO default_scope** - Must explicitly use `.active` scope in all queries
-- Partial indexes on deleted_at for performance (algorithm: :concurrently)
-- Controllers use .destroy (soft) not .destroy! (hard)
-- Scopes: `active` (not deleted), `with_deleted`, `only_deleted`
-- Methods: soft_delete, restore, deleted?
-- **Critical:** All queries must use `.active` - Controllers, policies, MCP tools, views
-- Migration uses disable_ddl_transaction! for production-safe concurrent index creation
-- **ApiToken Special Behavior**:
-  - Dual-state: `active` column (revocation) + `deleted_at` column (archiving)
-  - `destroy` both revokes (sets active=false) AND soft deletes (sets deleted_at)
-  - `revoke!` only revokes without soft deleting
-  - `active` scope overridden to check: not deleted AND not revoked AND not expired
-  - Additional scopes: `revoked`, `not_deleted`
-- See docs/soft_delete.md for detailed implementation
+- **10 models**: Project, Scope, Task, Note, Link, Attachment, Organization, Team, Report, ApiToken
+- **Concern**: `SoftDeletable` (app/models/concerns/soft_deletable.rb)
+- **NO default_scope** — Must explicitly use `.active` in ALL queries
+- **Scopes**: `active` (not deleted), `with_deleted`, `only_deleted`
+- **Methods**: `soft_delete`, `restore`, `deleted?`
+- **Critical**: Controllers, policies, MCP tools, views — ALL must use `.active`
+- **ApiToken special**: Dual-state (`active` column + `deleted_at`), `active` scope checks both + expiry
+
+### Timezone Handling
+- **Organization-level**: `timezone` field (default: "Australia/Brisbane")
+- **Hierarchy**: Task → Project → Team → Organization
+- **Display**: All times via `format_in_timezone` method
+- **Editing**: Form inputs convert to/from organization timezone (NOT browser timezone)
+- **Documentation**: See `docs/timezone_handling.md`
+
+### Estimate Rollup Caching
+- **Concern**: `EstimateCacheable` (included in Task)
+- **Cached on**: `scopes` and `projects` tables
+- **Columns**: `cached_unassisted_estimate`, `cached_ai_assisted_estimate`, `cached_actual_manhours`
+- **Triggers**: Task create/update/destroy/restore; handles reassignment between parents
+- **Backfill**: `bin/rails estimate_cache:backfill`
+
+### PaperTrail Audit
+- **6 models tracked**: Task, Scope, Project, Note, Link, Attachment
+- **Skipped columns**: Task skips positions/in_today; Scope skips position
+- **MCP access**: `ListUserChangesTool` queries versions with time range and team filtering
+- **Adapter**: HashDiff for efficient object_changes storage
 
 ## Model Context Protocol (MCP) Integration
 
 ### Overview
-MCP integration enables AI assistants to interact with the Task Manager via standardized tools using the official `mcp` gem (Ruby SDK, maintained by Anthropic + Shopify).
+MCP integration enables AI assistants to interact with Tudla via 13 standardized tools using the official `mcp` gem.
 
 ### Architecture
-- **Framework**: Official `mcp` gem (Streamable HTTP transport)
-- **Controller**: `McpController` handles POST `/mcp` with `MCP::Server#handle_json`
-- **Tools**: Individual classes in `app/tools/` inheriting from `ApplicationTool < MCP::Tool`
-- **Transport**: Streamable HTTP (POST `/mcp`) — no SSE, no middleware
-- **Authentication**: Bearer token in controller `before_action`, passed via `server_context[:user]`
-- **Documentation**: `docs/mcp_setup.md`, `docs/mcp_quick_start.md`
-
-### Available Tools (12 total)
-
-#### Task Tools
-- **ListTasksTool**: List/filter tasks by project, scope, user, state, today status
-- **GetTaskTool**: Get full task details including state history
-- **CreateTaskTool**: Create new task with all attributes
-- **UpdateTaskTool**: Update task attributes
-- **TransitionTaskStateTool**: Change task state via state machine (validates transitions)
-- **AssignTaskTool**: Assign task to user
-
-#### Scope Tools
-- **ListScopesTool**: List/filter scopes by project
-- **GetScopeTool**: Get scope details with tasks and completion percentage
-- **CreateScopeTool**: Create new scope in project
-- **UpdateScopeTool**: Update scope attributes
-
-#### Project Tools
-- **ListProjectsTool**: List all projects
-- **GetProjectTool**: Get project details with scopes and tasks
-
-#### Audit Tools
-- **ListUserChangesTool**: List changes from PaperTrail audit log with optional time range and team filtering
-
-### Endpoint
-
-The MCP server runs as part of the Rails application:
-- **Streamable HTTP**: `POST http://localhost:3000/mcp`
-
-### Authentication & Authorization
-
-- **API Tokens**: Users generate tokens via profile page (Security → API Tokens)
-- **Bearer Token Auth**: `Authorization: Bearer <token>` header
-- **Unauthenticated Handshake**: `initialize`, `ping`, `tools/list` work without auth
-- **Auth Required**: `tools/call` requires valid Bearer token (tool raises error if missing)
-- **User Scoping**: All queries scoped to authenticated user's permissions via Pundit
-- **Project Access**: Based on `user_party_roles` (Organization → Team → Project)
+- **Endpoint**: `POST /mcp` (Streamable HTTP)
+- **Auth**: Bearer token via `Authorization: Bearer <token>` header
+- **Controller**: `McpController` builds `MCP::Server` per request with user context
+- **Tools**: 13 total in `app/tools/` — see `app/tools/AGENTS.md` for details
+- **Discovery**: `/.well-known/mcp` + OAuth metadata endpoints for rmcp compatibility
+- **Token management**: Users generate via Profile → Security → API Tokens
 
 ### Configuration Example
-
-For AI assistants (Claude, Cascade, Kiro, etc.):
 ```json
 {
   "mcpServers": {
@@ -348,67 +263,55 @@ For AI assistants (Claude, Cascade, Kiro, etc.):
 }
 ```
 
-### Tool Pattern (ApplicationTool Delegation)
+### Tool Pattern
+Tools inherit from `ApplicationTool < MCP::Tool`. Each defines `description`, `annotations`, `input_schema`, and `def execute(**args)`. See `app/tools/AGENTS.md` for full conventions.
 
-Tools use a delegation pattern: `MCP::Tool.call` (class method) creates an instance and delegates to `#execute`:
-- `self.call(server_context:, **args)` — entry point called by MCP gem framework
-- `#execute(**args)` — tool logic, defined by each subclass (instance method)
-- `MCP::Tool::Response` wrapping and error handling in `ApplicationTool.call`
-- Cross-tool calls via `call_tool(ToolClass, **args)`
+## Testing
+- **Framework**: RSpec 8.0 with rspec-rails, FactoryBot, SimpleCov
+- **Specs**: 41 across models, requests, routing, helpers, components, tools
+- **Run**: `docker compose exec rails bundle exec rspec`
+- **Details**: See `spec/AGENTS.md`
 
-```ruby
-class MyTool < ApplicationTool
-  description "Tool description"
-  
-  annotations(
-    title: "My Tool",
-    read_only_hint: true
-  )
-  
-  input_schema(
-    properties: {
-      param: { type: "string", description: "Param description" }
-    },
-    required: ["param"]
-  )
-  
-  def execute(param:)
-    # Access current_user, scope_tasks_by_user, authorize, call_tool, etc.
-    # Return result string (ApplicationTool wraps in MCP::Tool::Response)
-  end
-end
+## Development Commands
+```bash
+# Server
+docker compose up -d && docker compose exec rails bash -l
+bin/dev                                    # Start all processes
+bin/setup                                  # Reset + setup all DBs
+
+# Tests & Quality
+bundle exec rspec                          # All specs
+bundle exec rubocop                        # Linter (Rails Omakase)
+bundle exec brakeman                       # Security scanner
+
+# Database
+bin/rails db:migrate                       # Run migrations
+bin/rails db:reset                         # Drop + create + migrate + seed
+bin/rails console                          # Rails console
+
+# Maintenance
+bin/rails estimate_cache:backfill          # Recalculate cached estimates
+bin/rails report_reminders:schedule        # Schedule reminder jobs
+bin/backup                                 # Backup DBs + storage
+bin/restore                                # Restore from backup
 ```
 
-### Example Usage
-- "List all tasks in project 5"
-- "Create a task called 'Fix login bug' in scope 3"
-- "Transition task 42 to in_progress"
-- "Assign task 15 to user 7"
-- "Show me scope 8 with all its tasks"
-- "What changes have I made in the last 24 hours?"
-- "Show me all my changes from 2025-11-01 to 2025-11-03"
-
-### Estimate Rollup Caching
-- **Concern**: `EstimateCacheable` (`app/models/concerns/estimate_cacheable.rb`), included in `Task`
-- **Purpose**: Denormalized cache of task estimate sums on `scopes` and `projects` tables
-- **Cached Columns** (on both `scopes` and `projects`):
-  - `cached_unassisted_estimate` (integer, default: 0)
-  - `cached_ai_assisted_estimate` (integer, default: 0)
-  - `cached_actual_manhours` (integer, default: 0)
-- **Rollup Logic**: Projects get ALL task totals (scoped + unscoped); Scopes get only their tasks' totals
-- **Triggers**: Recalculates parent caches on task create, update (estimates or parent change), soft delete, and restore
-- **Handles reassignment**: When a task moves between scopes/projects, both old and new parents are recalculated
-- **Soft delete compatibility**: Overrides `destroy` and `restore` since `SoftDeletable#update_column` bypasses callbacks
-- **Recalculation**: Uses SQL `SUM` via `Task.recalculate_estimates_for(record)` with `.active` scope
-- **Backfill**: `bin/rails estimate_cache:backfill` rake task for one-time population
-- **Display**: Read-only "Time Estimates" card in `scopes/_scope.html.erb` and `projects/_risk_details.html.erb`
-- **Specs**: `spec/models/estimate_cacheable_spec.rb` (12 examples)
+## Anti-Patterns (NEVER Do)
+- Query without `.active` scope on soft-deletable models
+- Use `default_scope` for soft delete (conflicts with Statesman + Rails 8 insert_all)
+- Inline lambda broadcasts (fail in console; use named methods with ActionCable guard)
+- Policy checks in broadcast-rendered partials (no Devise context available)
+- Skip `update_context` in Turbo Stream forms (causes wrong partial rendering)
+- Hard-code timezone (always use organization timezone via `format_in_timezone`)
+- Modify cached estimate columns directly (use EstimateCacheable callbacks)
+- Direct state assignment on Task/Project (use `state_machine.transition_to!`)
 
 ## Development Notes
-- Uses modern browser requirements
-- Tailwind CSS + DaisyUI for styling
-- No test framework configured (system tests disabled)
+- Tailwind CSS + DaisyUI 5 for styling (see `docs/daisyui.md` for component reference)
 - Rubocop with Rails Omakase styling
 - Brakeman for security analysis
-- Development uses Docker with volume mounting
+- Strong Migrations enabled (lock_timeout: 10s, statement_timeout: 1h)
+- Docker with volume mounting (configurable UID/GID for permissions)
 - ActionView::RecordIdentifier included in controllers for `dom_id` helper
+- Custom Devise failure handler (`lib/custom_failure.rb`) redirects to root_path
+- String-based class name comparison in policies (avoids Rails class reloading issues)
