@@ -1,0 +1,7 @@
+<% content_for :title, "New cycle" %>
+
+<div class="md:w-2/3 w-full">
+  <h1 class="font-bold text-2xl mb-4">New Cycle</h1>
+  <%= render "form", cycle: @cycle %>
+  <%= link_to "Back to cycles", cycles_path, class: "btn btn-soft mt-4" %>
+</div>

@@ -1,0 +1,15 @@
+<% active_cycle = @active_cycle || ::Cycle.active.in_state(:active).order(:start_date).first %>
+<% if active_cycle %>
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-3">
+      <div class="flex items-center justify-between">
+        <%= link_to active_cycle.name, cycle_path(active_cycle), class: "font-semibold text-sm hover:underline" %>
+        <span class="badge badge-sm <%= cycle_badge_color(active_cycle.current_state) %>">
+          <%= active_cycle.build_phase? ? "Build Phase" : "Cooldown" %>
+        </span>
+      </div>
+      <progress class="progress progress-primary w-full mt-2" value="<%= active_cycle.progress_percentage %>" max="100"></progress>
+      <p class="text-xs text-base-content/60 mt-1"><%= active_cycle.days_remaining %> days remaining</p>
+    </div>
+  </div>
+<% end %>

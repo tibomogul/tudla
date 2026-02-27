@@ -1,0 +1,7 @@
+<% content_for :title, "New pitch" %>
+
+<div class="md:w-2/3 w-full">
+  <h1 class="font-bold text-2xl mb-4">New Pitch</h1>
+  <%= render "form", pitch: @pitch %>
+  <%= link_to "Back to pitches", pitches_path, class: "btn btn-soft mt-4" %>
+</div>

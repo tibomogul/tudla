@@ -1,0 +1,4 @@
+<li class="flex items-center gap-2 text-sm py-1">
+  <span class="badge badge-sm <%= pitch_badge_color(transition.to_state) %>"><%= transition.to_state.humanize.titleize %></span>
+  <span class="text-base-content/60"><%= transition.created_at.strftime("%d %b %H:%M") %></span>
+</li>

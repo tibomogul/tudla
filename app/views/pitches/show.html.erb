@@ -1,0 +1,136 @@
+<% content_for :title, @pitch.title %>
+
+<div class="md:w-2/3 w-full">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <!-- Header with breadcrumbs -->
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-2">
+      <h1 class="font-bold text-2xl"><%= @pitch.title %></h1>
+      <span class="badge <%= pitch_badge_color(@pitch.current_state) %>"><%= @pitch.current_state.humanize.titleize %></span>
+      <span class="badge badge-outline"><%= @pitch.appetite_label %></span>
+    </div>
+    <div class="breadcrumbs hidden p-0 text-sm sm:inline">
+      <ul>
+        <li><%= link_to "Dashboard", user_root_path %></li>
+        <li><%= link_to "Pitches", pitches_path %></li>
+        <li class="opacity-80"><%= "PI-#{@pitch.id}" %></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Author info -->
+  <p class="text-sm text-base-content/60 mb-4">
+    Shaped by <strong><%= @pitch.user&.preferred_name || @pitch.user&.email %></strong>
+    on <%= @pitch.created_at.strftime("%d %b %Y") %>
+  </p>
+
+  <!-- State Transition Buttons -->
+  <% if policy(@pitch).update? %>
+    <div class="flex flex-wrap gap-2 mb-4">
+      <% if @pitch.current_state == "draft" && policy(@pitch).submit? %>
+        <%= button_to "Submit for Betting", transition_pitch_path(@pitch, state: "ready_for_betting"),
+          method: :patch, class: "btn btn-info btn-sm",
+          data: { turbo_confirm: "Submit this pitch for the betting table?" } %>
+      <% end %>
+      <% if @pitch.current_state == "ready_for_betting" && policy(@pitch).reject? %>
+        <%= button_to "Reject", transition_pitch_path(@pitch, state: "rejected"),
+          method: :patch, class: "btn btn-error btn-sm",
+          data: { turbo_confirm: "Reject this pitch?" } %>
+      <% end %>
+      <% if @pitch.current_state == "rejected" %>
+        <%= button_to "Rework (Back to Draft)", transition_pitch_path(@pitch, state: "draft"),
+          method: :patch, class: "btn btn-warning btn-sm" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Ingredient Tabs -->
+  <div role="tablist" class="tabs tabs-boxed my-4" data-controller="pitch-tabs">
+    <a role="tab" class="tab tab-active" data-pitch-tabs-target="tab" data-tab="problem">Problem</a>
+    <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="solution">Solution</a>
+    <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="rabbit_holes">Rabbit Holes</a>
+    <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="no_gos">No-Gos</a>
+  </div>
+
+  <!-- Tab Content -->
+  <div data-pitch-tabs-target="panel" data-tab="problem">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="font-semibold text-base mb-3">Problem</h3>
+        <% if @pitch.problem.present? %>
+          <div class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert">
+            <%= render_markdown(@pitch.problem) %>
+          </div>
+        <% else %>
+          <p class="text-base-content/50 text-sm italic">No problem description yet.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div data-pitch-tabs-target="panel" data-tab="solution" class="hidden">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="font-semibold text-base mb-3">Solution</h3>
+        <% if @pitch.solution.present? %>
+          <div class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert">
+            <%= render_markdown(@pitch.solution) %>
+          </div>
+        <% else %>
+          <p class="text-base-content/50 text-sm italic">No solution described yet.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div data-pitch-tabs-target="panel" data-tab="rabbit_holes" class="hidden">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="font-semibold text-base mb-3">Rabbit Holes</h3>
+        <% if @pitch.rabbit_holes.present? %>
+          <div class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert">
+            <%= render_markdown(@pitch.rabbit_holes) %>
+          </div>
+        <% else %>
+          <p class="text-base-content/50 text-sm italic">No rabbit holes identified yet.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div data-pitch-tabs-target="panel" data-tab="no_gos" class="hidden">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="font-semibold text-base mb-3">No-Gos</h3>
+        <% if @pitch.no_gos.present? %>
+          <div class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert">
+            <%= render_markdown(@pitch.no_gos) %>
+          </div>
+        <% else %>
+          <p class="text-base-content/50 text-sm italic">No no-gos defined yet.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="flex flex-wrap gap-2 mt-6">
+    <%= link_to "Edit this pitch", edit_pitch_path(@pitch), class: "btn btn-soft" if policy(@pitch).edit? %>
+    <%= link_to "Back to pitches", pitches_path, class: "btn btn-soft" %>
+    <% if policy(@pitch).destroy? %>
+      <%= button_to "Delete", @pitch, method: :delete, form_class: "inline-block", class: "btn btn-soft btn-secondary", data: { turbo_confirm: "Are you sure?" } %>
+    <% end %>
+  </div>
+
+  <!-- Attachments Section -->
+  <%= render "shared/attachments_section", record: @pitch, can_upload: policy(@pitch).update? %>
+
+  <!-- Notes Section -->
+  <%= render "shared/notes_section", record: @pitch, can_create: policy(@pitch).update? %>
+
+  <!-- Links Section -->
+  <%= render "shared/links_section", record: @pitch, can_create: policy(@pitch).update? %>
+</div>

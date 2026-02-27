@@ -1,0 +1,52 @@
+<% content_for :title, "Cycles" %>
+
+<div class="md:w-2/3 w-full">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="font-bold text-2xl">Cycles</h1>
+    <% if policy(::Cycle.new).create? %>
+      <%= link_to new_cycle_path, class: "btn btn-primary btn-sm" do %>
+        <span class="iconify lucide--plus size-4"></span>
+        New Cycle
+      <% end %>
+    <% end %>
+  </div>
+
+  <%= turbo_frame_tag "cycles_index_list" do %>
+    <div class="space-y-3">
+      <% @cycles.each do |cycle| %>
+        <%= link_to cycle_path(cycle), class: "card bg-base-100 shadow-sm hover:shadow-md transition-shadow block" do %>
+          <div class="card-body p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h2 class="font-semibold text-base"><%= cycle.name %></h2>
+                <span class="badge badge-sm <%= cycle_badge_color(cycle.current_state) %>"><%= cycle.current_state.humanize %></span>
+                <% if cycle.active? %>
+                  <span class="badge badge-sm badge-outline">
+                    <%= cycle.build_phase? ? "Build Phase" : "Cooldown" %>
+                  </span>
+                <% end %>
+              </div>
+              <span class="text-sm text-base-content/60">
+                <%= cycle.start_date.strftime("%d %b") %> — <%= cycle.end_date.strftime("%d %b %Y") %>
+              </span>
+            </div>
+            <progress class="progress progress-primary w-full mt-2" value="<%= cycle.progress_percentage %>" max="100"></progress>
+            <div class="flex items-center justify-between mt-1">
+              <span class="text-xs text-base-content/60"><%= cycle.organization&.name %></span>
+              <span class="text-xs text-base-content/60"><%= cycle.days_remaining %> days remaining</span>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if @cycles.empty? %>
+      <div class="text-center py-12 text-base-content/50">
+        <span class="iconify lucide--repeat size-12 mx-auto mb-3 opacity-30"></span>
+        <p>No cycles yet.</p>
+      </div>
+    <% end %>
+
+    <%== pagy_nav(@pagy_cycles) if @pagy_cycles&.pages.to_i > 1 %>
+  <% end %>
+</div>

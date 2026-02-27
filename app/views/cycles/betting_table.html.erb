@@ -1,0 +1,92 @@
+<% content_for :title, "Betting Table — #{@cycle.name}" %>
+
+<div class="w-full">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <!-- Header with breadcrumbs -->
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="font-bold text-2xl">Betting Table — <%= @cycle.name %></h1>
+    <div class="breadcrumbs hidden p-0 text-sm sm:inline">
+      <ul>
+        <li><%= link_to "Dashboard", user_root_path %></li>
+        <li><%= link_to "Cycles", cycles_path %></li>
+        <li><%= link_to "CY-#{@cycle.id}", cycle_path(@cycle) %></li>
+        <li class="opacity-80">Betting Table</li>
+      </ul>
+    </div>
+  </div>
+
+  <div role="tablist" class="tabs tabs-boxed my-4">
+    <%= link_to "Details", cycle_path(@cycle), class: "tab" %>
+    <%= link_to "Betting Table", betting_table_cycle_path(@cycle), class: "tab tab-active" %>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Pitches Column (2/3 width) -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Big Batch Section -->
+      <div>
+        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+          <span class="badge badge-lg badge-primary">Big Batch</span>
+          <span class="text-base-content/60 text-sm font-normal">6 weeks</span>
+        </h2>
+        <div class="space-y-3">
+          <% @big_batch_pitches.each do |pitch| %>
+            <%= render partial: "cycles/betting_pitch_card", locals: { pitch: pitch, cycle: @cycle } %>
+          <% end %>
+          <% if @big_batch_pitches.empty? %>
+            <p class="text-base-content/50 text-sm py-4">No big batch pitches ready for betting.</p>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Small Batch Section -->
+      <div>
+        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+          <span class="badge badge-lg badge-secondary">Small Batch</span>
+          <span class="text-base-content/60 text-sm font-normal">2 weeks</span>
+        </h2>
+        <div class="space-y-3">
+          <% @small_batch_pitches.each do |pitch| %>
+            <%= render partial: "cycles/betting_pitch_card", locals: { pitch: pitch, cycle: @cycle } %>
+          <% end %>
+          <% if @small_batch_pitches.empty? %>
+            <p class="text-base-content/50 text-sm py-4">No small batch pitches ready for betting.</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Availability Sidebar (1/3 width) -->
+    <div>
+      <h2 class="text-lg font-bold mb-3">Team Availability</h2>
+      <div class="space-y-3">
+        <% @teams.each do |team| %>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body p-3">
+              <div class="flex items-center justify-between">
+                <span class="font-medium text-sm"><%= team.name %></span>
+                <span class="badge badge-sm badge-neutral"><%= team.users.size %> members</span>
+              </div>
+              <% committed = @cycle.projects.active.where(team: team).count %>
+              <% if committed > 0 %>
+                <p class="text-xs text-warning mt-1"><%= committed %> project<%= committed == 1 ? '' : 's' %> committed</p>
+              <% else %>
+                <p class="text-xs text-success mt-1">Available</p>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+        <% if @teams.empty? %>
+          <p class="text-base-content/50 text-sm">No teams found.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6">
+    <%= link_to "Back to cycle", cycle_path(@cycle), class: "btn btn-soft" %>
+  </div>
+</div>

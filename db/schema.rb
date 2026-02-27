@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_14_030314) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_27_221205) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -76,6 +76,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_030314) do
     t.index ["attachable_id"], name: "index_attachments_on_attachable_id"
     t.index ["deleted_at"], name: "index_attachments_on_deleted_at", where: "(deleted_at IS NULL)"
     t.index ["user_id"], name: "index_attachments_on_user_id"
+  end
+
+  create_table "cycle_transitions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "cycle_id", null: false
+    t.jsonb "metadata", default: {}
+    t.boolean "most_recent", null: false
+    t.integer "sort_key", null: false
+    t.string "to_state", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cycle_id", "most_recent"], name: "index_cycle_transitions_parent_most_recent", unique: true, where: "most_recent"
+    t.index ["cycle_id", "sort_key"], name: "index_cycle_transitions_parent_sort", unique: true
+    t.index ["cycle_id"], name: "index_cycle_transitions_on_cycle_id"
+    t.index ["metadata"], name: "index_cycle_transitions_on_metadata", using: :gin
+  end
+
+  create_table "cycles", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "end_date", null: false
+    t.string "name", null: false
+    t.bigint "organization_id", null: false
+    t.date "start_date", null: false
+    t.string "status", default: "shaping"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_cycles_on_deleted_at", where: "(deleted_at IS NULL)"
+    t.index ["organization_id", "start_date"], name: "index_cycles_on_organization_id_and_start_date"
+    t.index ["organization_id"], name: "index_cycles_on_organization_id"
+    t.index ["status"], name: "index_cycles_on_status"
   end
 
   create_table "events", force: :cascade do |t|
@@ -153,6 +182,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_030314) do
     t.index ["name"], name: "index_organizations_on_name"
   end
 
+  create_table "pitch_transitions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "metadata", default: {}
+    t.boolean "most_recent", null: false
+    t.bigint "pitch_id", null: false
+    t.integer "sort_key", null: false
+    t.string "to_state", null: false
+    t.datetime "updated_at", null: false
+    t.index ["metadata"], name: "index_pitch_transitions_on_metadata", using: :gin
+    t.index ["pitch_id", "most_recent"], name: "index_pitch_transitions_parent_most_recent", unique: true, where: "most_recent"
+    t.index ["pitch_id", "sort_key"], name: "index_pitch_transitions_parent_sort", unique: true
+    t.index ["pitch_id"], name: "index_pitch_transitions_on_pitch_id"
+  end
+
+  create_table "pitches", force: :cascade do |t|
+    t.integer "appetite", default: 6
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.text "no_gos"
+    t.bigint "organization_id", null: false
+    t.text "problem"
+    t.text "rabbit_holes"
+    t.text "solution"
+    t.string "status", default: "draft"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["deleted_at"], name: "index_pitches_on_deleted_at", where: "(deleted_at IS NULL)"
+    t.index ["organization_id", "status"], name: "index_pitches_on_organization_id_and_status"
+    t.index ["organization_id"], name: "index_pitches_on_organization_id"
+    t.index ["user_id"], name: "index_pitches_on_user_id"
+  end
+
   create_table "project_risk_transitions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.jsonb "metadata", default: {}
@@ -172,14 +234,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_030314) do
     t.integer "cached_ai_assisted_estimate", default: 0, null: false
     t.integer "cached_unassisted_estimate", default: 0, null: false
     t.datetime "created_at", null: false
+    t.bigint "cycle_id"
     t.datetime "deleted_at"
     t.text "description"
     t.string "name"
+    t.bigint "pitch_id"
     t.string "risk_state"
     t.bigint "team_id"
     t.datetime "updated_at", null: false
+    t.index ["cycle_id"], name: "index_projects_on_cycle_id"
     t.index ["deleted_at"], name: "index_projects_on_deleted_at", where: "(deleted_at IS NULL)"
     t.index ["name"], name: "index_projects_on_name"
+    t.index ["pitch_id"], name: "index_projects_on_pitch_id"
     t.index ["risk_state"], name: "index_projects_on_risk_state"
     t.index ["team_id"], name: "index_projects_on_team_id"
   end
@@ -309,6 +375,109 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_030314) do
     t.index ["organization_id"], name: "index_teams_on_organization_id"
   end
 
+  create_table "tudla_hubstaff_activities", force: :cascade do |t|
+    t.bigint "activity_id", null: false
+    t.integer "billable", default: 0
+    t.datetime "created_at", null: false
+    t.string "date", null: false
+    t.integer "idle", default: 0
+    t.integer "input_tracked", default: 0
+    t.integer "keyboard", default: 0
+    t.datetime "last_updated_at"
+    t.integer "manual", default: 0
+    t.integer "mouse", default: 0
+    t.integer "overall", default: 0
+    t.bigint "project_id"
+    t.integer "resumed", default: 0
+    t.bigint "task_id"
+    t.integer "tracked", default: 0
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.integer "work_break", default: 0
+    t.index ["activity_id"], name: "index_tudla_hubstaff_activities_on_activity_id", unique: true
+    t.index ["date"], name: "index_tudla_hubstaff_activities_on_date"
+    t.index ["project_id"], name: "index_tudla_hubstaff_activities_on_project_id"
+    t.index ["task_id"], name: "index_tudla_hubstaff_activities_on_task_id"
+    t.index ["user_id"], name: "index_tudla_hubstaff_activities_on_user_id"
+  end
+
+  create_table "tudla_hubstaff_configs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "organization_id"
+    t.string "personal_access_token"
+    t.bigint "tudla_organization_id"
+    t.string "tudla_organization_type"
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_tudla_hubstaff_configs_on_organization_id"
+    t.index ["tudla_organization_type", "tudla_organization_id"], name: "index_configs_on_tudla_organization"
+  end
+
+  create_table "tudla_hubstaff_organization_updates", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "last_updated_at"
+    t.bigint "organization_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_tudla_hubstaff_organization_updates_on_organization_id"
+  end
+
+  create_table "tudla_hubstaff_projects", force: :cascade do |t|
+    t.integer "client_id"
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.datetime "last_updated_at"
+    t.json "metadata", default: {}, null: false
+    t.string "name", null: false
+    t.bigint "project_id"
+    t.string "project_type", null: false
+    t.string "status"
+    t.bigint "tudla_project_id"
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_tudla_hubstaff_projects_on_client_id"
+    t.index ["project_id"], name: "index_tudla_hubstaff_projects_on_project_id"
+    t.index ["tudla_project_id"], name: "index_tudla_hubstaff_projects_on_tudla_project_id"
+  end
+
+  create_table "tudla_hubstaff_tasks", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.text "details"
+    t.datetime "due_at"
+    t.integer "integration_id"
+    t.datetime "last_updated_at"
+    t.integer "lock_version"
+    t.json "metadata", default: {}, null: false
+    t.integer "project_id", null: false
+    t.string "project_type", null: false
+    t.string "remote_alternate_id"
+    t.string "remote_id"
+    t.string "status"
+    t.string "summary", null: false
+    t.bigint "task_id"
+    t.bigint "tudla_task_id"
+    t.datetime "updated_at", null: false
+    t.index ["remote_id"], name: "index_tudla_hubstaff_tasks_on_remote_id"
+    t.index ["task_id"], name: "index_tudla_hubstaff_tasks_on_task_id"
+    t.index ["tudla_task_id"], name: "index_tudla_hubstaff_tasks_on_tudla_task_id"
+  end
+
+  create_table "tudla_hubstaff_users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.string "first_name", null: false
+    t.string "ip_address"
+    t.string "last_name", null: false
+    t.datetime "last_updated_at"
+    t.string "name", null: false
+    t.string "status", default: "active", null: false
+    t.string "time_zone", default: "UTC", null: false
+    t.bigint "tudla_user_id"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["email"], name: "index_tudla_hubstaff_users_on_email", unique: true
+    t.index ["tudla_user_id"], name: "index_tudla_hubstaff_users_on_tudla_user_id"
+    t.index ["user_id"], name: "index_tudla_hubstaff_users_on_user_id"
+  end
+
   create_table "user_party_roles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "party_id", null: false
@@ -369,6 +538,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_030314) do
   add_foreign_key "api_tokens", "users"
   add_foreign_key "attachments", "attachables"
   add_foreign_key "attachments", "users"
+  add_foreign_key "cycle_transitions", "cycles"
+  add_foreign_key "cycles", "organizations"
   add_foreign_key "events", "subscribables"
   add_foreign_key "events", "users"
   add_foreign_key "links", "linkables"
@@ -377,7 +548,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_030314) do
   add_foreign_key "notes", "users"
   add_foreign_key "notifications", "events"
   add_foreign_key "notifications", "users"
+  add_foreign_key "pitch_transitions", "pitches"
+  add_foreign_key "pitches", "organizations"
+  add_foreign_key "pitches", "users"
   add_foreign_key "project_risk_transitions", "projects"
+  add_foreign_key "projects", "cycles", validate: false
+  add_foreign_key "projects", "pitches", validate: false
   add_foreign_key "projects", "teams"
   add_foreign_key "report_requirements", "reportables"
   add_foreign_key "report_requirements", "users"

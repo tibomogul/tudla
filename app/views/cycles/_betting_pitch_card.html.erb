@@ -1,0 +1,35 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <h3 class="font-semibold"><%= link_to pitch.title, pitch_path(pitch), class: "hover:underline" %></h3>
+        <span class="badge badge-sm <%= pitch_badge_color(pitch.current_state) %>"><%= pitch.current_state.humanize %></span>
+        <% if pitch.ingredients_complete? %>
+          <span class="text-success" title="All ingredients complete">
+            <span class="iconify lucide--check-circle size-4"></span>
+          </span>
+        <% else %>
+          <span class="text-warning" title="Ingredients incomplete">
+            <span class="iconify lucide--alert-circle size-4"></span>
+          </span>
+        <% end %>
+      </div>
+      <span class="text-xs text-base-content/60">by <%= pitch.user&.preferred_name || pitch.user&.email %></span>
+    </div>
+
+    <% if pitch.problem.present? %>
+      <p class="text-sm text-base-content/70 mt-2 line-clamp-2"><%= truncate(pitch.problem, length: 200) %></p>
+    <% end %>
+
+    <div class="flex items-center justify-between mt-3">
+      <span class="text-xs text-base-content/60">Created <%= pitch.created_at.strftime("%d %b %Y") %></span>
+
+      <% if policy(pitch).bet? && pitch.current_state == "ready_for_betting" %>
+        <%= button_to "Place Bet", bet_pitch_path(pitch, cycle_id: cycle.id),
+          method: :post,
+          class: "btn btn-primary btn-sm",
+          form: { data: { turbo_confirm: "Place a bet on '#{pitch.title}' for this cycle?" } } %>
+      <% end %>
+    </div>
+  </div>
+</div>

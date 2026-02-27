@@ -1,0 +1,68 @@
+<% content_for :title, "Pitches" %>
+
+<div class="md:w-2/3 w-full">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="font-bold text-2xl">Pitches</h1>
+    <% if policy(::Pitch.new).create? %>
+      <%= link_to new_pitch_path, class: "btn btn-primary btn-sm" do %>
+        <span class="iconify lucide--plus size-4"></span>
+        New Pitch
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Status Filter Tabs -->
+  <% current_status = params[:status] %>
+  <div role="tablist" class="tabs tabs-boxed mb-4">
+    <%= link_to "All", pitches_path, class: "tab #{current_status.blank? ? 'tab-active' : ''}" %>
+    <%= link_to "My Drafts", pitches_path(status: "draft"), class: "tab #{current_status == 'draft' ? 'tab-active' : ''}" %>
+    <%= link_to "Ready for Betting", pitches_path(status: "ready_for_betting"), class: "tab #{current_status == 'ready_for_betting' ? 'tab-active' : ''}" %>
+    <%= link_to "Bet", pitches_path(status: "bet"), class: "tab #{current_status == 'bet' ? 'tab-active' : ''}" %>
+    <%= link_to "Rejected", pitches_path(status: "rejected"), class: "tab #{current_status == 'rejected' ? 'tab-active' : ''}" %>
+  </div>
+
+  <%= turbo_frame_tag "pitches_index_list" do %>
+    <div class="space-y-3">
+      <% @pitches.each do |pitch| %>
+        <%= link_to pitch_path(pitch), class: "card bg-base-100 shadow-sm hover:shadow-md transition-shadow block" do %>
+          <div class="card-body p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h2 class="font-semibold text-base"><%= pitch.title %></h2>
+                <span class="badge badge-sm <%= pitch_badge_color(pitch.current_state) %>"><%= pitch.current_state.humanize.titleize %></span>
+                <span class="badge badge-sm badge-outline"><%= pitch.appetite_label %></span>
+              </div>
+              <span class="text-xs text-base-content/60">
+                by <%= pitch.user&.preferred_name || pitch.user&.email %>
+              </span>
+            </div>
+            <% if pitch.problem.present? %>
+              <p class="text-sm text-base-content/70 mt-2 line-clamp-2"><%= truncate(pitch.problem, length: 200) %></p>
+            <% end %>
+            <div class="flex items-center gap-3 mt-2 text-xs text-base-content/50">
+              <span><%= pitch.created_at.strftime("%d %b %Y") %></span>
+              <% if pitch.ingredients_complete? %>
+                <span class="text-success flex items-center gap-1">
+                  <span class="iconify lucide--check-circle size-3"></span> Complete
+                </span>
+              <% else %>
+                <span class="text-warning flex items-center gap-1">
+                  <span class="iconify lucide--alert-circle size-3"></span> Incomplete
+                </span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if @pitches.empty? %>
+      <div class="text-center py-12 text-base-content/50">
+        <span class="iconify lucide--lightbulb size-12 mx-auto mb-3 opacity-30"></span>
+        <p>No pitches found.</p>
+      </div>
+    <% end %>
+
+    <%== pagy_nav(@pagy_pitches) if @pagy_pitches&.pages.to_i > 1 %>
+  <% end %>
+</div>

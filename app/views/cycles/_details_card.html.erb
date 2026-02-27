@@ -1,0 +1,57 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-base">Cycle Details</h3>
+      <% if policy(cycle).update? %>
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+            <span class="iconify lucide--more-vertical size-4"></span>
+          </div>
+          <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box z-10 w-52">
+            <% cycle.state_machine.allowed_transitions.each do |state| %>
+              <li>
+                <%= button_to "Move to #{state.humanize}",
+                  transition_cycle_path(cycle, state: state),
+                  method: :patch,
+                  class: "btn btn-ghost btn-sm justify-start #{cycle_button_color(state)}",
+                  data: { turbo_stream: true } %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <p class="text-base-content/60">Status</p>
+        <span class="badge <%= cycle_badge_color(cycle.current_state) %>"><%= cycle.current_state.humanize %></span>
+      </div>
+      <div>
+        <p class="text-base-content/60">Organization</p>
+        <p class="font-medium"><%= cycle.organization&.name %></p>
+      </div>
+      <div>
+        <p class="text-base-content/60">Start Date</p>
+        <p class="font-medium"><%= cycle.start_date.strftime("%d %b %Y") %></p>
+      </div>
+      <div>
+        <p class="text-base-content/60">End Date</p>
+        <p class="font-medium"><%= cycle.end_date.strftime("%d %b %Y") %></p>
+      </div>
+    </div>
+
+    <% if cycle.active? %>
+      <div class="mt-4">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-medium">
+            <%= cycle.build_phase? ? "Build Phase" : "Cooldown Phase" %>
+          </span>
+          <span class="text-sm text-base-content/60"><%= cycle.progress_percentage.round(1) %>%</span>
+        </div>
+        <progress class="progress progress-primary w-full" value="<%= cycle.progress_percentage %>" max="100"></progress>
+        <p class="text-xs text-base-content/60 mt-1"><%= cycle.days_remaining %> days remaining</p>
+      </div>
+    <% end %>
+  </div>
+</div>

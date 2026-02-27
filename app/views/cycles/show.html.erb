@@ -1,0 +1,87 @@
+<% content_for :title, "Cycle — #{@cycle.name}" %>
+
+<div class="md:w-2/3 w-full">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <!-- Header with breadcrumbs -->
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-2">
+      <h1 class="font-bold text-2xl"><%= @cycle.name %></h1>
+      <span class="badge <%= cycle_badge_color(@cycle.current_state) %>"><%= @cycle.current_state.humanize %></span>
+    </div>
+    <div class="breadcrumbs hidden p-0 text-sm sm:inline">
+      <ul>
+        <li><%= link_to "Dashboard", user_root_path %></li>
+        <li><%= link_to "Cycles", cycles_path %></li>
+        <li class="opacity-80"><%= "CY-#{@cycle.id}" %></li>
+      </ul>
+    </div>
+  </div>
+
+  <div role="tablist" class="tabs tabs-boxed my-4">
+    <%= link_to "Details",
+      cycle_path(@cycle),
+      class: "tab #{'tab-active' if action_name == 'show'}" %>
+    <%= link_to "Betting Table",
+      betting_table_cycle_path(@cycle),
+      class: "tab #{'tab-active' if action_name == 'betting_table'}" %>
+  </div>
+
+  <%= turbo_frame_tag dom_id(@cycle, :details) do %>
+    <%= render partial: "cycles/details_card", locals: { cycle: @cycle } %>
+  <% end %>
+
+  <!-- Projects in this Cycle -->
+  <div class="mt-6">
+    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+      <span class="iconify lucide--folder-open size-5"></span>
+      Projects in this Cycle
+      <span class="badge badge-sm badge-neutral"><%= @cycle.projects.active.count %></span>
+    </h2>
+
+    <% finished = @cycle.finished_projects %>
+    <% unfinished = @cycle.unfinished_projects %>
+
+    <% if finished.any? || unfinished.any? %>
+      <div class="flex gap-2 mb-3">
+        <span class="badge badge-success badge-sm"><%= finished.count %> shipped</span>
+        <span class="badge <%= @cycle.current_state == 'completed' ? 'badge-error' : 'badge-warning' %> badge-sm"><%= unfinished.count %> in progress</span>
+      </div>
+
+      <div class="space-y-2">
+        <% @cycle.projects.active.each do |project| %>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body p-3 flex-row items-center justify-between">
+              <%= link_to project.name, project_path(project), class: "font-medium hover:underline" %>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-sm <%= risk_badge_color(project.risk_current_state) %>"><%= project.risk_current_state.humanize %></span>
+                <% if @cycle.current_state == "completed" && project.risk_current_state != "done" %>
+                  <span class="badge badge-sm badge-error">Expired</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-base-content/50 text-sm">No projects assigned to this cycle yet.</p>
+    <% end %>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="flex flex-wrap gap-2 mt-6">
+    <%= link_to "Edit this cycle", edit_cycle_path(@cycle), class: "btn btn-soft" if policy(@cycle).edit? %>
+    <%= link_to "Back to cycles", cycles_path, class: "btn btn-soft" %>
+  </div>
+
+  <!-- Notes Section -->
+  <%= render "shared/notes_section", record: @cycle, can_create: policy(@cycle).update? %>
+
+  <!-- Links Section -->
+  <%= render "shared/links_section", record: @cycle, can_create: policy(@cycle).update? %>
+
+  <!-- Attachments Section -->
+  <%= render "shared/attachments_section", record: @cycle, can_upload: policy(@cycle).update? %>
+</div>

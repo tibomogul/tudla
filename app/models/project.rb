@@ -8,6 +8,8 @@ class Project < ApplicationRecord
   has_many :user_party_roles, as: :party
   has_many :users, through: :user_party_roles
   belongs_to :team, optional: true
+  belongs_to :pitch, optional: true
+  belongs_to :cycle, optional: true
 
   has_one :subscribable, as: :subscribable, touch: true, dependent: :destroy
   has_one :reportable, as: :reportable, dependent: :destroy
