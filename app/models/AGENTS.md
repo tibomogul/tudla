@@ -52,7 +52,7 @@
 - Auto-triggers: after create, update (if estimates or parent changed), destroy, restore
 - Handles reassignment: recalculates BOTH old and new parent records
 - Uses SQL SUM with `.active` scope for soft delete compatibility
-- Backfill: `bin/rails estimate_cache:backfill`
+- Backfill: `docker compose exec rails bash -lc "bin/rails estimate_cache:backfill"`
 
 ## Broadcast Models (6)
 All use named method + ActionCable guard + error rescue pattern:

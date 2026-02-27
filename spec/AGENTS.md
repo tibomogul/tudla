@@ -26,10 +26,10 @@ spec/
 
 ## Running
 ```bash
-bundle exec rspec                                         # All specs
-bundle exec rspec spec/models/                            # Category
-bundle exec rspec spec/models/estimate_cacheable_spec.rb  # Single file
-bundle exec rspec --format documentation                  # Verbose
+docker compose exec rails bash -lc "bundle exec rspec"                                         # All specs
+docker compose exec rails bash -lc "bundle exec rspec spec/models/"                            # Category
+docker compose exec rails bash -lc "bundle exec rspec spec/models/estimate_cacheable_spec.rb"  # Single file
+docker compose exec rails bash -lc "bundle exec rspec --format documentation"                  # Verbose
 ```
 
 ## Conventions

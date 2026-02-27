@@ -28,12 +28,13 @@ Rails 8.1 task management app ("Tudla") for Shape Up methodology teams. PostgreS
 
 ## Development Setup
 ```bash
-docker compose up -d
-docker compose exec rails bash -l
-$ bin/setup              # Creates all DBs, migrates, seeds
-$ bin/dev                # Starts web + CSS + jobs + mailcatcher
+docker compose up -d                                         # Start containers
+docker compose exec rails bash -lc "bin/setup"               # Creates all DBs, migrates, seeds
+docker compose exec rails bash -lc "bin/dev"                  # Starts web + CSS + jobs + mailcatcher (foreground)
 # App: http://localhost:3000 | Mail: http://localhost:1080
 ```
+
+See [Development Commands](#development-commands) for full process management.
 
 ## Project Structure
 ```
@@ -77,7 +78,7 @@ spec/                # RSpec specs → see spec/AGENTS.md
 - **Cable DB** (`task_manager_development_cable`): Solid Cable (WebSocket storage)
 - **Cache DB** (`task_manager_production_cache`): Solid Cache (production only)
 
-**Setup**: `bin/setup` automatically creates and loads schemas for all databases
+**Setup**: `docker compose exec rails bash -lc "bin/setup"` creates and loads schemas for all databases
 
 ### Key Tables (Primary DB)
 - **tasks**: responsible_user_id, project_id, scope_id, state, estimates, positions
@@ -227,7 +228,7 @@ end
 - **Cached on**: `scopes` and `projects` tables
 - **Columns**: `cached_unassisted_estimate`, `cached_ai_assisted_estimate`, `cached_actual_manhours`
 - **Triggers**: Task create/update/destroy/restore; handles reassignment between parents
-- **Backfill**: `bin/rails estimate_cache:backfill`
+- **Backfill**: `docker compose exec rails bash -lc "bin/rails estimate_cache:backfill"`
 
 ### PaperTrail Audit
 - **6 models tracked**: Task, Scope, Project, Note, Link, Attachment
@@ -269,31 +270,86 @@ Tools inherit from `ApplicationTool < MCP::Tool`. Each defines `description`, `a
 ## Testing
 - **Framework**: RSpec 8.0 with rspec-rails, FactoryBot, SimpleCov
 - **Specs**: 41 across models, requests, routing, helpers, components, tools
-- **Run**: `docker compose exec rails bundle exec rspec`
+- **Run**: `docker compose exec rails bash -lc "bundle exec rspec"`
 - **Details**: See `spec/AGENTS.md`
 
 ## Development Commands
 ```bash
-# Server
-docker compose up -d && docker compose exec rails bash -l
-bin/dev                                    # Start all processes
-bin/setup                                  # Reset + setup all DBs
+# Docker
+docker compose up -d                                                     # Start containers
+docker compose down                                                      # Stop containers
+
+# Dev Server (bin/dev runs Foreman: web + css + jobs + mailcatcher)
+docker compose exec rails bash -lc "bin/dev"                              # Start (foreground, Ctrl+C to stop)
+docker compose exec -d rails bash -lc "bin/dev"                           # Start (background/detached)
+docker compose exec rails bash -lc "pkill -f foreman || true"             # Stop background dev server
+
+# Setup
+docker compose exec rails bash -lc "bin/setup"                            # Reset + setup all DBs
 
 # Tests & Quality
-bundle exec rspec                          # All specs
-bundle exec rubocop                        # Linter (Rails Omakase)
-bundle exec brakeman                       # Security scanner
+docker compose exec rails bash -lc "bundle exec rspec"                    # All specs
+docker compose exec rails bash -lc "bundle exec rubocop"                  # Linter (Rails Omakase)
+docker compose exec rails bash -lc "bundle exec brakeman"                 # Security scanner
 
 # Database
-bin/rails db:migrate                       # Run migrations
-bin/rails db:reset                         # Drop + create + migrate + seed
-bin/rails console                          # Rails console
+docker compose exec rails bash -lc "bin/rails db:migrate"                 # Run migrations
+docker compose exec rails bash -lc "bin/rails db:reset"                   # Drop + create + migrate + seed
+docker compose exec rails bash -lc "bin/rails console"                    # Rails console
 
 # Maintenance
-bin/rails estimate_cache:backfill          # Recalculate cached estimates
-bin/rails report_reminders:schedule        # Schedule reminder jobs
-bin/backup                                 # Backup DBs + storage
-bin/restore                                # Restore from backup
+docker compose exec rails bash -lc "bin/rails estimate_cache:backfill"    # Recalculate cached estimates
+docker compose exec rails bash -lc "bin/rails report_reminders:schedule"  # Schedule reminder jobs
+docker compose exec rails bash -lc "bin/backup"                           # Backup DBs + storage
+docker compose exec rails bash -lc "bin/restore"                          # Restore from backup
+```
+
+### Process Management
+
+All code runs inside the `rails` Docker container. Never run `bin/dev`, `bin/rails`, or `bundle exec`
+directly on the host — always prefix with `docker compose exec rails bash -lc "..."`.
+
+#### Starting the Dev Server
+```bash
+# 1. Ensure containers are running
+docker compose up -d
+
+# 2a. Foreground (see logs, Ctrl+C to stop):
+docker compose exec rails bash -lc "bin/dev"
+
+# 2b. Background (detached — preferred for agents):
+docker compose exec -d rails bash -lc "bin/dev"
+```
+**Do NOT use `nohup`** — it leaves zombie processes inside the container.
+The `-d` flag on `docker compose exec` is the correct way to detach.
+
+#### Stopping the Dev Server
+```bash
+docker compose exec rails bash -lc "pkill -f foreman || true"
+```
+This sends SIGTERM to Foreman, which gracefully stops all 4 child processes
+(web, css, jobs, mailcatcher). No stale PID files are left behind.
+
+#### Checking if Dev Server is Running
+```bash
+# Process check
+docker compose exec rails bash -lc "pgrep -f foreman > /dev/null && echo 'running' || echo 'stopped'"
+
+# HTTP health check (returns 200 when Rails is up)
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/up
+```
+
+#### Full Restart
+```bash
+docker compose exec rails bash -lc "pkill -f foreman || true" && sleep 2 && docker compose exec -d rails bash -lc "bin/dev"
+```
+
+#### Container Lifecycle
+```bash
+docker compose up -d                   # Start containers (PostgreSQL + Rails)
+docker compose down                    # Stop and remove containers
+docker compose restart rails           # Restart Rails container (kills dev server too)
+docker compose ps                      # Check container status
 ```
 
 ## Anti-Patterns (NEVER Do)
