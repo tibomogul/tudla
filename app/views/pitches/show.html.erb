@@ -47,16 +47,8 @@
     </div>
   <% end %>
 
-  <!-- Ingredient Tabs -->
-  <div role="tablist" class="tabs tabs-boxed my-4" data-controller="pitch-tabs">
-    <a role="tab" class="tab tab-active" data-pitch-tabs-target="tab" data-tab="problem">Problem</a>
-    <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="solution">Solution</a>
-    <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="rabbit_holes">Rabbit Holes</a>
-    <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="no_gos">No-Gos</a>
-  </div>
-
-  <!-- Tab Content -->
-  <div data-pitch-tabs-target="panel" data-tab="problem">
+  <!-- Pitch Ingredients -->
+  <div class="flex flex-col gap-6 my-6">
     <div class="card bg-base-100 shadow-sm">
       <div class="card-body p-4">
         <h3 class="font-semibold text-base mb-3">Problem</h3>
@@ -69,9 +61,7 @@
         <% end %>
       </div>
     </div>
-  </div>
 
-  <div data-pitch-tabs-target="panel" data-tab="solution" class="hidden">
     <div class="card bg-base-100 shadow-sm">
       <div class="card-body p-4">
         <h3 class="font-semibold text-base mb-3">Solution</h3>
@@ -84,9 +74,7 @@
         <% end %>
       </div>
     </div>
-  </div>
 
-  <div data-pitch-tabs-target="panel" data-tab="rabbit_holes" class="hidden">
     <div class="card bg-base-100 shadow-sm">
       <div class="card-body p-4">
         <h3 class="font-semibold text-base mb-3">Rabbit Holes</h3>
@@ -99,9 +87,7 @@
         <% end %>
       </div>
     </div>
-  </div>
 
-  <div data-pitch-tabs-target="panel" data-tab="no_gos" class="hidden">
     <div class="card bg-base-100 shadow-sm">
       <div class="card-body p-4">
         <h3 class="font-semibold text-base mb-3">No-Gos</h3>
