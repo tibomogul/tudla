@@ -47,7 +47,7 @@
           </div>
         <% end %>
 
-        <% task_count = scope.tasks.count %>
+        <% task_count = scope.tasks.active.count %>
         <% if task_count > 0 %>
           <div>
             <p class="text-sm font-medium text-base-content/70 mb-1">Tasks</p>

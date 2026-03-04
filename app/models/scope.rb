@@ -3,7 +3,7 @@ class Scope < ApplicationRecord
   has_paper_trail skip: [ :project_position ]
   belongs_to :project
   has_many :tasks
-  has_many :done_tasks, -> { where(done: true) }, class_name: "Task"
+  has_many :done_tasks, -> { active.where(done: true) }, class_name: "Task"
 
   has_one :subscribable, as: :subscribable, touch: true
   has_one :attachable, as: :attachable, dependent: :destroy
@@ -14,10 +14,10 @@ class Scope < ApplicationRecord
   has_many :links, through: :linkable
 
   def percent_done
-    total = tasks.count
+    total = tasks.active.count
     return 0 if total.zero?
 
-    done_count = tasks
+    done_count = tasks.active
       .joins(:task_transitions)
       .merge(TaskTransition.where(most_recent: true, to_state: "done"))
       .distinct

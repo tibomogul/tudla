@@ -37,7 +37,7 @@
                     <%= link_to scope.project.name, scope.project, class: "link link-hover", data: { turbo: false } %>
                   </div>
 
-                  <% task_count = scope.tasks.count %>
+                  <% task_count = scope.tasks.active.count %>
                   <% if task_count > 0 %>
                     <div class="flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

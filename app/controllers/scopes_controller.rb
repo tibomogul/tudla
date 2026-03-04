@@ -1,5 +1,5 @@
 class ScopesController < ApplicationController
-  before_action :set_scope, only: %i[ show edit update destroy reorder_tasks ]
+  before_action :set_scope, only: %i[show edit update destroy reorder_tasks]
 
   # GET /scopes or /scopes.json
   def index
@@ -17,7 +17,7 @@ class ScopesController < ApplicationController
         description: @scope.name
       }
     ]
-    @tasks = @scope.tasks.order(:scope_position, :id)
+    @tasks = policy_scope(Task).where(scope_id: @scope.id).order(:scope_position, :id)
     analyzer = TaskFlowAnalyzer.new(@tasks)
     @results = analyzer.state_durations.sort_by(&:state)
   end
@@ -112,17 +112,18 @@ class ScopesController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_scope
-      @scope = policy_scope(Scope).find(params.expect(:id))
-    end
 
-    # Only allow a list of trusted parameters through.
-    def scope_params
-      params.expect(scope: [ :name, :description, :project_id, :nice_to_have ])
-    end
+  # Use callbacks to share common setup or constraints between actions.
+  def set_scope
+    @scope = policy_scope(Scope).find(params.expect(:id))
+  end
 
-    def hillchart_params
-      params.permit(hillchart_data: {}, scope: {})
-    end
+  # Only allow a list of trusted parameters through.
+  def scope_params
+    params.expect(scope: [ :name, :description, :project_id, :nice_to_have ])
+  end
+
+  def hillchart_params
+    params.permit(hillchart_data: {}, scope: {})
+  end
 end
