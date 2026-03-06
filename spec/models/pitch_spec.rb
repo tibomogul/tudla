@@ -216,6 +216,45 @@ RSpec.describe Pitch, type: :model do
     end
   end
 
+  describe "#current_state" do
+    it "returns status column value when set" do
+      pitch.update_column(:status, "ready_for_betting")
+      expect(pitch.current_state).to eq("ready_for_betting")
+    end
+
+    it "falls back to state_machine when status is nil" do
+      pitch.update_column(:status, nil)
+      expect(pitch.current_state).to eq("draft")
+    end
+  end
+
+  describe "Statesman query adapter" do
+    let!(:draft_pitch) { create(:pitch, user: user, organization: organization) }
+    let!(:ready_pitch) do
+      p = create(:pitch, user: user, organization: organization)
+      p.state_machine.transition_to!(:ready_for_betting)
+      p
+    end
+
+    it "filters with .in_state" do
+      expect(Pitch.in_state(:draft)).to include(draft_pitch)
+      expect(Pitch.in_state(:draft)).not_to include(ready_pitch)
+    end
+
+    it "filters with .not_in_state" do
+      expect(Pitch.not_in_state(:draft)).to include(ready_pitch)
+      expect(Pitch.not_in_state(:draft)).not_to include(draft_pitch)
+    end
+  end
+
+  describe "state machine after_transition callback" do
+    it "updates the status column after transition" do
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      pitch.reload
+      expect(pitch.status).to eq("ready_for_betting")
+    end
+  end
+
   describe "delegated types" do
     it "can have notes through notable" do
       expect(pitch).to respond_to(:notes)

@@ -112,6 +112,32 @@ RSpec.describe "/pitches", type: :request do
       expect(response.body).to include(pitch.title)
     end
 
+    it "displays ingredient sections" do
+      get pitch_url(pitch)
+      expect(response.body).to include("Problem")
+      expect(response.body).to include("Solution")
+      expect(response.body).to include("Rabbit Holes")
+      expect(response.body).to include("No-Gos")
+    end
+
+    context "when pitch is non-draft and belongs to another user" do
+      let(:other_user) { create(:user) }
+      let(:other_ready_pitch) do
+        p = create(:pitch, user: other_user, organization: organization)
+        p.state_machine.transition_to!(:ready_for_betting)
+        p
+      end
+
+      before do
+        UserPartyRole.create!(user: other_user, party: organization, role: "member")
+      end
+
+      it "allows member to view non-draft pitch by another user" do
+        get pitch_url(other_ready_pitch)
+        expect(response).to be_successful
+      end
+    end
+
     context "when pitch is draft and belongs to another user" do
       let(:other_user) { create(:user) }
       let(:other_draft_pitch) { create(:pitch, user: other_user, organization: organization) }
@@ -132,6 +158,22 @@ RSpec.describe "/pitches", type: :request do
     it "renders a successful response" do
       get new_pitch_url
       expect(response).to be_successful
+    end
+
+    it "renders the form with required field markers" do
+      get new_pitch_url
+      expect(response.body).to include("Title")
+      expect(response.body).to include("Appetite")
+      expect(response.body).to include("Ingredients")
+    end
+
+    it "renders all ingredient fields in the form" do
+      get new_pitch_url
+      body = response.body
+      expect(body).to include("Problem")
+      expect(body).to include("Solution")
+      expect(body).to include("Rabbit Holes")
+      expect(body).to include("No-Gos")
     end
   end
 
@@ -260,6 +302,39 @@ RSpec.describe "/pitches", type: :request do
         expect(other_pitch.title).not_to eq("Hacked")
       end
     end
+
+    context "when user is admin" do
+      before do
+        UserPartyRole.where(user: user, party: organization).update_all(role: "admin")
+      end
+
+      it "allows admin to update another user's non-draft pitch" do
+        other_user = create(:user)
+        UserPartyRole.create!(user: other_user, party: organization, role: "member")
+        other_pitch = create(:pitch, user: other_user, organization: organization)
+        other_pitch.state_machine.transition_to!(:ready_for_betting)
+
+        patch pitch_url(other_pitch), params: { pitch: { title: "Admin Edit" } }
+        other_pitch.reload
+        expect(other_pitch.title).to eq("Admin Edit")
+      end
+
+      it "allows admin to update a non-draft pitch" do
+        pitch.state_machine.transition_to!(:ready_for_betting)
+        patch pitch_url(pitch), params: { pitch: { title: "Updated Ready Pitch" } }
+        pitch.reload
+        expect(pitch.title).to eq("Updated Ready Pitch")
+      end
+    end
+
+    context "when creator tries to update non-draft pitch" do
+      it "prevents creator from updating ready_for_betting pitch" do
+        pitch.state_machine.transition_to!(:ready_for_betting)
+        expect {
+          patch pitch_url(pitch), params: { pitch: { title: "Sneaky Update" } }
+        }.to raise_error(Pundit::NotAuthorizedError)
+      end
+    end
   end
 
   describe "DELETE /destroy" do
@@ -284,6 +359,15 @@ RSpec.describe "/pitches", type: :request do
       it "prevents deleting other user's pitch" do
         delete pitch_url(other_pitch)
         expect(other_pitch.reload.deleted_at).to be_nil
+      end
+    end
+
+    context "when pitch is not in draft state" do
+      it "prevents creator from deleting non-draft pitch" do
+        pitch.state_machine.transition_to!(:ready_for_betting)
+        expect {
+          delete pitch_url(pitch)
+        }.to raise_error(Pundit::NotAuthorizedError)
       end
     end
   end
@@ -323,6 +407,12 @@ RSpec.describe "/pitches", type: :request do
     it "redirects to the pitch" do
       patch transition_pitch_url(pitch), params: { state: "ready_for_betting" }
       expect(response).to redirect_to(pitch_url(pitch))
+    end
+
+    it "stores user_id in transition metadata" do
+      patch transition_pitch_url(pitch), params: { state: "ready_for_betting" }
+      transition = pitch.pitch_transitions.order(:sort_key).last
+      expect(transition.metadata["user_id"]).to eq(user.id)
     end
 
     context "with invalid state transition" do
@@ -381,6 +471,30 @@ RSpec.describe "/pitches", type: :request do
       expect(response).to redirect_to(project_url(Project.last))
     end
 
+    it "transitions pitch to bet state" do
+      team = create(:team, organization: organization)
+      cycle = create(:cycle, organization: organization)
+
+      post bet_pitch_url(pitch), params: { team_id: team.id, cycle_id: cycle.id }
+      pitch.reload
+      expect(pitch.current_state).to eq("bet")
+    end
+
+    context "when user is not admin" do
+      before do
+        UserPartyRole.where(user: user, party: organization).update_all(role: "member")
+      end
+
+      it "prevents non-admin from betting" do
+        team = create(:team, organization: organization)
+        cycle = create(:cycle, organization: organization)
+
+        expect {
+          post bet_pitch_url(pitch), params: { team_id: team.id, cycle_id: cycle.id }
+        }.to raise_error(Pundit::NotAuthorizedError)
+      end
+    end
+
     context "when pitch is not in bet state" do
       let(:draft_pitch) { create(:pitch, user: user, organization: organization) }
 
@@ -417,6 +531,25 @@ RSpec.describe "/pitches", type: :request do
       UserPartyRole.create!(user: non_member_user, party: organization, role: "member")
       get pitches_url
       expect(response).to be_successful
+    end
+  end
+
+  describe "unauthenticated access" do
+    before { sign_out user }
+
+    it "redirects index to root" do
+      get pitches_url
+      expect(response).to redirect_to(root_path)
+    end
+
+    it "redirects show to root" do
+      get pitch_url(pitch)
+      expect(response).to redirect_to(root_path)
+    end
+
+    it "redirects create to root" do
+      post pitches_url, params: { pitch: { title: "Test", appetite: 2 } }
+      expect(response).to redirect_to(root_path)
     end
   end
 
