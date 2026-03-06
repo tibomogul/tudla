@@ -14,7 +14,7 @@
   <%= turbo_frame_tag "cycles_index_list" do %>
     <div class="space-y-3">
       <% @cycles.each do |cycle| %>
-        <%= link_to cycle_path(cycle), class: "card bg-base-100 shadow-sm hover:shadow-md transition-shadow block" do %>
+        <%= link_to cycle_path(cycle), class: "card bg-base-100 shadow-sm hover:shadow-md transition-shadow block", data: { turbo_frame: "_top" } do %>
           <div class="card-body p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
