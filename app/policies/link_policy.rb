@@ -50,6 +50,8 @@ class LinkPolicy < ApplicationPolicy
       user_has_team_access?(linkable_record)
     when "Organization"
       user_has_organization_access?(linkable_record)
+    when "Cycle", "Pitch"
+      user_has_organization_access?(linkable_record.organization)
     else
       false
     end

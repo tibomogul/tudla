@@ -51,6 +51,8 @@ class NotePolicy < ApplicationPolicy
       user_has_team_access?(notable_record)
     when "Organization"
       user_has_organization_access?(notable_record)
+    when "Cycle", "Pitch"
+      user_has_organization_access?(notable_record.organization)
     else
       false
     end

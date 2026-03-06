@@ -51,6 +51,8 @@ class AttachmentPolicy < ApplicationPolicy
       user_has_team_access?(attachable_record)
     when "Organization"
       user_has_organization_access?(attachable_record)
+    when "Cycle", "Pitch"
+      user_has_organization_access?(attachable_record.organization)
     else
       false
     end
