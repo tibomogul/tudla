@@ -17,8 +17,9 @@ All commands run inside the Docker container — never on the host.
 # Start environment
 docker compose up -d
 docker compose exec rails bash -lc "bin/setup"                           # First-time DB setup
-docker compose exec -d rails bash -lc "bin/dev"                          # Start dev server (background)
-docker compose exec rails bash -lc "pkill -f foreman || true"            # Stop dev server
+docker compose exec rails bash -lc "ps aux | grep -E 'foreman' | grep -v grep" # Check if web and other processes have been started
+docker compose exec -d rails bash -lc "bin/dev"                                # Start (background/detached)
+docker compose exec rails bash -lc "pkill -f foreman || true"                  # Stop background dev server
 
 # Tests & quality
 docker compose exec rails bash -lc "bundle exec rspec"                   # All specs

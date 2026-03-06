@@ -1,4 +1,4 @@
-<%= form_with(model: pitch, class: "contents", data: { turbo: false, controller: "theme-dark pitch-tabs" }) do |form| %>
+<%= form_with(model: pitch, class: "contents", data: { turbo: false, controller: "theme-dark" }) do |form| %>
   <% if pitch.errors.any? %>
     <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
       <h2><%= pluralize(pitch.errors.count, "error") %> prohibited this pitch from being saved:</h2>
@@ -11,15 +11,17 @@
   <% end %>
 
   <div class="my-5">
-    <%= form.label :title %>
-    <%= form.text_field :title, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:title].none?, "border-red-400 focus:outline-red-600": pitch.errors[:title].any?}] %>
+    <%= form.label :title do %>
+      Title <span class="text-error">*</span>
+    <% end %>
+    <%= form.text_field :title, required: true, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:title].none?, "border-red-400 focus:outline-red-600": pitch.errors[:title].any?}] %>
   </div>
 
   <div class="my-5">
-    <%= form.label :appetite, "Appetite" %>
+    <label class="label">Appetite <span class="text-error">*</span></label>
     <div class="flex gap-4 mt-2">
       <label class="flex items-center gap-2 cursor-pointer">
-        <%= form.radio_button :appetite, 2, class: "radio radio-primary" %>
+        <%= form.radio_button :appetite, 2, class: "radio radio-primary", required: true %>
         <span>Small Batch (2 weeks)</span>
       </label>
       <label class="flex items-center gap-2 cursor-pointer">
@@ -31,7 +33,9 @@
 
   <% if @organizations && @organizations.size > 1 %>
     <div class="my-5">
-      <%= form.label :organization_id, "Organization" %>
+      <%= form.label :organization_id do %>
+        Organization <span class="text-error">*</span>
+      <% end %>
       <%= form.collection_select :organization_id, @organizations, :id, :name,
           { prompt: "Select an organization" },
           class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:organization_id].none?, "border-red-400 focus:outline-red-600": pitch.errors[:organization_id].any?}] %>
@@ -40,39 +44,34 @@
     <%= form.hidden_field :organization_id, value: @organizations.first.id %>
   <% end %>
 
-  <!-- Tabbed Ingredient Editor -->
-  <div class="my-5">
-    <h3 class="font-semibold text-base mb-2">Ingredients</h3>
+  <div class="divider"></div>
 
-    <div role="tablist" class="tabs tabs-boxed mb-4">
-      <a role="tab" class="tab tab-active" data-pitch-tabs-target="tab" data-tab="problem">Problem</a>
-      <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="solution">Solution</a>
-      <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="rabbit_holes">Rabbit Holes</a>
-      <a role="tab" class="tab" data-pitch-tabs-target="tab" data-tab="no_gos">No-Gos</a>
-    </div>
+  <h3 class="font-semibold text-lg mb-1">Ingredients</h3>
+  <p class="text-sm text-base-content/60 mb-4">The five components of a shaped pitch. Fill these out to make the pitch ready for the betting table.</p>
 
-    <div data-pitch-tabs-target="panel" data-tab="problem">
+  <div class="flex flex-col gap-6">
+    <div>
       <%= form.label :problem, "Problem — What's broken about the status quo?" %>
-      <%= form.marksmith :problem, rows: 8, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:problem].none?, "border-red-400 focus:outline-red-600": pitch.errors[:problem].any?}] %>
+      <%= form.marksmith :problem, rows: 6, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:problem].none?, "border-red-400 focus:outline-red-600": pitch.errors[:problem].any?}] %>
     </div>
 
-    <div data-pitch-tabs-target="panel" data-tab="solution" class="hidden">
+    <div>
       <%= form.label :solution, "Solution — Breadboards and fat-marker sketches" %>
-      <%= form.marksmith :solution, rows: 8, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:solution].none?, "border-red-400 focus:outline-red-600": pitch.errors[:solution].any?}] %>
+      <%= form.marksmith :solution, rows: 6, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:solution].none?, "border-red-400 focus:outline-red-600": pitch.errors[:solution].any?}] %>
     </div>
 
-    <div data-pitch-tabs-target="panel" data-tab="rabbit_holes" class="hidden">
+    <div>
       <%= form.label :rabbit_holes, "Rabbit Holes — Known technical risks" %>
-      <%= form.marksmith :rabbit_holes, rows: 8, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:rabbit_holes].none?, "border-red-400 focus:outline-red-600": pitch.errors[:rabbit_holes].any?}] %>
+      <%= form.marksmith :rabbit_holes, rows: 6, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:rabbit_holes].none?, "border-red-400 focus:outline-red-600": pitch.errors[:rabbit_holes].any?}] %>
     </div>
 
-    <div data-pitch-tabs-target="panel" data-tab="no_gos" class="hidden">
+    <div>
       <%= form.label :no_gos, "No-Gos — Explicitly excluded scope" %>
-      <%= form.marksmith :no_gos, rows: 8, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:no_gos].none?, "border-red-400 focus:outline-red-600": pitch.errors[:no_gos].any?}] %>
+      <%= form.marksmith :no_gos, rows: 6, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": pitch.errors[:no_gos].none?, "border-red-400 focus:outline-red-600": pitch.errors[:no_gos].any?}] %>
     </div>
   </div>
 
   <div class="inline">
-    <%= form.submit class: "btn btn-soft btn-primary mt-4" %>
+    <%= form.submit class: "btn btn-soft btn-primary mt-6" %>
   </div>
 <% end %>
