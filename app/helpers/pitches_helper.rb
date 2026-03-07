@@ -8,4 +8,9 @@ module PitchesHelper
     { "ready_for_betting" => "btn-info", "bet" => "btn-success",
      "rejected" => "btn-error" }[status.to_s] || "btn-neutral"
   end
+
+  def pitch_ingredients_count(pitch)
+    [ pitch.problem, pitch.appetite, pitch.solution, pitch.rabbit_holes, pitch.no_gos ]
+      .count(&:present?)
+  end
 end

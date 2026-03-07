@@ -79,11 +79,18 @@ class PitchesController < ApplicationController
   def transition
     new_state = params[:state].to_sym
     authorize_transition!(new_state)
+    @update_context = params[:update_context]
 
     if @pitch.state_machine.can_transition_to?(new_state)
       @pitch.state_machine.transition_to!(new_state, user_id: current_user.id)
       respond_to do |format|
-        format.turbo_stream
+        format.turbo_stream {
+          if @update_context == "betting_table"
+            @cycle = Cycle.find(params[:cycle_id])
+            @teams = Team.active.where(organization_id: @cycle.organization_id).includes(:users).order(:name)
+            @betting_enabled = @cycle.current_state.in?(%w[shaping betting])
+          end
+        }
         format.html { redirect_to @pitch, notice: "Pitch moved to #{new_state}." }
       end
     else
@@ -93,6 +100,11 @@ class PitchesController < ApplicationController
 
   def bet
     authorize @pitch, :bet?
+
+    if params[:team_id].blank?
+      redirect_back fallback_location: @pitch, alert: "Please select a team."
+      return
+    end
 
     project = nil
     Project.transaction do
@@ -106,7 +118,14 @@ class PitchesController < ApplicationController
       @pitch.state_machine.transition_to!(:bet, user_id: current_user.id)
     end
 
-    redirect_to project, notice: "Pitch was successfully bet and converted into a project."
+    respond_to do |format|
+      format.turbo_stream {
+        @cycle = Cycle.find(params[:cycle_id])
+        @teams = Team.active.where(organization_id: @cycle.organization_id).includes(:users).order(:name)
+        @betting_enabled = @cycle.current_state.in?(%w[shaping betting])
+      }
+      format.html { redirect_to project, notice: "Pitch was successfully bet and converted into a project." }
+    end
   rescue ActiveRecord::RecordInvalid => e
     redirect_to @pitch, alert: e.message
   end

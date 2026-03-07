@@ -7,7 +7,10 @@
 
   <!-- Header with breadcrumbs -->
   <div class="flex items-center justify-between mb-4">
-    <h1 class="font-bold text-2xl">Betting Table — <%= @cycle.name %></h1>
+    <div class="flex items-center gap-3">
+      <h1 class="font-bold text-2xl">Betting Table — <%= @cycle.name %></h1>
+      <span class="badge badge-lg <%= pitch_badge_color(@cycle.current_state) %>"><%= @cycle.current_state.humanize %></span>
+    </div>
     <div class="breadcrumbs hidden p-0 text-sm sm:inline">
       <ul>
         <li><%= link_to "Dashboard", user_root_path %></li>
@@ -23,6 +26,13 @@
     <%= link_to "Betting Table", betting_table_cycle_path(@cycle), class: "tab tab-active" %>
   </div>
 
+  <% unless @betting_enabled %>
+    <div class="alert alert-warning mb-4">
+      <span class="iconify lucide--alert-triangle size-5"></span>
+      <span>Betting is closed for this cycle. The cycle is in <strong><%= @cycle.current_state.humanize %></strong> state.</span>
+    </div>
+  <% end %>
+
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Pitches Column (2/3 width) -->
     <div class="lg:col-span-2 space-y-6">
@@ -34,7 +44,7 @@
         </h2>
         <div class="space-y-3">
           <% @big_batch_pitches.each do |pitch| %>
-            <%= render partial: "cycles/betting_pitch_card", locals: { pitch: pitch, cycle: @cycle } %>
+            <%= render partial: "cycles/betting_pitch_card", locals: { pitch: pitch, cycle: @cycle, teams: @teams, betting_enabled: @betting_enabled } %>
           <% end %>
           <% if @big_batch_pitches.empty? %>
             <p class="text-base-content/50 text-sm py-4">No big batch pitches ready for betting.</p>
@@ -50,7 +60,7 @@
         </h2>
         <div class="space-y-3">
           <% @small_batch_pitches.each do |pitch| %>
-            <%= render partial: "cycles/betting_pitch_card", locals: { pitch: pitch, cycle: @cycle } %>
+            <%= render partial: "cycles/betting_pitch_card", locals: { pitch: pitch, cycle: @cycle, teams: @teams, betting_enabled: @betting_enabled } %>
           <% end %>
           <% if @small_batch_pitches.empty? %>
             <p class="text-base-content/50 text-sm py-4">No small batch pitches ready for betting.</p>
@@ -61,28 +71,7 @@
 
     <!-- Team Availability Sidebar (1/3 width) -->
     <div>
-      <h2 class="text-lg font-bold mb-3">Team Availability</h2>
-      <div class="space-y-3">
-        <% @teams.each do |team| %>
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body p-3">
-              <div class="flex items-center justify-between">
-                <span class="font-medium text-sm"><%= team.name %></span>
-                <span class="badge badge-sm badge-neutral"><%= team.users.size %> members</span>
-              </div>
-              <% committed = @cycle.projects.active.where(team: team).count %>
-              <% if committed > 0 %>
-                <p class="text-xs text-warning mt-1"><%= committed %> project<%= committed == 1 ? '' : 's' %> committed</p>
-              <% else %>
-                <p class="text-xs text-success mt-1">Available</p>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-        <% if @teams.empty? %>
-          <p class="text-base-content/50 text-sm">No teams found.</p>
-        <% end %>
-      </div>
+      <%= render "cycles/team_availability", teams: @teams, cycle: @cycle %>
     </div>
   </div>
 

@@ -1,34 +1,127 @@
-<div class="card bg-base-100 shadow-sm">
-  <div class="card-body p-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
+<div id="<%= dom_id(pitch, :betting_card) %>" data-controller="betting-modal">
+  <% is_bet = pitch.current_state == "bet" %>
+  <% is_rejected = pitch.current_state == "rejected" %>
+  <% greyed_out = is_bet || is_rejected %>
+
+  <div class="card bg-base-100 shadow-sm <%= 'opacity-60' if greyed_out %>">
+    <div class="card-body p-4">
+      <%# Header row %>
+      <div class="flex flex-wrap items-center gap-2">
         <h3 class="font-semibold"><%= link_to pitch.title, pitch_path(pitch), class: "hover:underline" %></h3>
+        <span class="badge badge-sm <%= pitch.appetite == 6 ? 'badge-primary' : 'badge-secondary' %>"><%= pitch.appetite_label %></span>
+        <span class="text-xs text-base-content/60"><%= pitch_ingredients_count(pitch) %>/5 ingredients</span>
         <span class="badge badge-sm <%= pitch_badge_color(pitch.current_state) %>"><%= pitch.current_state.humanize %></span>
-        <% if pitch.ingredients_complete? %>
-          <span class="text-success" title="All ingredients complete">
-            <span class="iconify lucide--check-circle size-4"></span>
-          </span>
-        <% else %>
-          <span class="text-warning" title="Ingredients incomplete">
-            <span class="iconify lucide--alert-circle size-4"></span>
+        <% if is_bet && pitch.projects.any? %>
+          <span class="badge badge-sm badge-success">
+            <span class="iconify lucide--check size-3 mr-1"></span>
+            Bet &mdash; <%= pitch.projects.last.team&.name %>
           </span>
         <% end %>
+        <span class="ml-auto text-xs text-base-content/60">by <%= pitch.user&.preferred_name || pitch.user&.email %> &middot; <%= pitch.created_at.strftime("%d %b %Y") %></span>
       </div>
-      <span class="text-xs text-base-content/60">by <%= pitch.user&.preferred_name || pitch.user&.email %></span>
-    </div>
 
-    <% if pitch.problem.present? %>
-      <p class="text-sm text-base-content/70 mt-2 line-clamp-2"><%= truncate(pitch.problem, length: 200) %></p>
-    <% end %>
+      <%# Problem excerpt %>
+      <% if pitch.problem.present? %>
+        <p class="text-sm text-base-content/70 mt-2 line-clamp-2"><%= truncate(pitch.problem, length: 200) %></p>
+      <% end %>
 
-    <div class="flex items-center justify-between mt-3">
-      <span class="text-xs text-base-content/60">Created <%= pitch.created_at.strftime("%d %b %Y") %></span>
+      <%# Action row %>
+      <% if local_assigns[:betting_enabled] && betting_enabled && !greyed_out && pitch.current_state == "ready_for_betting" %>
+        <div class="flex items-center gap-2 mt-3">
+          <button type="button" class="btn btn-ghost btn-sm" data-action="betting-modal#togglePreview">
+            <span class="iconify lucide--chevron-down size-4 transition-transform" data-betting-modal-target="chevron"></span>
+            Preview
+          </button>
 
-      <% if policy(pitch).bet? && pitch.current_state == "ready_for_betting" %>
-        <%= button_to "Place Bet", bet_pitch_path(pitch, cycle_id: cycle.id),
-          method: :post,
-          class: "btn btn-primary btn-sm",
-          form: { data: { turbo_confirm: "Place a bet on '#{pitch.title}' for this cycle?" } } %>
+          <% if policy(pitch).bet? %>
+            <button type="button" class="btn btn-primary btn-sm" data-action="betting-modal#openBet">
+              Place Bet
+            </button>
+          <% end %>
+
+          <% if policy(pitch).reject? %>
+            <%= button_to transition_pitch_path(pitch),
+              method: :patch,
+              class: "btn btn-error btn-sm btn-outline",
+              params: { state: "rejected", update_context: "betting_table", cycle_id: cycle.id },
+              form: {
+                data: { turbo_confirm: "Reject '#{pitch.title}'? This pitch will not be bet on." }
+              } do %>
+              Reject
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%# Expandable details section %>
+      <div class="hidden mt-4 space-y-4" data-betting-modal-target="details">
+        <% if pitch.problem.present? %>
+          <div>
+            <h4 class="font-semibold text-sm mb-1">Problem</h4>
+            <%= render_markdown(pitch.problem) %>
+          </div>
+          <div class="divider my-0"></div>
+        <% end %>
+
+        <% if pitch.solution.present? %>
+          <div>
+            <h4 class="font-semibold text-sm mb-1">Solution</h4>
+            <%= render_markdown(pitch.solution) %>
+          </div>
+          <div class="divider my-0"></div>
+        <% end %>
+
+        <% if pitch.rabbit_holes.present? %>
+          <div>
+            <h4 class="font-semibold text-sm mb-1">Rabbit Holes</h4>
+            <%= render_markdown(pitch.rabbit_holes) %>
+          </div>
+          <div class="divider my-0"></div>
+        <% end %>
+
+        <% if pitch.no_gos.present? %>
+          <div>
+            <h4 class="font-semibold text-sm mb-1">No-Gos</h4>
+            <%= render_markdown(pitch.no_gos) %>
+          </div>
+        <% end %>
+      </div>
+
+      <%# Bet confirmation dialog %>
+      <% if local_assigns[:betting_enabled] && betting_enabled && !greyed_out && policy(pitch).bet? %>
+        <dialog class="modal" data-betting-modal-target="betDialog">
+          <div class="modal-box">
+            <h3 class="font-bold text-lg mb-2">Place Bet</h3>
+            <p class="text-sm text-base-content/70 mb-4">
+              <%= pitch.title %> &mdash;
+              <span class="badge badge-sm <%= pitch.appetite == 6 ? 'badge-primary' : 'badge-secondary' %>"><%= pitch.appetite_label %></span>
+            </p>
+
+            <%= form_with url: bet_pitch_path(pitch), method: :post, data: { turbo_stream: true } do |f| %>
+              <%= f.hidden_field :cycle_id, value: cycle.id %>
+              <div class="form-control mb-4">
+                <label class="label">
+                  <span class="label-text font-semibold">Assign to Team</span>
+                </label>
+                <select name="team_id" class="select select-bordered w-full" required>
+                  <option value="" disabled selected>Select a team...</option>
+                  <% if local_assigns[:teams] %>
+                    <% teams.each do |team| %>
+                      <option value="<%= team.id %>"><%= team.name %> (<%= team.users.size %> members)</option>
+                    <% end %>
+                  <% end %>
+                </select>
+              </div>
+              <div class="modal-action">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Cancel</button>
+                <%= f.submit "Confirm Bet", class: "btn btn-primary" %>
+              </div>
+            <% end %>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
       <% end %>
     </div>
   </div>

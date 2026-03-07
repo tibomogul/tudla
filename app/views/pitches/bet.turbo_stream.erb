@@ -1,0 +1,7 @@
+<%= turbo_stream.replace dom_id(@pitch, :betting_card) do %>
+  <%= render "cycles/betting_pitch_card", pitch: @pitch, cycle: @cycle, teams: @teams, betting_enabled: @betting_enabled %>
+<% end %>
+
+<%= turbo_stream.replace "team_availability" do %>
+  <%= render "cycles/team_availability", teams: @teams, cycle: @cycle %>
+<% end %>

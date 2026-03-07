@@ -215,6 +215,48 @@ RSpec.describe "/cycles", type: :request do
     end
   end
 
+  describe "GET /betting_table" do
+    it "renders a successful response" do
+      get betting_table_cycle_url(cycle)
+      expect(response).to be_successful
+    end
+
+    it "renders pitches grouped by appetite" do
+      big = create(:pitch, user: user, organization: organization, title: "Big Pitch", appetite: 6)
+      big.state_machine.transition_to!(:ready_for_betting)
+      small = create(:pitch, user: user, organization: organization, title: "Small Pitch", appetite: 2)
+      small.state_machine.transition_to!(:ready_for_betting)
+
+      get betting_table_cycle_url(cycle)
+      expect(response.body).to include("Big Pitch")
+      expect(response.body).to include("Small Pitch")
+    end
+
+    it "sets betting_enabled to true for shaping cycle" do
+      get betting_table_cycle_url(cycle)
+      expect(response.body).not_to include("Betting is closed")
+    end
+
+    it "sets betting_enabled to false for active cycle" do
+      cycle.state_machine.transition_to!(:betting)
+      cycle.state_machine.transition_to!(:active)
+      get betting_table_cycle_url(cycle)
+      expect(response.body).to include("Betting is closed")
+    end
+
+    it "shows bet pitches greyed out" do
+      pitch = create(:pitch, user: user, organization: organization, title: "Bet Pitch", appetite: 6)
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      team_for_bet = create(:team, organization: organization)
+      Project.create!(name: pitch.title, pitch: pitch, cycle: cycle, team: team_for_bet)
+      pitch.state_machine.transition_to!(:bet)
+
+      get betting_table_cycle_url(cycle)
+      expect(response.body).to include("Bet Pitch")
+      expect(response.body).to include("opacity-60")
+    end
+  end
+
   describe "organization isolation" do
     let(:other_organization) { create(:organization) }
     let(:other_cycle) { create(:cycle, organization: other_organization, name: "Other Org Cycle") }

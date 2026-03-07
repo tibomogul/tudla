@@ -60,4 +60,26 @@ RSpec.describe PitchesHelper, type: :helper do
       expect(helper.pitch_button_color(nil)).to eq("btn-neutral")
     end
   end
+
+  describe "#pitch_ingredients_count" do
+    it "returns 5 when all ingredients are present" do
+      pitch = build(:pitch, problem: "p", appetite: 6, solution: "s", rabbit_holes: "r", no_gos: "n")
+      expect(helper.pitch_ingredients_count(pitch)).to eq(5)
+    end
+
+    it "returns 0 when no ingredients are present" do
+      pitch = build(:pitch, problem: nil, appetite: nil, solution: nil, rabbit_holes: nil, no_gos: nil)
+      expect(helper.pitch_ingredients_count(pitch)).to eq(0)
+    end
+
+    it "returns partial count when some ingredients are present" do
+      pitch = build(:pitch, problem: "p", appetite: 6, solution: nil, rabbit_holes: nil, no_gos: nil)
+      expect(helper.pitch_ingredients_count(pitch)).to eq(2)
+    end
+
+    it "counts blank strings as not present" do
+      pitch = build(:pitch, problem: "", appetite: 6, solution: "s", rabbit_holes: "", no_gos: "")
+      expect(helper.pitch_ingredients_count(pitch)).to eq(2)
+    end
+  end
 end

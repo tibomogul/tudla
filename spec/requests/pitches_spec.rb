@@ -415,6 +415,18 @@ RSpec.describe "/pitches", type: :request do
       expect(transition.metadata["user_id"]).to eq(user.id)
     end
 
+    it "returns turbo_stream for betting_table context rejection" do
+      UserPartyRole.where(user: user, party: organization).update_all(role: "admin")
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      cycle = create(:cycle, organization: organization)
+
+      patch transition_pitch_url(pitch),
+        params: { state: "rejected", update_context: "betting_table", cycle_id: cycle.id },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include("betting_card")
+    end
+
     context "with invalid state transition" do
       it "does not transition to invalid state" do
         UserPartyRole.where(user: user, party: organization).update_all(role: "admin")
@@ -493,6 +505,25 @@ RSpec.describe "/pitches", type: :request do
           post bet_pitch_url(pitch), params: { team_id: team.id, cycle_id: cycle.id }
         }.to raise_error(Pundit::NotAuthorizedError)
       end
+    end
+
+    it "redirects with error when team_id is blank" do
+      cycle = create(:cycle, organization: organization)
+
+      post bet_pitch_url(pitch), params: { cycle_id: cycle.id }
+      expect(response).to redirect_to(pitch_url(pitch))
+      follow_redirect!
+      expect(response.body).to include("Please select a team")
+    end
+
+    it "returns turbo_stream when requested" do
+      team = create(:team, organization: organization)
+      cycle = create(:cycle, organization: organization)
+
+      post bet_pitch_url(pitch), params: { team_id: team.id, cycle_id: cycle.id },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include("turbo-stream")
     end
 
     context "when pitch is not in bet state" do
