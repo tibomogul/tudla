@@ -8,7 +8,7 @@
       <%# Header row %>
       <div class="flex flex-wrap items-center gap-2">
         <h3 class="font-semibold"><%= link_to pitch.title, pitch_path(pitch), class: "hover:underline" %></h3>
-        <span class="badge badge-sm <%= pitch.appetite == 6 ? 'badge-primary' : 'badge-secondary' %>"><%= pitch.appetite_label %></span>
+        <span class="badge badge-sm <%= pitch_appetite_badge_class(pitch) %>"><%= pitch.appetite_label %></span>
         <span class="text-xs text-base-content/60"><%= pitch_ingredients_count(pitch) %>/5 ingredients</span>
         <span class="badge badge-sm <%= pitch_badge_color(pitch.current_state) %>"><%= pitch.current_state.humanize %></span>
         <% if is_bet && pitch.projects.any? %>
@@ -94,7 +94,7 @@
             <h3 class="font-bold text-lg mb-2">Place Bet</h3>
             <p class="text-sm text-base-content/70 mb-4">
               <%= pitch.title %> &mdash;
-              <span class="badge badge-sm <%= pitch.appetite == 6 ? 'badge-primary' : 'badge-secondary' %>"><%= pitch.appetite_label %></span>
+              <span class="badge badge-sm <%= pitch_appetite_badge_class(pitch) %>"><%= pitch.appetite_label %></span>
             </p>
 
             <%= form_with url: bet_pitch_path(pitch), method: :post, data: { turbo_stream: true } do |f| %>

@@ -29,10 +29,12 @@ RSpec.describe Pitch, type: :model do
       expect(pitch).not_to be_valid
     end
 
-    it "validates appetite inclusion" do
-      expect(build(:pitch, appetite: 2, user: user, organization: organization)).to be_valid
-      expect(build(:pitch, appetite: 6, user: user, organization: organization)).to be_valid
-      expect(build(:pitch, appetite: 3, user: user, organization: organization)).not_to be_valid
+    it "validates appetite inclusion in 1..6" do
+      (1..6).each do |n|
+        expect(build(:pitch, appetite: n, user: user, organization: organization)).to be_valid
+      end
+      expect(build(:pitch, appetite: 0, user: user, organization: organization)).not_to be_valid
+      expect(build(:pitch, appetite: 7, user: user, organization: organization)).not_to be_valid
     end
   end
 
@@ -109,18 +111,36 @@ RSpec.describe Pitch, type: :model do
   end
 
   describe "#appetite_label" do
-    it "returns 'Small Batch' for 2 weeks" do
-      pitch = build(:pitch, appetite: 2, user: user, organization: organization)
-      expect(pitch.appetite_label).to eq("Small Batch")
+    it "returns Small Batch label for 1-2 weeks" do
+      expect(build(:pitch, appetite: 1, user: user, organization: organization).appetite_label).to eq("Small Batch (1w)")
+      expect(build(:pitch, appetite: 2, user: user, organization: organization).appetite_label).to eq("Small Batch (2w)")
     end
 
-    it "returns 'Big Batch' for 6 weeks" do
-      expect(pitch.appetite_label).to eq("Big Batch")
+    it "returns Medium Batch label for 3-4 weeks" do
+      expect(build(:pitch, appetite: 3, user: user, organization: organization).appetite_label).to eq("Medium Batch (3w)")
+      expect(build(:pitch, appetite: 4, user: user, organization: organization).appetite_label).to eq("Medium Batch (4w)")
     end
 
-    it "returns custom label for other values" do
-      pitch = build(:pitch, appetite: 4, user: user, organization: organization)
-      expect(pitch.appetite_label).to eq("4 weeks")
+    it "returns Big Batch label for 5-6 weeks" do
+      expect(build(:pitch, appetite: 5, user: user, organization: organization).appetite_label).to eq("Big Batch (5w)")
+      expect(build(:pitch, appetite: 6, user: user, organization: organization).appetite_label).to eq("Big Batch (6w)")
+    end
+  end
+
+  describe "#appetite_batch" do
+    it "returns :small for 1-2 weeks" do
+      expect(build(:pitch, appetite: 1, user: user, organization: organization).appetite_batch).to eq(:small)
+      expect(build(:pitch, appetite: 2, user: user, organization: organization).appetite_batch).to eq(:small)
+    end
+
+    it "returns :medium for 3-4 weeks" do
+      expect(build(:pitch, appetite: 3, user: user, organization: organization).appetite_batch).to eq(:medium)
+      expect(build(:pitch, appetite: 4, user: user, organization: organization).appetite_batch).to eq(:medium)
+    end
+
+    it "returns :big for 5-6 weeks" do
+      expect(build(:pitch, appetite: 5, user: user, organization: organization).appetite_batch).to eq(:big)
+      expect(build(:pitch, appetite: 6, user: user, organization: organization).appetite_batch).to eq(:big)
     end
   end
 

@@ -19,16 +19,17 @@
 
   <div class="my-5">
     <label class="label">Appetite <span class="text-error">*</span></label>
-    <div class="flex gap-4 mt-2">
-      <label class="flex items-center gap-2 cursor-pointer">
-        <%= form.radio_button :appetite, 2, class: "radio radio-primary", required: true %>
-        <span>Small Batch (2 weeks)</span>
-      </label>
-      <label class="flex items-center gap-2 cursor-pointer">
-        <%= form.radio_button :appetite, 6, class: "radio radio-primary" %>
-        <span>Big Batch (6 weeks)</span>
-      </label>
-    </div>
+    <%= form.select :appetite,
+      [
+        ["1 week — Small Batch", 1],
+        ["2 weeks — Small Batch", 2],
+        ["3 weeks — Medium Batch", 3],
+        ["4 weeks — Medium Batch", 4],
+        ["5 weeks — Big Batch", 5],
+        ["6 weeks — Big Batch", 6]
+      ],
+      { prompt: "Select appetite..." },
+      { required: true, class: "select select-bordered w-full max-w-xs mt-2" } %>
   </div>
 
   <% if @organizations && @organizations.size > 1 %>

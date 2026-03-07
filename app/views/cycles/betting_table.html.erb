@@ -36,11 +36,11 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Pitches Column (2/3 width) -->
     <div class="lg:col-span-2 space-y-6">
-      <!-- Big Batch Section -->
+      <!-- Big Batch Section (5-6 weeks) -->
       <div>
         <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
           <span class="badge badge-lg badge-primary">Big Batch</span>
-          <span class="text-base-content/60 text-sm font-normal">6 weeks</span>
+          <span class="text-base-content/60 text-sm font-normal">5-6 weeks</span>
         </h2>
         <div class="space-y-3">
           <% @big_batch_pitches.each do |pitch| %>
@@ -52,11 +52,27 @@
         </div>
       </div>
 
-      <!-- Small Batch Section -->
+      <!-- Medium Batch Section (3-4 weeks) -->
+      <div>
+        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+          <span class="badge badge-lg badge-accent">Medium Batch</span>
+          <span class="text-base-content/60 text-sm font-normal">3-4 weeks</span>
+        </h2>
+        <div class="space-y-3">
+          <% @medium_batch_pitches.each do |pitch| %>
+            <%= render partial: "cycles/betting_pitch_card", locals: { pitch: pitch, cycle: @cycle, teams: @teams, betting_enabled: @betting_enabled } %>
+          <% end %>
+          <% if @medium_batch_pitches.empty? %>
+            <p class="text-base-content/50 text-sm py-4">No medium batch pitches ready for betting.</p>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Small Batch Section (1-2 weeks) -->
       <div>
         <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
           <span class="badge badge-lg badge-secondary">Small Batch</span>
-          <span class="text-base-content/60 text-sm font-normal">2 weeks</span>
+          <span class="text-base-content/60 text-sm font-normal">1-2 weeks</span>
         </h2>
         <div class="space-y-3">
           <% @small_batch_pitches.each do |pitch| %>

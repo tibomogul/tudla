@@ -27,7 +27,7 @@ class Pitch < ApplicationRecord
   after_commit :broadcast_pitch_update, if: :persisted?
 
   validates :title, presence: true
-  validates :appetite, inclusion: { in: [ 2, 6 ] }
+  validates :appetite, inclusion: { in: 1..6 }
 
   # Draft pitches are only visible to their creator;
   # all other statuses are visible to organization members
@@ -54,12 +54,22 @@ class Pitch < ApplicationRecord
   end
 
   # Human-readable appetite label
+  APPETITE_BATCHES = {
+    small: { range: 1..2, label: "Small Batch" },
+    medium: { range: 3..4, label: "Medium Batch" },
+    big: { range: 5..6, label: "Big Batch" }
+  }.freeze
+
   def appetite_label
-    case appetite
-    when 2 then "Small Batch"
-    when 6 then "Big Batch"
-    else "#{appetite} weeks"
+    batch = APPETITE_BATCHES.values.find { |b| b[:range].cover?(appetite) }
+    batch ? "#{batch[:label]} (#{appetite}w)" : "#{appetite} weeks"
+  end
+
+  def appetite_batch
+    APPETITE_BATCHES.each do |key, config|
+      return key if config[:range].cover?(appetite)
     end
+    :small
   end
 
   # Check if all five ingredients are filled out

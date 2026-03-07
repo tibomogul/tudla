@@ -105,9 +105,10 @@ class CyclesController < ApplicationController
       .includes(:user, projects: :team)
       .order(updated_at: :desc)
 
-    pitches_by_appetite = all_pitches.group_by { |pitch| (pitch.appetite == 2) ? :small_batch : :big_batch }
-    @small_batch_pitches = pitches_by_appetite[:small_batch] || []
-    @big_batch_pitches = pitches_by_appetite[:big_batch] || []
+    pitches_by_appetite = all_pitches.group_by(&:appetite_batch)
+    @small_batch_pitches = pitches_by_appetite[:small] || []
+    @medium_batch_pitches = pitches_by_appetite[:medium] || []
+    @big_batch_pitches = pitches_by_appetite[:big] || []
     @teams = Team.active.where(organization_id: @cycle.organization_id).includes(:users).order(:name)
   end
 

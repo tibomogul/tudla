@@ -237,7 +237,7 @@ RSpec.describe "/pitches", type: :request do
       let(:invalid_attributes) do
         {
           title: "",
-          appetite: 3
+          appetite: 7
         }
       end
 
@@ -278,7 +278,7 @@ RSpec.describe "/pitches", type: :request do
       let(:invalid_attributes) do
         {
           title: "",
-          appetite: 3
+          appetite: 7
         }
       end
 

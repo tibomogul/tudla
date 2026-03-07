@@ -222,13 +222,16 @@ RSpec.describe "/cycles", type: :request do
     end
 
     it "renders pitches grouped by appetite" do
-      big = create(:pitch, user: user, organization: organization, title: "Big Pitch", appetite: 6)
+      big = create(:pitch, user: user, organization: organization, title: "Big Pitch", appetite: 5)
       big.state_machine.transition_to!(:ready_for_betting)
-      small = create(:pitch, user: user, organization: organization, title: "Small Pitch", appetite: 2)
+      medium = create(:pitch, user: user, organization: organization, title: "Medium Pitch", appetite: 3)
+      medium.state_machine.transition_to!(:ready_for_betting)
+      small = create(:pitch, user: user, organization: organization, title: "Small Pitch", appetite: 1)
       small.state_machine.transition_to!(:ready_for_betting)
 
       get betting_table_cycle_url(cycle)
       expect(response.body).to include("Big Pitch")
+      expect(response.body).to include("Medium Pitch")
       expect(response.body).to include("Small Pitch")
     end
 

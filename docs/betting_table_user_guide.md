@@ -22,13 +22,14 @@ The betting table is divided into two areas:
 
 Pitches are grouped by appetite:
 
-- **Big Batch** (6 weeks) - larger projects shown with a purple badge.
-- **Small Batch** (2 weeks) - smaller projects shown with a pink/secondary badge.
+- **Big Batch** (5-6 weeks) - larger projects shown with a primary badge.
+- **Medium Batch** (3-4 weeks) - mid-size projects shown with an accent badge.
+- **Small Batch** (1-2 weeks) - smaller projects shown with a secondary badge.
 
 Each pitch card displays:
 
 - **Title** - links to the full pitch detail page.
-- **Appetite badge** - Big Batch or Small Batch.
+- **Appetite badge** - Big Batch, Medium Batch, or Small Batch with the week count.
 - **Ingredients count** - e.g. "5/5 ingredients" indicates all sections are filled in.
 - **State badge** - Ready for betting, Bet, or Rejected.
 - **Author and date** - who created the pitch and when.

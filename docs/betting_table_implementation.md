@@ -39,7 +39,7 @@ Loads all pitches relevant to the betting table:
 
 Sets `@betting_enabled` based on cycle state — `true` only when the cycle is in `shaping` or `betting`.
 
-Groups pitches by appetite into `@big_batch_pitches` (appetite = 6) and `@small_batch_pitches` (appetite = 2).
+Groups pitches by appetite batch into `@big_batch_pitches` (5-6 weeks), `@medium_batch_pitches` (3-4 weeks), and `@small_batch_pitches` (1-2 weeks) using `Pitch#appetite_batch`.
 
 Loads `@teams` for the team selection dropdown and sidebar.
 
