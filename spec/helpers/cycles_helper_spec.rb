@@ -14,12 +14,12 @@ RSpec.describe CyclesHelper, type: :helper do
       expect(helper.cycle_badge_color("active")).to eq("badge-success")
     end
 
-    it "returns badge-neutral for completed state" do
-      expect(helper.cycle_badge_color("completed")).to eq("badge-neutral")
+    it "returns badge-ghost for completed state" do
+      expect(helper.cycle_badge_color("completed")).to eq("badge-ghost")
     end
 
-    it "returns badge-neutral for unknown state" do
-      expect(helper.cycle_badge_color("unknown")).to eq("badge-neutral")
+    it "returns badge-ghost for unknown state" do
+      expect(helper.cycle_badge_color("unknown")).to eq("badge-ghost")
     end
 
     it "handles symbol input" do
@@ -27,7 +27,7 @@ RSpec.describe CyclesHelper, type: :helper do
     end
 
     it "handles nil input" do
-      expect(helper.cycle_badge_color(nil)).to eq("badge-neutral")
+      expect(helper.cycle_badge_color(nil)).to eq("badge-ghost")
     end
   end
 

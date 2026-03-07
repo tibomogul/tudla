@@ -38,7 +38,7 @@
     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
       <span class="iconify lucide--folder-open size-5"></span>
       Projects in this Cycle
-      <span class="badge badge-sm badge-neutral"><%= @cycle.projects.active.count %></span>
+      <span class="badge badge-sm badge-ghost"><%= @cycle.projects.active.count %></span>
     </h2>
 
     <% finished = @cycle.finished_projects %>

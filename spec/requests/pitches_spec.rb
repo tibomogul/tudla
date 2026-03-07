@@ -23,6 +23,17 @@ RSpec.describe "/pitches", type: :request do
       expect(response.body).to include("My Pitch")
     end
 
+    it "pitch links break out of the turbo frame for full-page navigation" do
+      visible_pitch = create(:pitch, user: user, organization: organization, title: "Visible Pitch")
+      visible_pitch.state_machine.transition_to!(:ready_for_betting)
+      get pitches_url
+      body = response.body
+      # Links inside the turbo frame must target _top, otherwise Turbo
+      # looks for a matching frame on the show page and shows "Content missing"
+      pitch_link = body[/(<a[^>]*href="#{Regexp.escape(pitch_path(visible_pitch))}"[^>]*>)/m, 1]
+      expect(pitch_link).to include('data-turbo-frame="_top"')
+    end
+
     it "does not display soft-deleted pitches" do
       deleted_pitch = create(:pitch, user: user, organization: organization, title: "Deleted Pitch")
       deleted_pitch.destroy

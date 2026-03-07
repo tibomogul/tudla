@@ -2,8 +2,8 @@ require "rails_helper"
 
 RSpec.describe PitchesHelper, type: :helper do
   describe "#pitch_badge_color" do
-    it "returns badge-neutral for draft status" do
-      expect(helper.pitch_badge_color("draft")).to eq("badge-neutral")
+    it "returns badge-ghost for draft status" do
+      expect(helper.pitch_badge_color("draft")).to eq("badge-ghost")
     end
 
     it "returns badge-info for ready_for_betting status" do
@@ -18,16 +18,16 @@ RSpec.describe PitchesHelper, type: :helper do
       expect(helper.pitch_badge_color("rejected")).to eq("badge-error")
     end
 
-    it "returns badge-neutral for unknown status" do
-      expect(helper.pitch_badge_color("unknown")).to eq("badge-neutral")
+    it "returns badge-ghost for unknown status" do
+      expect(helper.pitch_badge_color("unknown")).to eq("badge-ghost")
     end
 
     it "handles symbol input" do
-      expect(helper.pitch_badge_color(:draft)).to eq("badge-neutral")
+      expect(helper.pitch_badge_color(:draft)).to eq("badge-ghost")
     end
 
     it "handles nil input" do
-      expect(helper.pitch_badge_color(nil)).to eq("badge-neutral")
+      expect(helper.pitch_badge_color(nil)).to eq("badge-ghost")
     end
   end
 

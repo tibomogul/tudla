@@ -6,7 +6,7 @@
         <div class="card-body p-3">
           <div class="flex items-center justify-between">
             <span class="font-medium text-sm"><%= team.name %></span>
-            <span class="badge badge-sm badge-neutral"><%= team.users.size %> members</span>
+            <span class="badge badge-sm badge-ghost"><%= team.users.size %> members</span>
           </div>
           <% committed = cycle.projects.active.where(team: team).count %>
           <% if committed > 0 %>
