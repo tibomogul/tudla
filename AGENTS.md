@@ -17,7 +17,7 @@ Rails 8.1 task management app ("Tudla") for Shape Up methodology teams. PostgreS
 - **WebSockets**: Solid Cable (async dev, solid_cable production)
 - **Markdown**: Commonmarker ~> 2.5 + Marksmith ~> 0.4.7
 - **Components**: ViewComponent
-- **Pagination**: Pagy
+- **Pagination**: Pagy ~> 43.2 (v43 API: `pagy(:offset, collection, limit: N)`)
 - **MCP**: Official `mcp` gem (Streamable HTTP)
 - **Containerization**: Docker Compose
 
@@ -361,6 +361,7 @@ docker compose ps                      # Check container status
 - Hard-code timezone (always use organization timezone via `format_in_timezone`)
 - Modify cached estimate columns directly (use EstimateCacheable callbacks)
 - Direct state assignment on Task/Project (use `state_machine.transition_to!`)
+- Use old Pagy API `pagy(collection)` — always use `pagy(:offset, collection, limit: N)` (v43 API)
 
 ## Development Notes
 - Tailwind CSS + DaisyUI 5 for styling (see `docs/daisyui.md` for component reference)
