@@ -2,17 +2,7 @@
     <div class="flex items-center justify-between">
         <%= image_tag "tudla-wordmark-light.svg", alt: "logo-light", class: "h-5.5 dark:hidden" %>
         <%= image_tag "tudla-wordmark-dark.svg", alt: "logo-dark", class: "h-5.5 hidden dark:inline" %>
-        <button
-            aria-label="Toggle Theme"
-            class="btn btn-circle btn-outline border-base-300 relative overflow-hidden"
-            data-action="click->theme#toggle">
-            <span
-                class="iconify lucide--sun absolute size-4.5 -translate-y-4 opacity-0 transition-all duration-300 group-data-[theme=light]/html:translate-y-0 group-data-[theme=light]/html:opacity-100"></span>
-            <span
-                class="iconify lucide--moon absolute size-4.5 translate-y-4 opacity-0 transition-all duration-300 group-data-[theme=dark]/html:translate-y-0 group-data-[theme=dark]/html:opacity-100"></span>
-            <span
-                class="iconify lucide--palette absolute size-4.5 opacity-100 group-data-[theme=dark]/html:opacity-0 group-data-[theme=light]/html:opacity-0"></span>
-        </button>
+        <%= render "application/theme_toggle", button_class: "btn btn-circle btn-outline border-base-300 relative overflow-hidden" %>
     </div>
     <h3 class="mt-8 text-center text-xl font-semibold md:mt-12 lg:mt-24">Login</h3>
     <h3 class="text-base-content/70 mt-2 text-center text-sm">

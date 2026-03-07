@@ -4,7 +4,7 @@ module ProjectsHelper
       "green" => "badge-success",
       "yellow" => "badge-warning",
       "red" => "badge-error"
-    }[state.to_s] || "badge-neutral"
+    }[state.to_s] || "badge-ghost"
   end
 
   def risk_button_color(state)

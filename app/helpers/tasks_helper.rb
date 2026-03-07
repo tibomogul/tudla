@@ -7,7 +7,7 @@ module TasksHelper
       "in_review" => "badge-warning",
       "done" => "badge-success",
       "blocked" => "badge-error"
-    }[state] || "badge-neutral"
+    }[state] || "badge-ghost"
   end
 
   def button_color(state)
