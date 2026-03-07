@@ -4,7 +4,7 @@ class PitchPolicy < ApplicationPolicy
   def initialize(user, pitch)
     @user = user
     @pitch = pitch
-    if pitch.instance_of?(::Pitch) && pitch.organization.present?
+    if pitch.class.name == "Pitch" && pitch.organization.present?
       @organization_role = UserPartyRole.where(user: user, party: pitch.organization).first&.role
       @is_creator = pitch.user_id.present? && pitch.user_id == user&.id
     end
