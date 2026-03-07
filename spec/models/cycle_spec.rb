@@ -34,6 +34,14 @@ RSpec.describe Cycle, type: :model do
       expect(cycle).not_to be_valid
     end
 
+    it "validates cooldown_weeks in 0..2" do
+      expect(build(:cycle, cooldown_weeks: 0, organization: organization)).to be_valid
+      expect(build(:cycle, cooldown_weeks: 1, organization: organization)).to be_valid
+      expect(build(:cycle, cooldown_weeks: 2, organization: organization)).to be_valid
+      expect(build(:cycle, cooldown_weeks: 3, organization: organization)).not_to be_valid
+      expect(build(:cycle, cooldown_weeks: -1, organization: organization)).not_to be_valid
+    end
+
     it "requires end_date after start_date" do
       cycle = build(:cycle, start_date: Date.current, end_date: Date.current - 1.day, organization: organization)
       expect(cycle).not_to be_valid
@@ -139,9 +147,19 @@ RSpec.describe Cycle, type: :model do
   end
 
   describe "#cooldown_start_date" do
-    it "returns 2 weeks before end_date" do
+    it "returns cooldown_weeks before end_date (default 2)" do
       cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 6.weeks, organization: organization)
       expect(cycle.cooldown_start_date).to eq(Date.current + 4.weeks)
+    end
+
+    it "respects custom cooldown_weeks" do
+      cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 6.weeks, cooldown_weeks: 1, organization: organization)
+      expect(cycle.cooldown_start_date).to eq(Date.current + 5.weeks)
+    end
+
+    it "handles zero cooldown_weeks" do
+      cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 6.weeks, cooldown_weeks: 0, organization: organization)
+      expect(cycle.cooldown_start_date).to eq(Date.current + 6.weeks)
     end
   end
 

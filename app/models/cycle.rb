@@ -28,6 +28,7 @@ class Cycle < ApplicationRecord
   validates :name, presence: true
   validates :start_date, presence: true
   validates :end_date, presence: true
+  validates :cooldown_weeks, inclusion: { in: 0..2 }
   validate :end_date_after_start_date
 
   def state_machine
@@ -67,9 +68,8 @@ class Cycle < ApplicationRecord
     Date.current >= cooldown_start_date && Date.current <= end_date
   end
 
-  # The date when cooldown begins (2 weeks before end)
   def cooldown_start_date
-    end_date - 2.weeks
+    end_date - cooldown_weeks.weeks
   end
 
   # Is this cycle currently in the active state?

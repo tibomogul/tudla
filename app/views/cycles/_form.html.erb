@@ -27,6 +27,14 @@
     </div>
   </div>
 
+  <div class="my-5">
+    <%= form.label :cooldown_weeks, "Cooldown Period (weeks)" %>
+    <%= form.select :cooldown_weeks,
+      [["0 weeks (no cooldown)", 0], ["1 week", 1], ["2 weeks", 2]],
+      {},
+      { class: "select select-bordered w-full max-w-xs mt-2" } %>
+  </div>
+
   <% if @organizations && @organizations.size > 1 %>
     <div class="my-5">
       <%= form.label :organization_id, "Organization" %>

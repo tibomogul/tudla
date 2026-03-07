@@ -119,7 +119,7 @@ class CyclesController < ApplicationController
   end
 
   def cycle_params
-    params.expect(cycle: [ :name, :start_date, :end_date, :organization_id ])
+    params.expect(cycle: [ :name, :start_date, :end_date, :cooldown_weeks, :organization_id ])
   end
 
   def load_paginated_index_cycles
