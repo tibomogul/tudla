@@ -92,17 +92,18 @@ class CyclesController < ApplicationController
     authorize @cycle, :show?
     @betting_enabled = @cycle.current_state.in?(%w[shaping betting])
 
-    betting_pitches = policy_scope(Pitch)
-      .where(organization_id: @cycle.organization_id, status: %w[ready_for_betting bet rejected])
+    # Single query: ready_for_betting pitches OR bet/rejected pitches linked to this cycle
+    base_scope = policy_scope(Pitch).where(organization_id: @cycle.organization_id)
+    cycle_project_pitch_ids = base_scope
+      .where(status: %w[bet rejected])
+      .joins(:projects).where(projects: { cycle_id: @cycle.id })
+      .select(:id)
+
+    all_pitches = base_scope
+      .where(status: "ready_for_betting")
+      .or(base_scope.where(id: cycle_project_pitch_ids))
       .includes(:user, projects: :team)
       .order(updated_at: :desc)
-
-    # Bet/rejected pitches only shown if they have a project linked to this cycle
-    ready_pitches = betting_pitches.where(status: "ready_for_betting")
-    bet_pitches = betting_pitches.where(status: %w[bet rejected])
-      .joins(:projects).where(projects: { cycle_id: @cycle.id })
-
-    all_pitches = (ready_pitches + bet_pitches).uniq
 
     pitches_by_appetite = all_pitches.group_by { |pitch| (pitch.appetite == 2) ? :small_batch : :big_batch }
     @small_batch_pitches = pitches_by_appetite[:small_batch] || []
