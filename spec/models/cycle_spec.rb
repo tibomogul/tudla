@@ -255,6 +255,13 @@ RSpec.describe Cycle, type: :model do
       expect(cycle.deleted_at).to be_nil
       expect(Cycle.active).to include(cycle)
     end
+
+    it "nullifies cycle_id on associated projects" do
+      team = create(:team, organization: organization)
+      project = create(:project, team: team, cycle: cycle)
+      cycle.destroy
+      expect(project.reload.cycle_id).to be_nil
+    end
   end
 
   describe "paper trail" do

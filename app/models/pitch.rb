@@ -79,6 +79,11 @@ class Pitch < ApplicationRecord
     datetime.in_time_zone(timezone).strftime(format)
   end
 
+  def soft_delete
+    projects.update_all(pitch_id: nil)
+    super
+  end
+
   private
 
   def broadcast_pitch_update

@@ -207,6 +207,13 @@ RSpec.describe Pitch, type: :model do
       expect(pitch.deleted_at).to be_nil
       expect(Pitch.active).to include(pitch)
     end
+
+    it "nullifies pitch_id on associated projects" do
+      team = create(:team, organization: organization)
+      project = create(:project, team: team, pitch: pitch)
+      pitch.destroy
+      expect(project.reload.pitch_id).to be_nil
+    end
   end
 
   describe "paper trail" do

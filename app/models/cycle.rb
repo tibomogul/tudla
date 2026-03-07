@@ -104,6 +104,11 @@ class Cycle < ApplicationRecord
     datetime.in_time_zone(timezone).strftime(format)
   end
 
+  def soft_delete
+    projects.update_all(cycle_id: nil)
+    super
+  end
+
   private
 
   def end_date_after_start_date
