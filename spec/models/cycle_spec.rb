@@ -95,9 +95,15 @@ RSpec.describe Cycle, type: :model do
       expect(cycle.progress_percentage).to eq(100)
     end
 
-    it "returns percentage during cycle" do
-      cycle = create(:cycle, start_date: Date.current - 4.weeks, end_date: Date.current + 4.weeks, organization: organization)
-      expect(cycle.progress_percentage).to be_between(40, 60)
+    it "returns 100 during cooldown phase" do
+      cycle = create(:cycle, start_date: Date.current - 7.weeks, end_date: Date.current + 1.week, cooldown_weeks: 2, organization: organization)
+      expect(cycle.progress_percentage).to eq(100)
+    end
+
+    it "returns percentage based on build phase only" do
+      # 6 week build + 2 week cooldown = 8 weeks total, currently at midpoint of build
+      cycle = create(:cycle, start_date: Date.current - 3.weeks, end_date: Date.current + 5.weeks, cooldown_weeks: 2, organization: organization)
+      expect(cycle.progress_percentage).to eq(50)
     end
 
     it "returns 0 when dates are nil" do
@@ -178,9 +184,14 @@ RSpec.describe Cycle, type: :model do
   end
 
   describe "#days_remaining" do
-    it "returns days until end_date" do
-      cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 14.days, organization: organization)
-      expect(cycle.days_remaining).to eq(14)
+    it "returns days until cooldown starts" do
+      cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 8.weeks, cooldown_weeks: 2, organization: organization)
+      expect(cycle.days_remaining).to eq((Date.current + 6.weeks - Date.current).to_i)
+    end
+
+    it "returns 0 during cooldown phase" do
+      cycle = create(:cycle, start_date: Date.current - 7.weeks, end_date: Date.current + 1.week, cooldown_weeks: 2, organization: organization)
+      expect(cycle.days_remaining).to eq(0)
     end
 
     it "returns 0 after end_date" do
@@ -191,6 +202,11 @@ RSpec.describe Cycle, type: :model do
     it "returns 0 when end_date is nil" do
       cycle = build(:cycle, end_date: nil, organization: organization)
       expect(cycle.days_remaining).to eq(0)
+    end
+
+    it "returns days until end_date when cooldown is zero" do
+      cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 6.weeks, cooldown_weeks: 0, organization: organization)
+      expect(cycle.days_remaining).to eq((Date.current + 6.weeks - Date.current).to_i)
     end
   end
 
