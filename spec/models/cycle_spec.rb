@@ -85,25 +85,33 @@ RSpec.describe Cycle, type: :model do
   end
 
   describe "#progress_percentage" do
+    # Pin to a Monday for deterministic business day counts
+    around { |example| travel_to(Date.new(2026, 3, 9)) { example.run } }
+
     it "returns 0 before start date" do
-      cycle = create(:cycle, start_date: Date.current + 1.day, end_date: Date.current + 9.weeks, organization: organization)
+      cycle = create(:cycle, start_date: Date.new(2026, 3, 10), end_date: Date.new(2026, 5, 11), organization: organization)
       expect(cycle.progress_percentage).to eq(0)
     end
 
     it "returns 100 after end date" do
-      cycle = create(:cycle, start_date: Date.current - 9.weeks, end_date: Date.current - 1.day, organization: organization)
+      cycle = create(:cycle, start_date: Date.new(2026, 1, 5), end_date: Date.new(2026, 3, 8), organization: organization)
       expect(cycle.progress_percentage).to eq(100)
     end
 
     it "returns 100 during cooldown phase" do
-      cycle = create(:cycle, start_date: Date.current - 7.weeks, end_date: Date.current + 1.week, cooldown_weeks: 2, organization: organization)
+      # Build: Jan 19 to Mar 2 (cooldown starts Mar 2), today Mar 9 is in cooldown
+      cycle = create(:cycle, start_date: Date.new(2026, 1, 19), end_date: Date.new(2026, 3, 16), cooldown_weeks: 2, organization: organization)
       expect(cycle.progress_percentage).to eq(100)
     end
 
-    it "returns percentage based on build phase only" do
-      # 6 week build + 2 week cooldown = 8 weeks total, currently at midpoint of build
-      cycle = create(:cycle, start_date: Date.current - 3.weeks, end_date: Date.current + 5.weeks, cooldown_weeks: 2, organization: organization)
-      expect(cycle.progress_percentage).to eq(50)
+    it "returns percentage based on build phase business days" do
+      # Start: Feb 23 (Mon), End: Apr 20 (Mon), cooldown 2 weeks, cooldown_start: Apr 6 (Mon)
+      # Total business days Feb 23 to Apr 6 = 30
+      # Elapsed business days Feb 23 to Mar 9 = 10
+      # 10/30 = 33.33...
+      cycle = create(:cycle, start_date: Date.new(2026, 2, 23), end_date: Date.new(2026, 4, 20), cooldown_weeks: 2, organization: organization)
+      expected = (10.0 / 30.0 * 100)
+      expect(cycle.progress_percentage).to be_within(0.01).of(expected)
     end
 
     it "returns 0 when dates are nil" do
@@ -184,18 +192,23 @@ RSpec.describe Cycle, type: :model do
   end
 
   describe "#days_remaining" do
-    it "returns days until cooldown starts" do
-      cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 8.weeks, cooldown_weeks: 2, organization: organization)
-      expect(cycle.days_remaining).to eq((Date.current + 6.weeks - Date.current).to_i)
+    # Pin to a Monday for deterministic business day counts
+    around { |example| travel_to(Date.new(2026, 3, 9)) { example.run } }
+
+    it "returns business days until cooldown starts" do
+      # Start: Mar 9, End: May 4, cooldown 2 weeks, cooldown_start: Apr 20
+      # Business days Mar 9 to Apr 20 = 30
+      cycle = create(:cycle, start_date: Date.new(2026, 3, 9), end_date: Date.new(2026, 5, 4), cooldown_weeks: 2, organization: organization)
+      expect(cycle.days_remaining).to eq(30)
     end
 
     it "returns 0 during cooldown phase" do
-      cycle = create(:cycle, start_date: Date.current - 7.weeks, end_date: Date.current + 1.week, cooldown_weeks: 2, organization: organization)
+      cycle = create(:cycle, start_date: Date.new(2026, 1, 19), end_date: Date.new(2026, 3, 16), cooldown_weeks: 2, organization: organization)
       expect(cycle.days_remaining).to eq(0)
     end
 
     it "returns 0 after end_date" do
-      cycle = create(:cycle, start_date: Date.current - 2.weeks, end_date: Date.current - 1.day, organization: organization)
+      cycle = create(:cycle, start_date: Date.new(2026, 2, 23), end_date: Date.new(2026, 3, 8), organization: organization)
       expect(cycle.days_remaining).to eq(0)
     end
 
@@ -204,9 +217,11 @@ RSpec.describe Cycle, type: :model do
       expect(cycle.days_remaining).to eq(0)
     end
 
-    it "returns days until end_date when cooldown is zero" do
-      cycle = create(:cycle, start_date: Date.current, end_date: Date.current + 6.weeks, cooldown_weeks: 0, organization: organization)
-      expect(cycle.days_remaining).to eq((Date.current + 6.weeks - Date.current).to_i)
+    it "returns business days until end_date when cooldown is zero" do
+      # Start: Mar 9, End: Apr 20, cooldown 0, cooldown_start = end_date = Apr 20
+      # Business days Mar 9 to Apr 20 = 30
+      cycle = create(:cycle, start_date: Date.new(2026, 3, 9), end_date: Date.new(2026, 4, 20), cooldown_weeks: 0, organization: organization)
+      expect(cycle.days_remaining).to eq(30)
     end
   end
 

@@ -42,15 +42,16 @@ class Cycle < ApplicationRecord
   end
 
   # Returns build progress as a percentage (0-100), excluding cooldown period
+  # Uses business days (Mon-Fri) for accurate working time measurement
   def progress_percentage
     return 0 if start_date.nil? || end_date.nil?
     return 0 if Date.current < start_date
     return 100 if Date.current >= cooldown_start_date
 
-    total_days = (cooldown_start_date - start_date).to_f
+    total_days = business_calendar.business_days_between(start_date, cooldown_start_date).to_f
     return 0 if total_days <= 0
 
-    elapsed_days = (Date.current - start_date).to_f
+    elapsed_days = business_calendar.business_days_between(start_date, Date.current).to_f
     (elapsed_days / total_days * 100).clamp(0, 100)
   end
 
@@ -77,11 +78,11 @@ class Cycle < ApplicationRecord
     current_state == "active"
   end
 
-  # Days remaining in the build phase (excludes cooldown)
+  # Business days remaining in the build phase (excludes cooldown)
   def days_remaining
     return 0 if end_date.nil? || Date.current >= cooldown_start_date
 
-    (cooldown_start_date - Date.current).to_i
+    business_calendar.business_days_between(Date.current, cooldown_start_date)
   end
 
   # Circuit breaker: projects not shipped by cycle end
@@ -110,6 +111,12 @@ class Cycle < ApplicationRecord
   end
 
   private
+
+  def business_calendar
+    @business_calendar ||= Business::Calendar.new(
+      working_days: %w[monday tuesday wednesday thursday friday]
+    )
+  end
 
   def end_date_after_start_date
     return unless start_date.present? && end_date.present?

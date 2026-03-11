@@ -102,6 +102,8 @@ gem "view_component", "~> 4.0"
 
 gem "pagy", "~> 43.2"
 
+gem "business", "~> 2.3"
+
 gem "tudla_contracts", git: "https://github.com/tibomogul/tudla_contracts", branch: "main"
 
 # Optional gems for feature integration

@@ -113,6 +113,7 @@ GEM
     brakeman (7.1.0)
       racc
     builder (3.3.0)
+    business (2.3.0)
     capybara (3.40.0)
       addressable
       matrix
@@ -517,6 +518,7 @@ DEPENDENCIES
   apexcharts!
   bootsnap
   brakeman
+  business (~> 2.3)
   capybara
   commonmarker (~> 2.5)
   debug
