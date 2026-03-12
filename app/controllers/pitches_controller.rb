@@ -143,6 +143,7 @@ class PitchesController < ApplicationController
   def load_paginated_index_pitches
     @status_tab = params[:status].presence || "all"
     pitches = policy_scope(Pitch).includes(:user, :organization).order(updated_at: :desc)
+    pitches = pitches.where(organization_id: current_organization&.id) if current_organization
 
     pitches = case @status_tab
     when "draft"

@@ -158,7 +158,7 @@ class ProjectsController < ApplicationController
   # GET /projects/1/risk_history
   def risk_history
     params.permit(:user_id, :period, :id)
-    @users = User.order(:email)
+    @users = User.active.order(:email)
     @filter_user_id = params[:user_id].presence
     @filter_period = params[:period].presence || "7"
 
@@ -211,6 +211,7 @@ class ProjectsController < ApplicationController
       # avoiding N+1 from calling project.tasks.count / project.scopes.count in the loop.
       # Both subqueries exclude soft-deleted records (deleted_at IS NULL).
       projects = policy_scope(Project)
+                  .where(team_id: current_organization_team_ids)
                   .includes(:team)
                   .select(
                     "projects.*",

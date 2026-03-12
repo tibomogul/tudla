@@ -5,7 +5,7 @@ class TasksController < ApplicationController
 
   # GET /tasks or /tasks.json
   def index
-    @tasks = policy_scope(Task)
+    @tasks = policy_scope(Task).where(project_id: current_organization_project_ids)
   end
 
   # GET /tasks/1 or /tasks/1.json
@@ -182,7 +182,7 @@ class TasksController < ApplicationController
   # GET /tasks/1/history
   def history
     params.permit(:user_id, :period, :id)
-    @users = User.order(:email)
+    @users = User.active.order(:email)
     @filter_user_id = params[:user_id].presence
     @filter_period = params[:period].presence || "7"
 

@@ -34,7 +34,22 @@ Rails.application.routes.draw do
   resources :notes, only: [ :create, :edit, :update, :destroy ]
   resources :links, only: [ :create, :edit, :update, :destroy ]
   resources :teams
-  resources :organizations
+  resources :organizations do
+    member do
+      patch :switch
+    end
+    resources :users, controller: "organizations/users", only: [ :index, :new, :create, :destroy ] do
+      collection do
+        get :lookup
+      end
+      member do
+        patch :lock
+        patch :unlock
+      end
+    end
+    resources :user_party_roles, controller: "organizations/user_party_roles", only: [ :create, :update, :destroy ]
+    resource :settings, controller: "organizations/settings", only: [ :show ]
+  end
   resources :cycles do
     member do
       patch :transition
@@ -85,7 +100,8 @@ Rails.application.routes.draw do
     controllers: {
       omniauth_callbacks: "users/omniauth_callbacks",
       registrations: "users/registrations",
-      confirmations: "users/confirmations"
+      confirmations: "users/confirmations",
+      invitations: "users/invitations"
     }
 
   resource :profile, only: [ :show ], controller: "profiles"

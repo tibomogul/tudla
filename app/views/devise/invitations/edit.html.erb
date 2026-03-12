@@ -1,0 +1,78 @@
+<% content_for :custom_layout do %>
+    <div class="grid grid-cols-12 overflow-auto sm:h-screen">
+        <div class="relative hidden bg-[#FFE9D1] lg:col-span-7 lg:block xl:col-span-8 2xl:col-span-9 dark:bg-[#14181c]">
+        </div>
+        <div class="col-span-12 lg:col-span-5 xl:col-span-4 2xl:col-span-3">
+            <div class="flex flex-col items-stretch p-6 md:p-8 lg:p-16">
+                <div class="flex items-center justify-between">
+                    <%= image_tag "tudla-wordmark-light.svg", alt: "logo-light", class: "h-5.5 dark:hidden" %>
+                    <%= image_tag "tudla-wordmark-dark.svg", alt: "logo-dark", class: "h-5.5 hidden dark:inline" %>
+                    <%= render "application/theme_toggle", button_class: "btn btn-circle btn-outline border-base-300 relative overflow-hidden" %>
+                </div>
+                <h3 class="mt-8 text-center text-xl font-semibold md:mt-12 lg:mt-24">Accept Invitation</h3>
+                <h3 class="text-base-content/70 mt-2 text-center text-sm">
+                    Set your password to join your team
+                </h3>
+
+                <%= form_with model: resource, url: invitation_path(resource_name), method: :put, local: true, class: "mt-6 md:mt-10" do |form| %>
+                    <%= render "devise/shared/error_messages", resource: resource %>
+                    <%= form.hidden_field :invitation_token %>
+
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Email Address</legend>
+                        <label class="input w-full focus:outline-0">
+                            <span class="iconify lucide--mail text-base-content/80 size-5"></span>
+                            <%= form.email_field :email, class: "grow focus:outline-0", disabled: true %>
+                        </label>
+                    </fieldset>
+
+                    <% if resource.username.present? %>
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend">Username</legend>
+                            <label class="input w-full focus:outline-0">
+                                <span class="iconify lucide--at-sign text-base-content/80 size-5"></span>
+                                <%= form.text_field :username, class: "grow focus:outline-0", disabled: true %>
+                            </label>
+                        </fieldset>
+                    <% end %>
+
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Preferred Name</legend>
+                        <label class="input w-full focus:outline-0">
+                            <span class="iconify lucide--user text-base-content/80 size-5"></span>
+                            <%= form.text_field :preferred_name, class: "grow focus:outline-0", placeholder: "Preferred Name", autofocus: true %>
+                        </label>
+                    </fieldset>
+
+                    <fieldset class="fieldset" x-data="{ show: false }">
+                        <legend class="fieldset-legend">Password</legend>
+                        <label class="input w-full focus:outline-0">
+                            <span class="iconify lucide--key-round text-base-content/80 size-5"></span>
+                            <%= form.password_field :password, class: "grow focus:outline-0", placeholder: "Password", "x-bind:type": "show ? 'text' : 'password'" %>
+                            <label class="swap btn btn-xs btn-ghost btn-circle text-base-content/60">
+                                <input type="checkbox" x-model="show" aria-label="Show password" />
+                                <span class="iconify lucide--eye swap-off size-4"></span>
+                                <span class="iconify lucide--eye-off swap-on size-4"></span>
+                            </label>
+                        </label>
+                    </fieldset>
+
+                    <fieldset class="fieldset" x-data="{ show: false }">
+                        <legend class="fieldset-legend">Confirm Password</legend>
+                        <label class="input w-full focus:outline-0">
+                            <span class="iconify lucide--key-round text-base-content/80 size-5"></span>
+                            <%= form.password_field :password_confirmation, class: "grow focus:outline-0", placeholder: "Confirm Password", "x-bind:type": "show ? 'text' : 'password'" %>
+                            <label class="swap btn btn-xs btn-ghost btn-circle text-base-content/60">
+                                <input type="checkbox" x-model="show" aria-label="Show password" />
+                                <span class="iconify lucide--eye swap-off size-4"></span>
+                                <span class="iconify lucide--eye-off swap-on size-4"></span>
+                            </label>
+                        </label>
+                    </fieldset>
+
+                    <%= form.submit "Accept Invitation", class: "btn btn-primary btn-wide mt-4 max-w-full gap-3 md:mt-6" %>
+                <% end %>
+            </div>
+        </div>
+    </div>
+<% end %>

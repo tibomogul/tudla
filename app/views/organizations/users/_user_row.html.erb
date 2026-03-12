@@ -1,0 +1,112 @@
+<tr id="<%= dom_id(user) %>">
+  <td>
+    <div class="flex flex-col">
+      <span class="font-medium"><%= user.preferred_name.presence || user.email.split('@').first %></span>
+      <span class="text-xs text-base-content/60"><%= user.email %></span>
+    </div>
+  </td>
+  <td>
+    <div class="flex flex-wrap gap-1">
+      <% user.user_party_roles.select { |r| role_in_org_hierarchy?(r) }.uniq { |r| [r.party_type, r.party_id, r.role] }.each do |role| %>
+        <div class="group/role inline-flex items-center gap-0.5">
+          <span class="badge badge-sm <%= role.role == 'admin' ? 'badge-primary' : 'badge-ghost' %>">
+            <%= role_badge_label(role) %>
+          </span>
+          <div class="flex items-center gap-0.5 opacity-0 group-hover/role:opacity-100 has-[[open]]:opacity-100 transition-opacity">
+            <details class="dropdown dropdown-end dropdown-top">
+              <summary class="cursor-pointer text-base-content/60 hover:text-base-content list-none" title="Change role">
+                <span class="iconify lucide--pencil size-3.5"></span>
+              </summary>
+              <ul class="dropdown-content menu menu-xs bg-base-200 rounded-box shadow-lg z-10 w-28">
+                <li>
+                  <%= button_to organization_user_party_role_path(organization, role),
+                              method: :patch,
+                              params: { role: "admin" },
+                              form: { class: "contents" },
+                              class: role.role == 'admin' ? 'font-bold' : '' do %>
+                    Admin
+                  <% end %>
+                </li>
+                <li>
+                  <%= button_to organization_user_party_role_path(organization, role),
+                              method: :patch,
+                              params: { role: "member" },
+                              form: { class: "contents" },
+                              class: role.role == 'member' ? 'font-bold' : '' do %>
+                    Member
+                  <% end %>
+                </li>
+              </ul>
+            </details>
+            <%= button_to organization_user_party_role_path(organization, role),
+                          method: :delete,
+                          class: "text-error/60 hover:text-error",
+                          title: "Remove role",
+                          data: { turbo_confirm: "Remove this role?" } do %>
+              <span class="iconify lucide--x size-3.5"></span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </td>
+  <td>
+    <% if user.access_locked? %>
+      <span class="badge badge-sm badge-error">Disabled</span>
+    <% elsif user.invitation_accepted_at.present? || user.confirmed_at.present? %>
+      <span class="badge badge-sm badge-success">Active</span>
+    <% elsif user.invitation_sent_at.present? %>
+      <span class="badge badge-sm badge-warning">Invited</span>
+    <% else %>
+      <span class="badge badge-sm badge-ghost">Pending</span>
+    <% end %>
+  </td>
+  <td class="text-right">
+    <div class="flex justify-end gap-1">
+      <button class="btn btn-ghost btn-sm btn-circle"
+              title="Add role"
+              onclick="document.getElementById('add_role_modal_<%= user.id %>').showModal()">
+        <span class="iconify lucide--plus size-4"></span>
+      </button>
+      <% if user != current_user %>
+        <% if user.access_locked? %>
+          <%= button_to unlock_organization_user_path(organization, user),
+                        method: :patch,
+                        class: "btn btn-ghost btn-sm btn-circle text-success",
+                        title: "Enable user",
+                        data: { turbo_confirm: "Enable #{user.email}?" } do %>
+            <span class="iconify lucide--shield-check size-4"></span>
+          <% end %>
+        <% else %>
+          <%= button_to lock_organization_user_path(organization, user),
+                        method: :patch,
+                        class: "btn btn-ghost btn-sm btn-circle text-warning",
+                        title: "Disable user",
+                        data: { turbo_confirm: "Disable #{user.email}? They will not be able to sign in." } do %>
+            <span class="iconify lucide--lock size-4"></span>
+          <% end %>
+        <% end %>
+      <% end %>
+      <%= button_to organization_user_path(organization, user),
+                    method: :delete,
+                    class: "btn btn-ghost btn-sm btn-circle text-error",
+                    title: "Remove user",
+                    data: { turbo_confirm: "Remove #{user.email} from #{organization.name}?" } do %>
+        <span class="iconify lucide--user-minus size-4"></span>
+      <% end %>
+    </div>
+  </td>
+</tr>
+
+<!-- Add Role modal -->
+<dialog id="add_role_modal_<%= user.id %>" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold mb-4">Add Role — <%= user.email %></h3>
+    <%= render partial: "organizations/users/add_role_form",
+              locals: { user: user, organization: organization,
+                        existing_role_keys: existing_role_keys, teams: teams } %>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

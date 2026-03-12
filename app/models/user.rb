@@ -1,9 +1,11 @@
 class User < ApplicationRecord
+  include SoftDeletable
+
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable,
-         :trackable, :confirmable, :lockable,
+         :trackable, :confirmable, :lockable, :invitable,
          :omniauthable, omniauth_providers: [ :google_oauth2, :microsoft_graph ]
 
   has_many :user_party_roles
@@ -13,6 +15,39 @@ class User < ApplicationRecord
   has_many :subscribables, through: :subscriptions
 
   has_many :notifications
+
+  # Caches full AR objects (not just IDs) to avoid an extra query on every page load.
+  # Trade-off: if an Organization name changes or is soft-deleted, this serves stale data
+  # until the next UserPartyRole change busts the cache. Acceptable because org-level
+  # mutations are rare and the cached set is small (typically 1-5 orgs per user).
+  # The multiple queries inside the block only run on cache miss.
+  def accessible_organizations
+    Rails.cache.fetch(organizations_cache_key) do
+      org_ids = user_party_roles
+        .where(party_type: "Organization")
+        .pluck(:party_id)
+
+      team_org_ids = Team.where(
+        id: user_party_roles.where(party_type: "Team").pluck(:party_id)
+      ).pluck(:organization_id)
+
+      project_team_ids = Project.where(
+        id: user_party_roles.where(party_type: "Project").pluck(:party_id)
+      ).pluck(:team_id)
+      project_org_ids = Team.where(id: project_team_ids).pluck(:organization_id)
+
+      all_org_ids = (org_ids + team_org_ids + project_org_ids).uniq
+      Organization.active.where(id: all_org_ids).order(:name).to_a
+    end
+  end
+
+  def organizations_cache_key
+    "user/#{id}/accessible_organizations"
+  end
+
+  def bust_organizations_cache
+    Rails.cache.delete(organizations_cache_key)
+  end
 
   # Get all teams where user can create projects
   # This includes:

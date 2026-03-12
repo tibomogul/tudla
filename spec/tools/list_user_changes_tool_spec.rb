@@ -7,12 +7,12 @@ RSpec.describe ListUserChangesTool, type: :model do
   let(:team) { create(:team, name: "Test Team", organization: organization) }
   let(:user) do
     create(:user, email: "testuser@example.com", username: "testuser", confirmation_token: "token_user1").tap do |u|
-      UserPartyRole.create!(user: u, party: team)
+      UserPartyRole.create!(user: u, party: team, role: "member")
     end
   end
   let(:other_user) do
     create(:user, email: "otheruser@example.com", username: "otheruser", confirmation_token: "token_user2").tap do |u|
-      UserPartyRole.create!(user: u, party: team)
+      UserPartyRole.create!(user: u, party: team, role: "member")
     end
   end
   let(:project) { create(:project, name: "Test Project", team: team) }

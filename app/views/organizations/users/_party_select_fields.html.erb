@@ -1,0 +1,50 @@
+<% placeholders = local_assigns.fetch(:include_placeholders, false) %>
+
+<div class="form-control <%= spacing_class %>">
+  <label class="label"><span class="label-text">Type</span></label>
+  <select name="party_type" class="select select-bordered w-full"
+          data-add-role-target="typeSelect"
+          data-action="change->add-role#typeChanged change->invite-lookup#typeChanged">
+    <% if placeholders %>
+      <option value="" disabled selected>Select type…</option>
+    <% end %>
+    <option value="Organization">Organization</option>
+    <option value="Team">Team</option>
+    <option value="Project">Project</option>
+  </select>
+</div>
+
+<div class="form-control <%= spacing_class %>">
+  <label class="label"><span class="label-text">Entity</span></label>
+  <select name="party_id" class="select select-bordered w-full"
+          data-add-role-target="entitySelect"
+          data-action="change->add-role#selectionChanged change->invite-lookup#entityChanged">
+    <% if placeholders %>
+      <option value="" disabled selected>Select entity…</option>
+    <% end %>
+    <option value="<%= organization.id %>" data-entity-type="Organization" data-party-key="Organization-<%= organization.id %>"<%= " hidden" if placeholders %>><%= organization.name %></option>
+    <% teams = local_assigns.fetch(:teams) { organization.teams.active.includes(:projects).order(:name) } %>
+    <% teams.each do |team| %>
+      <option value="<%= team.id %>" data-entity-type="Team" data-party-key="Team-<%= team.id %>" hidden><%= team.name %></option>
+    <% end %>
+    <% teams.each do |team| %>
+      <%# Filter in Ruby (not .active scope) to use the already-eager-loaded association %>
+      <% team.projects.select { |p| p.deleted_at.nil? }.sort_by(&:name).each do |project| %>
+        <option value="<%= project.id %>" data-entity-type="Project" data-party-key="Project-<%= project.id %>" hidden><%= project.name %> (<%= team.name %>)</option>
+      <% end %>
+    <% end %>
+  </select>
+</div>
+
+<div class="form-control <%= spacing_class %>">
+  <label class="label"><span class="label-text">Role</span></label>
+  <select name="role" class="select select-bordered w-full"
+          data-add-role-target="roleSelect"
+          data-action="change->add-role#selectionChanged change->invite-lookup#selectionChanged">
+    <% if placeholders %>
+      <option value="" disabled selected>Select role…</option>
+    <% end %>
+    <option value="member">Member</option>
+    <option value="admin">Admin</option>
+  </select>
+</div>

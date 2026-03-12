@@ -19,6 +19,42 @@ class ApplicationController < ActionController::Base
     devise_parameter_sanitizer.permit :account_update, keys: update_attrs
   end
 
+  helper_method :current_organization, :current_admin_organization
+
+  def current_organization
+    return nil unless user_signed_in?
+    @current_organization ||= begin
+      orgs = current_user.accessible_organizations
+      if session[:current_organization_id]
+        orgs.find { |o| o.id == session[:current_organization_id] } || orgs.first
+      else
+        orgs.first
+      end
+    end
+  end
+
+  def current_admin_organization
+    return nil unless current_organization
+    @current_admin_organization ||= begin
+      admin_org_ids = current_user.user_party_roles
+        .where(party_type: "Organization", role: "admin")
+        .pluck(:party_id)
+      current_organization if admin_org_ids.include?(current_organization.id)
+    end
+  end
+
+  helper_method :current_organization_team_ids, :current_organization_project_ids
+
+  def current_organization_team_ids
+    return [] unless current_organization
+    @current_organization_team_ids ||= current_organization.teams.active.pluck(:id)
+  end
+
+  def current_organization_project_ids
+    return [] unless current_organization
+    @current_organization_project_ids ||= Project.active.where(team_id: current_organization_team_ids).pluck(:id)
+  end
+
   def custom_authenticate_user!
     redirect_to root_path, notice: "You must login" unless user_signed_in?
   end

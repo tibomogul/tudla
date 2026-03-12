@@ -1,0 +1,33 @@
+<%= turbo_frame_tag "users_index_list" do %>
+  <% if users.any? %>
+    <div class="overflow-x-auto">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.each do |user| %>
+            <%= render partial: "organizations/users/user_row",
+                        locals: { user: user, organization: organization,
+                                  existing_role_keys: existing_role_keys_by_user[user.id] || [],
+                                  teams: teams } %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="text-center py-12 text-base-content/60">
+      <span class="iconify lucide--users size-12 mx-auto mb-4 opacity-50"></span>
+      <p>No users found.</p>
+    </div>
+  <% end %>
+
+  <div class="mt-4 flex justify-center">
+    <%= pagy_daisyui_nav(pagy_users, turbo_frame: "users_index_list") %>
+  </div>
+<% end %>

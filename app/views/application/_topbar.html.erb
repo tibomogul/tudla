@@ -23,13 +23,39 @@
         </div>
     </div>
     <div class="flex items-center gap-4">
+        <% orgs = current_user.accessible_organizations %>
+        <% if orgs.size > 1 %>
+          <div class="dropdown dropdown-bottom dropdown-end">
+            <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1.5">
+              <span class="iconify lucide--briefcase size-4"></span>
+              <span class="max-sm:hidden"><%= current_organization&.name || "Select Organization" %></span>
+              <span class="iconify lucide--chevron-down size-3.5 opacity-60"></span>
+            </div>
+            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box mt-2 w-56 shadow-lg z-20">
+              <% orgs.each do |org| %>
+                <li>
+                  <%= button_to switch_organization_path(org),
+                                method: :patch,
+                                class: "#{org.id == current_organization&.id ? 'active' : ''}" do %>
+                    <span class="iconify lucide--briefcase size-4"></span>
+                    <span><%= org.name %></span>
+                    <% if org.id == current_organization&.id %>
+                      <span class="iconify lucide--check size-4 ml-auto"></span>
+                    <% end %>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% elsif orgs.size == 1 %>
+          <div class="flex items-center gap-1.5 text-sm text-base-content/70">
+            <span class="iconify lucide--briefcase size-4"></span>
+            <span class="max-sm:hidden"><%= orgs.first.name %></span>
+          </div>
+        <% end %>
         <%= render "application/theme_toggle" %>
         <div class="dropdown dropdown-bottom dropdown-end">
             <div tabindex="0" class="flex cursor-pointer items-center gap-2">
-                <!-- <div class="avatar bg-base-200 rounded-box size-7 overflow-hidden">
-                    <span class="text-xs">TM</span>
-                    <img alt="Avatar" src="/images/avatars/1.png" />
-                </div> -->
                 <div class="avatar avatar-placeholder">
                     <div class="bg-neutral text-neutral-content size-7 rounded-full">
                         <span class="text-xs">UI</span>
@@ -63,12 +89,6 @@
                 </ul>
                 <hr class="border-base-300" />
                 <ul class="menu w-full p-2">
-                    <li>
-                        <div>
-                            <span class="iconify lucide--arrow-left-right size-4"></span>
-                            <span>Switch Account</span>
-                        </div>
-                    </li>
                     <li>
                         <%= link_to destroy_user_session_path,
                           class: "text-error hover:bg-error/10",

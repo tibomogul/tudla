@@ -19,7 +19,7 @@ class PagesController < ApplicationController
       return
     end
 
-    tasks = policy_scope(Task).where(responsible_user_id: current_user.id)
+    tasks = policy_scope(Task).where(responsible_user_id: current_user.id, project_id: current_organization_project_ids)
 
     if params[:project_id].present?
       tasks = tasks.where(project_id: params[:project_id])
@@ -44,6 +44,7 @@ class PagesController < ApplicationController
     # The subquery excludes soft-deleted tasks (deleted_at IS NULL).
     # The resulting attribute is accessible as project.tasks_count in the view.
     projects = policy_scope(Project)
+                .where(team_id: current_organization_team_ids)
                 .includes(:team)
                 .select("projects.*, (SELECT COUNT(*) FROM tasks WHERE tasks.project_id = projects.id AND tasks.deleted_at IS NULL) AS tasks_count")
                 .order(:name)

@@ -3,7 +3,7 @@ class TeamsController < ApplicationController
 
   # GET /teams or /teams.json
   def index
-    @teams = policy_scope(Team)
+    @teams = policy_scope(Team).where(organization_id: current_organization&.id)
   end
 
   # GET /teams/1 or /teams/1.json

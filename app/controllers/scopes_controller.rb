@@ -3,7 +3,7 @@ class ScopesController < ApplicationController
 
   # GET /scopes or /scopes.json
   def index
-    @scopes = policy_scope(Scope)
+    @scopes = policy_scope(Scope).where(project_id: current_organization_project_ids)
   end
 
   # GET /scopes/1 or /scopes/1.json

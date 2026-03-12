@@ -1,0 +1,5 @@
+<p>Hello <%= @user.preferred_name.presence || @user.email %>,</p>
+
+<p><%= @added_by.preferred_name.presence || @added_by.email %> has added you to <%= @party.class.name.underscore.humanize.downcase %> "<%= @party.name %>".</p>
+
+<p><%= link_to "Sign in to Tudla", root_url %></p>

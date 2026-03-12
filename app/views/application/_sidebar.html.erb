@@ -76,6 +76,25 @@
                 <% end %>
             </div>
         </div>
+        <% if current_admin_organization %>
+          <div class="mt-4">
+            <div class="flex items-center justify-between px-5">
+              <p class="menu-label">Admin</p>
+            </div>
+            <div class="mt-1 space-y-0.5 px-2.5">
+              <%= link_to organization_users_path(current_admin_organization), class: "menu-item group" do %>
+                <span class="iconify lucide--users size-4"></span>
+                <p class="grow">Users</p>
+                <span class="iconify lucide--chevron-right size-3.5 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-60"></span>
+              <% end %>
+              <%= link_to organization_settings_path(current_admin_organization), class: "menu-item group" do %>
+                <span class="iconify lucide--settings size-4"></span>
+                <p class="grow">Settings</p>
+                <span class="iconify lucide--chevron-right size-3.5 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-60"></span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
     </div>
 </div>
 <label for="layout-sidebar-toggle-trigger" id="layout-sidebar-backdrop"></label>

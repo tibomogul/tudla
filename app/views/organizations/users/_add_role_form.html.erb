@@ -1,0 +1,16 @@
+<div data-controller="add-role"
+     data-add-role-existing-roles-value="<%= existing_role_keys.to_json %>">
+  <%= form_with url: organization_user_party_roles_path(organization),
+                method: :post, class: "space-y-4" do |f| %>
+    <%= f.hidden_field :user_id, value: user.id %>
+
+    <%= render partial: "organizations/users/party_select_fields",
+              locals: { organization: organization, spacing_class: "", teams: teams } %>
+
+    <div class="modal-action">
+      <button type="button" class="btn" onclick="this.closest('dialog').close()">Cancel</button>
+      <%= f.submit "Add Role", class: "btn btn-primary",
+                   data: { add_role_target: "submitButton" } %>
+    </div>
+  <% end %>
+</div>

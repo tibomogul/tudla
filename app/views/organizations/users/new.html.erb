@@ -1,0 +1,55 @@
+<% content_for :title, "Invite User - #{@organization.name}" %>
+
+<div class="w-full max-w-md mx-auto">
+  <h1 class="font-bold text-4xl mb-6">Invite User</h1>
+
+  <div class="card bg-base-100 shadow">
+    <div class="card-body" data-controller="add-role invite-lookup"
+         data-invite-lookup-url-value="<%= lookup_organization_users_path(@organization) %>">
+      <%= form_with url: organization_users_path(@organization), method: :post do |f| %>
+        <fieldset class="fieldset mb-4">
+          <legend class="fieldset-legend">Email Address</legend>
+          <label class="input w-full focus:outline-0">
+            <span class="iconify lucide--mail text-base-content/80 size-5"></span>
+            <%= f.email_field :email, class: "grow focus:outline-0",
+                              placeholder: "user@example.com", required: true,
+                              data: { invite_lookup_target: "email",
+                                      action: "blur->invite-lookup#lookup" } %>
+          </label>
+        </fieldset>
+
+        <div data-invite-lookup-target="notice" class="alert alert-info text-sm mb-4" hidden></div>
+
+        <fieldset class="fieldset mb-4" data-invite-lookup-target="usernameFieldset">
+          <legend class="fieldset-legend">Username</legend>
+          <label class="input w-full focus:outline-0">
+            <span class="iconify lucide--at-sign text-base-content/80 size-5"></span>
+            <%= f.text_field :username, class: "grow focus:outline-0",
+                             placeholder: "jsmith",
+                             data: { invite_lookup_target: "username" } %>
+          </label>
+        </fieldset>
+
+        <fieldset class="fieldset mb-4" data-invite-lookup-target="preferredNameFieldset">
+          <legend class="fieldset-legend">Preferred Name</legend>
+          <label class="input w-full focus:outline-0">
+            <span class="iconify lucide--user text-base-content/80 size-5"></span>
+            <%= f.text_field :preferred_name, class: "grow focus:outline-0",
+                             placeholder: "Jane Smith",
+                             data: { invite_lookup_target: "preferredName" } %>
+          </label>
+        </fieldset>
+
+        <%= render partial: "organizations/users/party_select_fields",
+                  locals: { organization: @organization, spacing_class: "mb-4", include_placeholders: true, teams: @teams } %>
+
+        <div class="flex gap-2 mt-6">
+          <%= f.submit "Send Invitation", class: "btn btn-primary",
+                       data: { invite_lookup_target: "submitButton" } %>
+          <%= link_to "Cancel", organization_users_path(@organization),
+                      class: "btn btn-ghost" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

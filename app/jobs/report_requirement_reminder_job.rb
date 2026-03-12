@@ -21,7 +21,7 @@ class ReportRequirementReminderJob < ApplicationJob
       party_id: reportable_entity.id
     ).pluck(:user_id).uniq
 
-    users = User.where(id: user_ids)
+    users = User.active.where(id: user_ids)
     Rails.logger.info("[ReportRequirementReminderJob] Found #{users.count} users associated with #{reportable_entity.class.name} ##{reportable_entity.id}")
 
     reminders_sent = 0

@@ -66,6 +66,7 @@ end
 
 # gem "devise", "~> 4.9"
 gem "devise", git: "https://github.com/heartcombo/devise", branch: "main"
+gem "devise_invitable"
 
 gem "omniauth-google-oauth2", "~> 1.2"
 

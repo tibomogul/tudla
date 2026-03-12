@@ -57,6 +57,16 @@ class OrganizationsController < ApplicationController
     end
   end
 
+  def switch
+    org = current_user.accessible_organizations.find { |o| o.id == params[:id].to_i }
+    if org
+      session[:current_organization_id] = org.id
+      redirect_to user_root_path, notice: "Switched to #{org.name}."
+    else
+      redirect_to user_root_path, alert: "Organization not found."
+    end
+  end
+
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_organization

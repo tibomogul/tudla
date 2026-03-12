@@ -5,7 +5,13 @@ class ReportsController < ApplicationController
 
   # GET /reports or /reports.json
   def index
+    team_reportable_ids = Reportable.where(reportable_type: "Team", reportable_id: current_organization_team_ids).pluck(:id)
+    project_reportable_ids = Reportable.where(reportable_type: "Project", reportable_id: current_organization_project_ids).pluck(:id)
+    org_reportable_ids = team_reportable_ids + project_reportable_ids
+
     @reports = policy_scope(Report)
+      .where(reportable_id: org_reportable_ids)
+      .or(policy_scope(Report).where(user_id: current_user.id))
       .includes(:user, reportable: :reportable)
       .order(created_at: :desc)
   end

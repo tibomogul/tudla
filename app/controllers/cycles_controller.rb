@@ -126,9 +126,7 @@ class CyclesController < ApplicationController
     load_accessible_organizations
     cycles = policy_scope(Cycle).includes(:organization).order(start_date: :desc)
 
-    if params[:organization_id].present?
-      cycles = cycles.where(organization_id: params[:organization_id])
-    end
+    cycles = cycles.where(organization_id: current_organization&.id) if current_organization
 
     @pagy_cycles, @cycles = pagy(:offset, cycles, limit: 20)
   end
