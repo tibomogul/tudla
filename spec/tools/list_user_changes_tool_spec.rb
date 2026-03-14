@@ -85,6 +85,17 @@ RSpec.describe ListUserChangesTool, type: :model do
         expect(result).to include("change")
       end
 
+      it "includes Pitch changes made by the current user" do
+        pitch = create(:pitch, title: "My Pitch", user: user, organization: organization)
+        PaperTrail.request.whodunnit = user.id.to_s
+        pitch.update!(title: "Updated Pitch")
+
+        result = tool.execute
+
+        expect(result).to include("Pitch")
+        expect(result).to include("change")
+      end
+
       it "does not include changes by other users" do
         create_note_for(task, user: other_user, content: "Other user note")
 
@@ -145,6 +156,17 @@ RSpec.describe ListUserChangesTool, type: :model do
         result = tool.execute(team_id: team.id)
 
         expect(result).to include("Link")
+      end
+
+      it "includes Pitch changes by team members in the team's organization" do
+        pitch = create(:pitch, title: "Team Pitch", user: other_user, organization: organization)
+        PaperTrail.request.whodunnit = other_user.id.to_s
+        pitch.update!(title: "Updated Team Pitch")
+
+        result = tool.execute(team_id: team.id)
+
+        expect(result).to include("Pitch")
+        expect(result).to include("change")
       end
 
       it "excludes Notes from other teams" do
@@ -260,6 +282,27 @@ RSpec.describe ListUserChangesTool, type: :model do
         expect(filtered.exists?(item_type: "Project", item_id: project.id)).to be true
       end
 
+      it "includes Pitch versions for pitches in team's organization" do
+        pitch = create(:pitch, title: "Org Pitch", user: user, organization: organization)
+        PaperTrail.request.whodunnit = user.id.to_s
+        pitch.update!(title: "Updated Org Pitch")
+
+        filtered = tool.send(:filter_by_team, all_versions, team)
+
+        expect(filtered.exists?(item_type: "Pitch", item_id: pitch.id)).to be true
+      end
+
+      it "excludes Pitch versions for pitches in other organizations" do
+        other_org = create(:organization, name: "Other Pitch Org")
+        pitch = create(:pitch, title: "Other Org Pitch", user: user, organization: other_org)
+        PaperTrail.request.whodunnit = user.id.to_s
+        pitch.update!(title: "Updated Other Org Pitch")
+
+        filtered = tool.send(:filter_by_team, all_versions, team)
+
+        expect(filtered.exists?(item_type: "Pitch", item_id: pitch.id)).to be false
+      end
+
       it "excludes Task versions for tasks NOT in team projects" do
         other_org = create(:organization, name: "Excluded Org")
         other_team = create(:team, name: "Excluded Team", organization: other_org)
@@ -345,6 +388,24 @@ RSpec.describe ListUserChangesTool, type: :model do
         expect(filtered.exists?(item_type: "Attachment", item_id: attachment.id)).to be true
       end
 
+      it "includes Note versions for notes on pitches in team's organization" do
+        pitch = create(:pitch, title: "Noted Pitch", user: user, organization: organization)
+        note = create_note_for(pitch, user: user, content: "Pitch note")
+
+        filtered = tool.send(:filter_by_team, all_versions, team)
+
+        expect(filtered.exists?(item_type: "Note", item_id: note.id)).to be true
+      end
+
+      it "includes Link versions for links on pitches in team's organization" do
+        pitch = create(:pitch, title: "Linked Pitch", user: user, organization: organization)
+        link = create_link_for(pitch, user: user, url: "https://pitch.com")
+
+        filtered = tool.send(:filter_by_team, all_versions, team)
+
+        expect(filtered.exists?(item_type: "Link", item_id: link.id)).to be true
+      end
+
       it "excludes Note versions for notes on non-team tasks" do
         other_org = create(:organization, name: "Other Org 2")
         other_team = create(:team, name: "Other Team 2", organization: other_org)
@@ -415,6 +476,16 @@ RSpec.describe ListUserChangesTool, type: :model do
         filtered = tool.send(:filter_by_team, all_versions, team)
 
         expect(filtered.exists?(item_type: "Project", item_id: deleted_project.id)).to be false
+      end
+
+      it "excludes versions for soft-deleted pitches" do
+        PaperTrail.request.whodunnit = user.id.to_s
+        deleted_pitch = create(:pitch, title: "Will Delete Pitch", user: user, organization: organization)
+        deleted_pitch.soft_delete
+
+        filtered = tool.send(:filter_by_team, all_versions, team)
+
+        expect(filtered.exists?(item_type: "Pitch", item_id: deleted_pitch.id)).to be false
       end
 
       it "excludes versions for soft-deleted notes" do

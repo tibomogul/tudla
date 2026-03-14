@@ -21,9 +21,9 @@
 ### Delegated Type Containers
 | Container | Concrete Model | Concerns | Attachable Types |
 |-----------|---------------|----------|-----------------|
-| Notable | Note | SoftDeletable, PaperTrail | Project, Scope, Task, Team, Organization |
-| Linkable | Link | SoftDeletable, PaperTrail | Project, Scope, Task, Team, Organization |
-| Attachable | Attachment | SoftDeletable, PaperTrail | Project, Scope, Task, Team, Organization |
+| Notable | Note | SoftDeletable, PaperTrail | Project, Scope, Task, Pitch, Team, Organization |
+| Linkable | Link | SoftDeletable, PaperTrail | Project, Scope, Task, Pitch, Team, Organization |
+| Attachable | Attachment | SoftDeletable, PaperTrail | Project, Scope, Task, Pitch, Team, Organization |
 | Subscribable | Subscription | — | Project, Scope, Task |
 | Reportable | Report | SoftDeletable | Project, Team |
 
@@ -63,8 +63,8 @@ All use named method + ActionCable guard + error rescue pattern:
 - **Note** → "{type}_{id}_notes" (replace)
 - **Link** → "{type}_{id}_links" (replace)
 
-## PaperTrail (6 models)
-Task, Scope, Project, Note, Link, Attachment
+## PaperTrail (7 models)
+Task, Scope, Project, Pitch, Note, Link, Attachment
 - Task skips: `backlog_position`, `today_position`, `scope_position`, `in_today`
 - Scope skips: `project_position`
 - Whodunnit tracked via `PaperTrail.request.whodunnit` (set in ApplicationController)

@@ -38,7 +38,7 @@ Provides: `format_tasks`, `format_scopes`, `format_projects`, `format_task_detai
 | UpdateScopeTool | Scope | Write | Updates scope attributes |
 | ListProjectsTool | Project | Read | All projects accessible to user |
 | GetProjectTool | Project | Read | Details with scopes and tasks |
-| ListUserChangesTool | Audit | Read | PaperTrail versions with time range + team filtering |
+| ListUserChangesTool | Audit | Read | PaperTrail versions (incl. Pitches) with time range + team filtering |
 
 ## Adding a New Tool
 ```ruby

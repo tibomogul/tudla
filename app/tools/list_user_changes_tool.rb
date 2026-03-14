@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class ListUserChangesTool < ApplicationTool
-  description "List changes from PaperTrail audit log (Tasks, Scopes, Projects, Notes, Links, Attachments). Shows current user's changes by default. " \
+  description "List changes from PaperTrail audit log (Tasks, Scopes, Projects, Pitches, Notes, Links, Attachments). Shows current user's changes by default. " \
               "If team_id is specified, shows changes by all team members (user must be associated with team or its organization)."
 
   annotations(
@@ -13,7 +13,7 @@ class ListUserChangesTool < ApplicationTool
     properties: {
       start_time: { type: "string", description: "Start datetime (ISO8601 format, e.g., '2025-11-03T00:00:00Z'). Defaults to 24 hours ago." },
       end_time: { type: "string", description: "End datetime (ISO8601 format, e.g., '2025-11-04T00:00:00Z'). Defaults to now." },
-      team_id: { type: "integer", description: "Show changes by all team members on team-related items (Tasks/Scopes/Projects/Notes/Links/Attachments in team's projects). Requires user to be associated with team or its organization." },
+      team_id: { type: "integer", description: "Show changes by all team members on team-related items (Tasks/Scopes/Projects/Pitches/Notes/Links/Attachments in team's projects and organization). Requires user to be associated with team or its organization." },
       limit: { type: "integer", description: "Maximum number of versions to return (default: 100)" }
     }
   )
@@ -229,14 +229,15 @@ class ListUserChangesTool < ApplicationTool
   # Respects .active (soft-delete) on every model that supports it.
   def filter_by_team(versions, team)
     project_rel = team.projects.active
-    return versions.none unless project_rel.exists?
+    pitch_rel   = Pitch.active.where(organization_id: team.organization_id).select(:id)
+    return versions.none unless project_rel.exists? || pitch_rel.exists?
 
     project_ids = project_rel.select(:id)
     task_rel    = Task.active.where(project_id: project_ids).select(:id)
     scope_rel   = Scope.active.where(project_id: project_ids).select(:id)
 
     # Resolve Notes/Links/Attachments via their polymorphic join tables
-    parent_map = { "Task" => task_rel, "Scope" => scope_rel, "Project" => project_ids }
+    parent_map = { "Task" => task_rel, "Scope" => scope_rel, "Project" => project_ids, "Pitch" => pitch_rel }
     note_rel       = polymorphic_item_rel(Notable,    :notable,    parent_map, Note,       :notable_id)
     link_rel       = polymorphic_item_rel(Linkable,   :linkable,   parent_map, Link,       :linkable_id)
     attachment_rel = polymorphic_item_rel(Attachable, :attachable, parent_map, Attachment, :attachable_id)
@@ -245,7 +246,7 @@ class ListUserChangesTool < ApplicationTool
     # duplicated across branches — produces clean, EXPLAINable SQL.
     vt = PaperTrail::Version.arel_table
     type_rels = {
-      "Task" => task_rel, "Scope" => scope_rel, "Project" => project_ids,
+      "Task" => task_rel, "Scope" => scope_rel, "Project" => project_ids, "Pitch" => pitch_rel,
       "Note" => note_rel, "Link" => link_rel, "Attachment" => attachment_rel
     }
 
