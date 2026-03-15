@@ -16,13 +16,13 @@
 ## Helper Methods (ApplicationTool)
 - `current_user` — Authenticated user from server_context (raises if missing)
 - `authorize(record, query)` — Pundit authorization check
-- `scope_tasks_by_user(tasks)` / `scope_scopes_by_user` / `scope_projects_by_user` — Policy scoping
+- `scope_tasks_by_user(tasks)` / `scope_scopes_by_user` / `scope_projects_by_user` / `scope_reports_by_user` / `scope_pitches_by_user` — Policy scoping
 - `call_tool(ToolClass, **args)` — Cross-tool calls with same server_context
 
 ## Formatters (McpFormatters concern)
-Provides: `format_tasks`, `format_scopes`, `format_projects`, `format_task_details`, `format_scope_details`, `format_project_details`, `format_user`, `format_datetime`
+Provides: `format_tasks`, `format_scopes`, `format_projects`, `format_reports`, `format_pitches`, `format_task_details`, `format_scope_details`, `format_project_details`, `format_report_details`, `format_pitch_details`, `format_user`, `format_datetime`
 
-## Tool Inventory (13 total)
+## Tool Inventory (19 total)
 
 | Tool | Domain | Read/Write | Description |
 |------|--------|-----------|-------------|
@@ -38,6 +38,12 @@ Provides: `format_tasks`, `format_scopes`, `format_projects`, `format_task_detai
 | UpdateScopeTool | Scope | Write | Updates scope attributes |
 | ListProjectsTool | Project | Read | All projects accessible to user |
 | GetProjectTool | Project | Read | Details with scopes and tasks |
+| ListReportsTool | Report | Read | List reports with project/team filter |
+| GetReportTool | Report | Read | Full report details with content |
+| FetchReportsTool | Report | Read | Reports by date range + team/user filtering |
+| ListPitchesTool | Pitch | Read | List pitches with org/status filter |
+| GetPitchTool | Pitch | Read | Full pitch details with ingredients + state history |
+| FetchPitchesTool | Pitch | Read | Pitches by date range + org/user filtering |
 | ListUserChangesTool | Audit | Read | PaperTrail versions (incl. Pitches) with time range + team filtering |
 
 ## Adding a New Tool

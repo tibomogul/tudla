@@ -72,6 +72,22 @@ class ApplicationTool < MCP::Tool
     ProjectPolicy::Scope.new(current_user, projects).resolve
   end
 
+  # Scope reports by current user's permissions using Pundit
+  # Delegates to ReportPolicy::Scope for single source of truth
+  def scope_reports_by_user(reports)
+    return reports unless current_user
+
+    ReportPolicy::Scope.new(current_user, reports).resolve
+  end
+
+  # Scope pitches by current user's permissions using Pundit
+  # Delegates to PitchPolicy::Scope for single source of truth
+  def scope_pitches_by_user(pitches)
+    return pitches unless current_user
+
+    PitchPolicy::Scope.new(current_user, pitches).resolve
+  end
+
   # Call another tool's execute method with the same server_context
   def call_tool(tool_class, **args)
     tool_class.new(server_context).execute(**args)

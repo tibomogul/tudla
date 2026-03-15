@@ -128,6 +128,89 @@ module McpFormatters
     output
   end
 
+  # Report Formatters
+
+  def format_reports(reports)
+    return "No reports found." if reports.empty?
+
+    output = "Found #{reports.count} report(s):\n\n"
+    reports.each do |report|
+      output += format_report_summary(report)
+      output += "\n---\n\n"
+    end
+    output
+  end
+
+  def format_report_summary(report)
+    reportable_info = report.reportable&.reportable
+    reportable_name = reportable_info ? "#{reportable_info.class.name}: #{reportable_info.name}" : "Unknown"
+    <<~TEXT
+      ID: #{report.id}
+      For: #{reportable_name}
+      Author: #{format_user(report.user)}
+      As of: #{format_datetime(report.as_of_at)}
+      Status: #{report.submitted? ? "Submitted" : "Draft"}
+      Submitted at: #{report.submitted? ? format_datetime(report.submitted_at) : "N/A"}
+    TEXT
+  end
+
+  def format_report_details(report)
+    output = format_report_summary(report)
+    output += "\nContent:\n#{report.content || "No content"}\n"
+    output
+  end
+
+  # Pitch Formatters
+
+  def format_pitches(pitches)
+    return "No pitches found." if pitches.empty?
+
+    output = "Found #{pitches.count} pitch(es):\n\n"
+    pitches.each do |pitch|
+      output += format_pitch_summary(pitch)
+      output += "\n---\n\n"
+    end
+    output
+  end
+
+  def format_pitch_summary(pitch)
+    <<~TEXT
+      ID: #{pitch.id}
+      Title: #{pitch.title}
+      Organization: #{pitch.organization&.name || "Unknown"}
+      Author: #{format_user(pitch.user)}
+      Status: #{pitch.current_state}
+      Appetite: #{pitch.appetite_label}
+      Ingredients Complete: #{pitch.ingredients_complete? ? "Yes" : "No"}
+      Created: #{format_datetime(pitch.created_at)}
+    TEXT
+  end
+
+  def format_pitch_details(pitch)
+    output = format_pitch_summary(pitch)
+    output += "\nProblem:\n#{pitch.problem || "Not provided"}\n"
+    output += "\nSolution:\n#{pitch.solution || "Not provided"}\n"
+    output += "\nRabbit Holes:\n#{pitch.rabbit_holes || "Not provided"}\n"
+    output += "\nNo-Gos:\n#{pitch.no_gos || "Not provided"}\n"
+
+    if pitch.projects.any?
+      output += "\nLinked Projects (#{pitch.projects.count}):\n"
+      pitch.projects.each do |project|
+        output += "  - #{project.name} (ID: #{project.id})\n"
+      end
+    end
+
+    if pitch.pitch_transitions.any?
+      output += "\nState History:\n"
+      pitch.pitch_transitions.order(:sort_key).each do |transition|
+        user_info = transition.metadata["user_id"] ? " (User ID: #{transition.metadata["user_id"]})" : ""
+        output += "  - #{transition.to_state} at #{format_datetime(transition.created_at)}#{user_info}\n"
+      end
+    end
+
+    output
+  end
+
   # Helper Formatters
 
   def format_user(user)
