@@ -3,6 +3,13 @@
     "chrome-devtools": {
       "command": "npx",
       "args": ["chrome-devtools-mcp@latest"]
+    },
+    "tudla": {
+      "type": "http",
+      "url": "${TUDLA_MCP_SERVER}",
+      "headers": {
+        "Authorization": "Bearer ${TUDLA_API_TOKEN}"
+      }
     }
   }
 }
