@@ -47,8 +47,7 @@ class McpToolAdapter
       Langchain::ToolResponse.new(content: text)
     rescue Pundit::NotAuthorizedError => e
       Langchain::ToolResponse.new(content: "Authorization error: #{e.message}")
-    rescue StandardError => e
-      Rails.logger.error "LangChain tool error (#{tool_class.name}): #{e.message}"
+    rescue RuntimeError => e
       Langchain::ToolResponse.new(content: "Error: #{e.message}")
     end
   end
