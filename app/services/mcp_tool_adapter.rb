@@ -43,7 +43,7 @@ class McpToolAdapter
 
     define_method(method_name) do |**args|
       instance = tool_class.new(server_context)
-      text = instance.execute(**args)
+      text = instance.execute(**args).to_s
       Langchain::ToolResponse.new(content: text)
     rescue Pundit::NotAuthorizedError => e
       Langchain::ToolResponse.new(content: "Authorization error: #{e.message}")
