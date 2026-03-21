@@ -18,6 +18,14 @@ class ReportPolicy < ApplicationPolicy
     true # any logged-in user can create a report
   end
 
+  def ai_assist?
+    true # any logged-in user can use AI assist (same as create?)
+  end
+
+  def render_markdown?
+    true # any logged-in user can render markdown preview
+  end
+
   def new?
     create?
   end
@@ -49,12 +57,12 @@ class ReportPolicy < ApplicationPolicy
       org_ids = UserPartyRole
         .where(user: user, party_type: "Organization")
         .pluck(:party_id)
-      
+
       team_ids = Team.active.where(organization_id: org_ids).pluck(:id)
       team_ids |= UserPartyRole
         .where(user: user, party_type: "Team")
         .pluck(:party_id)
-      
+
       project_ids = Project.active.where(team_id: team_ids).pluck(:id)
       project_ids |= UserPartyRole
         .where(user: user, party_type: "Project")
@@ -63,7 +71,7 @@ class ReportPolicy < ApplicationPolicy
       # Get reportable IDs for teams and projects
       team_reportable_ids = Reportable.where(reportable_type: "Team", reportable_id: team_ids).pluck(:id)
       project_reportable_ids = Reportable.where(reportable_type: "Project", reportable_id: project_ids).pluck(:id)
-      
+
       # Return reports the user owns or reports for accessible reportables
       # Only show submitted reports OR drafts owned by current user
       scope

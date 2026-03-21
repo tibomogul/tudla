@@ -49,10 +49,10 @@ class ReportsController < ApplicationController
   def create
     @report = Report.new(report_params)
     @report.user = current_user
-    
+
     # Parse as_of_at in organization timezone
     parse_as_of_at_in_timezone(@report)
-    
+
     authorize @report
 
     respond_to do |format|
@@ -71,7 +71,7 @@ class ReportsController < ApplicationController
     # Temporarily assign params to parse timezone
     @report.assign_attributes(report_params)
     parse_as_of_at_in_timezone(@report)
-    
+
     respond_to do |format|
       if @report.save
         format.html { redirect_to @report, notice: "Report was successfully updated.", status: :see_other }
@@ -93,6 +93,33 @@ class ReportsController < ApplicationController
     end
   end
 
+  # POST /reports/ai_assist
+  def ai_assist
+    authorize :report, :ai_assist?
+    params.require(:message)
+
+    service = ReportAiAssistService.new(user: current_user)
+    result = service.call(
+      content: params[:content],
+      message: params[:message],
+      conversation_history: Array(params[:conversation_history]).map { |m| m.permit(:role, :content).to_h }
+    )
+
+    render json: result
+  rescue ActionController::ParameterMissing
+    render json: { reply: "Message is required.", updated_content: nil }, status: :bad_request
+  rescue ReportAiAssistService::Error => e
+    render json: { reply: e.message, updated_content: nil }, status: :internal_server_error
+  end
+
+  # POST /reports/render_markdown
+  def render_markdown
+    authorize :report, :render_markdown?
+    content = params[:content] || ""
+    html = helpers.sanitize(helpers.render_markdown_inline(content).to_s)
+    render json: { html: html }
+  end
+
   # POST /reports/1/submit
   def submit
     authorize @report
@@ -101,7 +128,7 @@ class ReportsController < ApplicationController
       if @report.update(submitted_at: Time.current)
         # Schedule Slack posting based on timing
         schedule_slack_posting(@report)
-        
+
         format.html { redirect_to @report, notice: "Report was successfully submitted.", status: :see_other }
         format.json { render :show, status: :ok, location: @report }
       else
@@ -200,13 +227,13 @@ class ReportsController < ApplicationController
 
     organization = get_organization_from_reportable(report.reportable)
     timezone_name = organization&.timezone || "Australia/Brisbane"
-    
+
     # The as_of_at value from the form is parsed by Rails (usually as UTC or app default timezone)
     # We need to interpret those date/time components as being in the organization's timezone
     # Best practice: use ActiveSupport::TimeZone to parse in the correct timezone
     local_time = report.as_of_at
     tz = ActiveSupport::TimeZone[timezone_name]
-    report.as_of_at = tz.parse(local_time.strftime('%Y-%m-%d %H:%M:%S'))
+    report.as_of_at = tz.parse(local_time.strftime("%Y-%m-%d %H:%M:%S"))
   end
 
   # Schedule Slack posting based on report timing

@@ -148,6 +148,7 @@ GEM
     erubi (1.13.1)
     et-orbi (1.4.0)
       tzinfo
+    event_stream_parser (1.0.0)
     factory_bot (6.5.5)
       activesupport (>= 6.1.0)
     factory_bot_rails (6.5.1)
@@ -426,6 +427,10 @@ GEM
       rubocop (>= 1.72)
       rubocop-performance (>= 1.24)
       rubocop-rails (>= 2.30)
+    ruby-openai (8.3.0)
+      event_stream_parser (>= 0.3.0, < 2.0.0)
+      faraday (>= 1)
+      faraday-multipart (>= 1)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
     simplecov (0.22.0)
@@ -559,6 +564,7 @@ DEPENDENCIES
   rails (~> 8.1.0)
   rspec-rails (~> 8.0.0)
   rubocop-rails-omakase
+  ruby-openai (~> 8.3.0)
   simplecov
   slack-ruby-client (~> 2.4)
   solid_cable

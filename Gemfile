@@ -105,6 +105,8 @@ gem "pagy", "~> 43.2"
 
 gem "business", "~> 2.3"
 
+# Required explicitly — langchainrb checks for this gem at runtime
+gem "ruby-openai", "~> 8.3.0"
 gem "langchainrb", "~> 0.19.5"
 
 gem "tudla_contracts", git: "https://github.com/tibomogul/tudla_contracts", branch: "main"

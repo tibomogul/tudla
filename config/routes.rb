@@ -24,6 +24,10 @@ Rails.application.routes.draw do
     member do
       post :submit
     end
+    collection do
+      post :ai_assist
+      post :render_markdown
+    end
   end
   resources :attachments, only: [ :create, :destroy ] do
     member do
