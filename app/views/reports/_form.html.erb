@@ -1,6 +1,5 @@
-<div data-controller="report-ai-assist"
-     data-report-ai-assist-ai-assist-url-value="<%= ai_assist_reports_path %>"
-     data-report-ai-assist-render-markdown-url-value="<%= render_markdown_reports_path %>">
+<% llm_configured = current_organization&.llm_configured? %>
+<%= tag.div(**( llm_configured ? { data: { controller: "report-ai-assist", "report-ai-assist-ai-assist-url-value": ai_assist_reports_path, "report-ai-assist-render-markdown-url-value": render_markdown_reports_path } } : {} )) do %>
 
   <%= form_with(model: report, class: "contents", data: { turbo: false, controller: "theme-dark" }) do |form| %>
     <% if report.errors.any? %>
@@ -39,10 +38,12 @@
     <div class="my-5">
       <div class="flex items-center justify-between mb-2">
         <%= form.label :content, class: "mb-0" %>
-        <button type="button" class="btn btn-soft btn-secondary btn-sm"
-                data-action="report-ai-assist#open">
-          AI Assist
-        </button>
+        <% if llm_configured %>
+          <button type="button" class="btn btn-soft btn-secondary btn-sm"
+                  data-action="report-ai-assist#open">
+            AI Assist
+          </button>
+        <% end %>
       </div>
       <%= form.marksmith :content, rows: 20, class: ["block shadow-sm rounded-md border px-3 py-2 w-full", {"border-gray-400 focus:outline-blue-600": report.errors[:content].none?, "border-red-400 focus:outline-red-600": report.errors[:content].any?}] %>
     </div>
@@ -54,57 +55,59 @@
     </div>
   <% end %>
 
-  <%# Dialog placed outside form_with to avoid nested form issues %>
-  <dialog data-report-ai-assist-target="dialog" class="modal"
-          data-action="close->report-ai-assist#close">
-    <div class="modal-box w-11/12 h-[80vh] flex flex-col p-0" style="max-width: 80rem;">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-base-300">
-        <h3 class="font-bold text-lg">AI Report Assistant</h3>
-        <button type="button" class="btn btn-sm btn-circle btn-ghost" data-action="report-ai-assist#close">X</button>
-      </div>
+  <% if llm_configured %>
+    <%# Dialog placed outside form_with to avoid nested form issues %>
+    <dialog data-report-ai-assist-target="dialog" class="modal"
+            data-action="close->report-ai-assist#close">
+      <div class="modal-box w-11/12 h-[80vh] flex flex-col p-0" style="max-width: 80rem;">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-base-300">
+          <h3 class="font-bold text-lg">AI Report Assistant</h3>
+          <button type="button" class="btn btn-sm btn-circle btn-ghost" data-action="report-ai-assist#close">X</button>
+        </div>
 
-      <div class="flex flex-1 overflow-hidden">
-        <%# Left: Markdown Preview %>
-        <div class="w-1/2 border-r border-base-300 overflow-y-auto p-6">
-          <h4 class="font-semibold text-sm text-base-content/60 mb-3">Content Preview</h4>
-          <div data-report-ai-assist-target="preview" data-controller="theme-dark" class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert max-w-none">
+        <div class="flex flex-1 overflow-hidden">
+          <%# Left: Markdown Preview %>
+          <div class="w-1/2 border-r border-base-300 overflow-y-auto p-6">
+            <h4 class="font-semibold text-sm text-base-content/60 mb-3">Content Preview</h4>
+            <div data-report-ai-assist-target="preview" data-controller="theme-dark" class="marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert max-w-none">
+            </div>
+          </div>
+
+          <%# Right: Chat %>
+          <div class="w-1/2 flex flex-col">
+            <div data-report-ai-assist-target="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-2">
+            </div>
+
+            <div class="border-t border-base-300 p-4">
+              <div data-report-ai-assist-target="loadingIndicator" class="hidden mb-2">
+                <span class="loading loading-dots loading-sm"></span>
+                <span class="text-sm text-base-content/60 ml-1">Thinking...</span>
+              </div>
+              <div class="flex gap-2">
+                <textarea data-report-ai-assist-target="chatInput"
+                          data-action="keydown->report-ai-assist#handleKeydown"
+                          class="textarea textarea-bordered flex-1 resize-none"
+                          rows="2"
+                          placeholder="Ask the AI to help with your report..."></textarea>
+                <button type="button"
+                        data-report-ai-assist-target="sendButton"
+                        data-action="report-ai-assist#sendMessage"
+                        class="btn btn-primary btn-sm self-end">
+                  Send
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <%# Right: Chat %>
-        <div class="w-1/2 flex flex-col">
-          <div data-report-ai-assist-target="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-2">
-          </div>
-
-          <div class="border-t border-base-300 p-4">
-            <div data-report-ai-assist-target="loadingIndicator" class="hidden mb-2">
-              <span class="loading loading-dots loading-sm"></span>
-              <span class="text-sm text-base-content/60 ml-1">Thinking...</span>
-            </div>
-            <div class="flex gap-2">
-              <textarea data-report-ai-assist-target="chatInput"
-                        data-action="keydown->report-ai-assist#handleKeydown"
-                        class="textarea textarea-bordered flex-1 resize-none"
-                        rows="2"
-                        placeholder="Ask the AI to help with your report..."></textarea>
-              <button type="button"
-                      data-report-ai-assist-target="sendButton"
-                      data-action="report-ai-assist#sendMessage"
-                      class="btn btn-primary btn-sm self-end">
-                Send
-              </button>
-            </div>
-          </div>
+        <div class="flex justify-end gap-2 px-6 py-4 border-t border-base-300">
+          <button type="button" class="btn btn-ghost" data-action="report-ai-assist#close">Cancel</button>
+          <button type="button" class="btn btn-primary" data-report-ai-assist-target="acceptButton" data-action="report-ai-assist#accept" disabled>Accept Changes</button>
         </div>
       </div>
-
-      <div class="flex justify-end gap-2 px-6 py-4 border-t border-base-300">
-        <button type="button" class="btn btn-ghost" data-action="report-ai-assist#close">Cancel</button>
-        <button type="button" class="btn btn-primary" data-report-ai-assist-target="acceptButton" data-action="report-ai-assist#accept" disabled>Accept Changes</button>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button>close</button>
-    </form>
-  </dialog>
-</div>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
+  <% end %>
+<% end %>

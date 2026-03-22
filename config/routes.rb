@@ -52,7 +52,7 @@ Rails.application.routes.draw do
       end
     end
     resources :user_party_roles, controller: "organizations/user_party_roles", only: [ :create, :update, :destroy ]
-    resource :settings, controller: "organizations/settings", only: [ :show ]
+    resource :settings, controller: "organizations/settings", only: [ :show, :update ]
   end
   resources :cycles do
     member do

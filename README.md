@@ -253,6 +253,26 @@ All environment variables used by the application, organized by category. Create
 | `PORT` | No | All | `3000` | Port Puma listens on |
 | `PIDFILE` | No | All | — | Custom PID file path for Puma |
 
+### ActiveRecord Encryption
+
+Required for encrypting sensitive data at rest (e.g. per-organization LLM API keys). Generate keys with:
+
+```bash
+docker compose exec rails bash -lc "bin/rails db:encryption:init"
+```
+
+Then add the output values to your `.env` file:
+
+| Variable | Required | Environment | Default | Description |
+|----------|----------|-------------|---------|-------------|
+| `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` | Yes | All | — | Primary key for ActiveRecord encryption |
+| `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` | Yes | All | — | Deterministic key for ActiveRecord encryption |
+| `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` | Yes | All | — | Key derivation salt for ActiveRecord encryption |
+
+### LLM (AI Assist)
+
+Per-organization LLM settings are configured via the organization settings page (`/organizations/:id/settings`). There are no global environment variables for LLM configuration — each organization must configure its own API key, base URL, and model.
+
 ### ActionCable (WebSockets)
 
 | Variable | Required | Environment | Default | Description |

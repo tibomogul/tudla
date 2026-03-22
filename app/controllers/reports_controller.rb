@@ -98,7 +98,7 @@ class ReportsController < ApplicationController
     authorize :report, :ai_assist?
     params.require(:message)
 
-    service = ReportAiAssistService.new(user: current_user)
+    service = ReportAiAssistService.new(user: current_user, organization: current_organization)
     result = service.call(
       content: params[:content],
       message: params[:message],

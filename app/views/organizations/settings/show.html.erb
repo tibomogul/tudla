@@ -4,9 +4,58 @@
   <h1 class="font-bold text-4xl mb-6">Settings</h1>
 
   <div class="card bg-base-100 shadow">
-    <div class="card-body text-center text-base-content/60 py-12">
-      <span class="iconify lucide--settings size-12 mx-auto mb-4 opacity-50"></span>
-      <p>Organization settings coming soon.</p>
+    <div class="card-body">
+      <h2 class="card-title">LLM Configuration</h2>
+      <p class="text-base-content/60 text-sm mb-4">Configure the AI language model used for report assistance. All three fields must be provided together or left blank.</p>
+
+      <%= form_with(model: @organization, url: organization_settings_path(@organization), method: :patch, class: "contents") do |form| %>
+        <% if @organization.errors.any? %>
+          <div class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mb-4">
+            <ul class="list-disc ml-6">
+              <% @organization.errors.each do |error| %>
+                <li><%= error.full_message %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <% llm_key_set = @organization.read_attribute_before_type_cast(:llm_api_key).present? %>
+        <div class="my-3">
+          <%= form.label :llm_api_key, "API Key" %>
+          <%= form.password_field :llm_api_key,
+            placeholder: llm_key_set ? "Key is set" : "Not configured",
+            class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": @organization.errors[:llm_api_key].none?, "border-red-400 focus:outline-red-600": @organization.errors[:llm_api_key].any?}],
+            autocomplete: "off" %>
+          <p class="text-xs text-base-content/60 mt-1">Leave blank to keep the existing key.</p>
+        </div>
+
+        <div class="my-3">
+          <%= form.label :llm_api_base, "API Base URL" %>
+          <%= form.text_field :llm_api_base,
+            placeholder: "https://api.openai.com/v1",
+            class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": @organization.errors[:llm_api_base].none?, "border-red-400 focus:outline-red-600": @organization.errors[:llm_api_base].any?}] %>
+        </div>
+
+        <div class="my-3">
+          <%= form.label :llm_model, "Model" %>
+          <%= form.text_field :llm_model,
+            placeholder: "gpt-4o-mini",
+            class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": @organization.errors[:llm_model].none?, "border-red-400 focus:outline-red-600": @organization.errors[:llm_model].any?}] %>
+        </div>
+
+        <% if @organization.llm_configured? %>
+          <div class="my-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <%= form.check_box :clear_llm_settings, class: "checkbox" %>
+              <span>Remove all LLM settings</span>
+            </label>
+          </div>
+        <% end %>
+
+        <div class="mt-6">
+          <%= form.submit "Save Settings", class: "btn btn-soft btn-primary" %>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>

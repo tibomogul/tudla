@@ -4,7 +4,8 @@ require "rails_helper"
 
 RSpec.describe ReportAiAssistService do
   let(:user) { create(:user) }
-  let(:service) { described_class.new(user: user) }
+  let(:organization) { create(:organization, llm_api_key: "sk-test", llm_api_base: "https://api.openai.com/v1", llm_model: "gpt-4o-mini") }
+  let(:service) { described_class.new(user: user, organization: organization) }
 
   let(:mock_llm) { instance_double(Langchain::LLM::OpenAI) }
   let(:mock_assistant) { instance_double(Langchain::Assistant) }
@@ -118,6 +119,42 @@ RSpec.describe ReportAiAssistService do
       expect(mock_assistant).not_to have_received(:add_message).with(
         role: "user", content: a_string_matching(/Here is my current report content/)
       )
+    end
+
+    it "uses organization LLM settings" do
+      mock_message = instance_double(Langchain::Assistant::Messages::OpenAIMessage, role: "assistant", content: "OK")
+      allow(mock_assistant).to receive(:add_message_and_run!).and_return([ mock_message ])
+
+      service.call(content: "", message: "Hello")
+
+      expect(Langchain::LLM::OpenAI).to have_received(:new).with(
+        api_key: "sk-test",
+        default_options: {
+          chat_model: "gpt-4o-mini",
+          uri_base: "https://api.openai.com/v1"
+        }
+      )
+    end
+
+    context "when organization is nil" do
+      let(:service) { described_class.new(user: user, organization: nil) }
+
+      it "raises Error" do
+        expect {
+          service.call(content: "", message: "Hello")
+        }.to raise_error(ReportAiAssistService::Error, "LLM is not configured for this organization.")
+      end
+    end
+
+    context "when organization has no LLM settings" do
+      let(:unconfigured_org) { create(:organization) }
+      let(:service) { described_class.new(user: user, organization: unconfigured_org) }
+
+      it "raises Error" do
+        expect {
+          service.call(content: "", message: "Hello")
+        }.to raise_error(ReportAiAssistService::Error, "LLM is not configured for this organization.")
+      end
     end
 
     context "error handling" do

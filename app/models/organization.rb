@@ -1,5 +1,8 @@
 class Organization < ApplicationRecord
   include SoftDeletable
+
+  encrypts :llm_api_key
+
   has_many :user_party_roles, as: :party
   has_many :teams
   has_one :attachable, as: :attachable, dependent: :destroy
@@ -8,6 +11,14 @@ class Organization < ApplicationRecord
   has_many :notes, through: :notable
   has_one :linkable, as: :linkable, dependent: :destroy
   has_many :links, through: :linkable
+
+  validate :llm_settings_completeness
+  validate :llm_api_base_format
+  after_update :bust_members_organizations_cache
+
+  def llm_configured?
+    read_attribute_before_type_cast(:llm_api_key).present? && llm_api_base.present? && llm_model.present?
+  end
 
   # Returns the set of IDs for entities in this organization's hierarchy.
   # Used to efficiently check membership and filter roles without N+1 queries.
@@ -38,5 +49,30 @@ class Organization < ApplicationRecord
   def members(hierarchy: nil)
     user_ids = hierarchy_roles(hierarchy: hierarchy).distinct.pluck(:user_id)
     User.active.where(id: user_ids)
+  end
+
+  private
+
+  def bust_members_organizations_cache
+    members.find_each(&:bust_organizations_cache)
+  end
+
+  def llm_settings_completeness
+    fields = [ read_attribute_before_type_cast(:llm_api_key), llm_api_base, llm_model ]
+    filled = fields.select(&:present?)
+    return if filled.empty? || filled.size == fields.size
+
+    errors.add(:llm_api_base, "is required when other LLM settings are provided") if llm_api_base.blank?
+    errors.add(:llm_model, "is required when other LLM settings are provided") if llm_model.blank?
+    errors.add(:llm_api_key, "is required when other LLM settings are provided") if read_attribute_before_type_cast(:llm_api_key).blank?
+  end
+
+  def llm_api_base_format
+    return if llm_api_base.blank?
+
+    uri = URI.parse(llm_api_base)
+    errors.add(:llm_api_base, "must be a valid HTTP(S) URL") unless uri.is_a?(URI::HTTP)
+  rescue URI::InvalidURIError
+    errors.add(:llm_api_base, "must be a valid HTTP(S) URL")
   end
 end

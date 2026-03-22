@@ -6,8 +6,9 @@ class ReportAiAssistService
   MAX_HISTORY_MESSAGES = 50
   ALLOWED_ROLES = %w[user assistant].freeze
 
-  def initialize(user:)
+  def initialize(user:, organization:)
     @user = user
+    @organization = organization
   end
 
   def call(content:, message:, conversation_history: [])
@@ -51,11 +52,13 @@ class ReportAiAssistService
   end
 
   def build_llm
+    raise Error, "LLM is not configured for this organization." unless @organization&.llm_configured?
+
     Langchain::LLM::OpenAI.new(
-      api_key: ENV.fetch("LLM_API_KEY"),
+      api_key: @organization.llm_api_key,
       default_options: {
-        chat_model: ENV.fetch("LLM_MODEL"),
-        uri_base: ENV.fetch("LLM_API_BASE")
+        chat_model: @organization.llm_model,
+        uri_base: @organization.llm_api_base
       }
     )
   end

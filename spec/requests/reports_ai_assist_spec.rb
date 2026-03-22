@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "/reports AI assist", type: :request do
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, llm_api_key: "sk-test", llm_api_base: "https://api.openai.com/v1", llm_model: "gpt-4o-mini") }
   let(:team) { create(:team, organization: organization) }
   let(:user) { create(:user) }
 
@@ -40,6 +40,14 @@ RSpec.describe "/reports AI assist", type: :request do
       json = JSON.parse(response.body)
       expect(json["reply"]).to eq("Here is my suggestion.")
       expect(json["updated_content"]).to be_nil
+    end
+
+    it "passes current_organization to the service" do
+      allow(mock_service).to receive(:call).and_return({ reply: "OK", updated_content: nil })
+
+      post ai_assist_reports_path, params: ai_assist_params, as: :json
+
+      expect(ReportAiAssistService).to have_received(:new).with(user: user, organization: organization)
     end
 
     it "returns updated_content when service provides it" do
