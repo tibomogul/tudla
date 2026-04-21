@@ -1,3 +1,7 @@
+# Audit trail of project lifecycle transitions (active/done/archived).
+# Rows are queryable directly for history/reporting. A dedicated history UI is
+# intentionally deferred — mirror `ProjectsController#risk_history` and
+# `app/views/projects/_risk_history.html.erb` if/when one is required.
 class ProjectLifecycleTransition < ApplicationRecord
   belongs_to :project, inverse_of: :project_lifecycle_transitions
 

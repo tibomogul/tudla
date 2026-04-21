@@ -89,6 +89,32 @@ RSpec.describe ProjectLifecycleStateMachine, type: :model do
     end
   end
 
+  describe "transactional atomicity (regression for after_commit bug)" do
+    let!(:scope) { create(:scope, project: project) }
+    let!(:task) { create(:task, project: project, scope: scope) }
+
+    it "rolls back the transition row when child propagation fails" do
+      # Materialize the machine first so Statesman's initial-transition row is
+      # already inserted and out of the picture.
+      project.lifecycle_state_machine.current_state
+      transitions_before = project.project_lifecycle_transitions.count
+
+      # Simulate a DB error mid-propagation. Because propagation runs inside
+      # Statesman's transaction (synchronous after_transition), the transition
+      # row must roll back with it.
+      allow(project).to receive(:propagate_lifecycle_to_children!).and_raise(ActiveRecord::StatementInvalid, "boom")
+
+      expect {
+        project.lifecycle_state_machine.transition_to!(:archived)
+      }.to raise_error(ActiveRecord::StatementInvalid)
+
+      expect(project.project_lifecycle_transitions.count).to eq(transitions_before)
+      expect(project.reload.lifecycle_state).to eq("active")
+      expect(task.reload.project_lifecycle_state).to eq("active")
+      expect(scope.reload.project_lifecycle_state).to eq("active")
+    end
+  end
+
   describe "new children inherit project lifecycle state" do
     it "new scope inherits archived state" do
       project.lifecycle_state_machine.transition_to!(:archived)

@@ -34,14 +34,14 @@
   <% end %>
 
   <div class="flex flex-wrap gap-2 my-3">
-    <% if policy(@project).mark_done? %>
-      <%= button_to "Mark as Done", mark_done_project_path(@project), method: :patch, class: "btn btn-sm btn-success", form_class: "inline-block", data: { turbo_confirm: "Mark this project as done? It will become read-only." } %>
+    <% if policy(@project).can_transition_to?(:done) %>
+      <%= button_to "Mark as Done", transition_lifecycle_project_path(@project, to_state: :done), method: :patch, class: "btn btn-sm btn-success", form_class: "inline-block", data: { turbo_confirm: "Mark this project as done? It will become read-only." } %>
     <% end %>
-    <% if policy(@project).archive? %>
-      <%= button_to "Archive", archive_project_path(@project), method: :patch, class: "btn btn-sm btn-warning", form_class: "inline-block", data: { turbo_confirm: "Archive this project? It will be hidden from default lists." } %>
+    <% if policy(@project).can_transition_to?(:archived) %>
+      <%= button_to "Archive", transition_lifecycle_project_path(@project, to_state: :archived), method: :patch, class: "btn btn-sm btn-warning", form_class: "inline-block", data: { turbo_confirm: "Archive this project? It will be hidden from default lists." } %>
     <% end %>
-    <% if policy(@project).reopen? %>
-      <%= button_to "Reopen", reopen_project_path(@project), method: :patch, class: "btn btn-sm btn-primary", form_class: "inline-block", data: { turbo_confirm: "Reopen this project?" } %>
+    <% if policy(@project).can_transition_to?(:active) %>
+      <%= button_to "Reopen", transition_lifecycle_project_path(@project, to_state: :active), method: :patch, class: "btn btn-sm btn-primary", form_class: "inline-block", data: { turbo_confirm: "Reopen this project?" } %>
     <% end %>
   </div>
 

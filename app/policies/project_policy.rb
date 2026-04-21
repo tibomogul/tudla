@@ -37,8 +37,9 @@ class ProjectPolicy < ApplicationPolicy
   end
 
   def update?
-    return false if project.instance_of?(Project) && project.read_only?
-    create?
+    return false unless project.instance_of?(Project)
+    return false if project.read_only?
+    can_modify_project?
   end
 
   def edit?
@@ -49,17 +50,24 @@ class ProjectPolicy < ApplicationPolicy
     false # nobody can delete right now
   end
 
-  def mark_done?
-    project.instance_of?(Project) && project.active? && admin_on_project_scope?
+  # Gate for invoking the lifecycle transition endpoint at all.
+  def transition_lifecycle?
+    project.instance_of?(Project) && admin_on_project_scope?
   end
 
-  def archive?
-    project.instance_of?(Project) &&
-      (project.active? || project.done?) && admin_on_project_scope?
-  end
-
-  def reopen?
-    project.instance_of?(Project) && !project.active? && admin_on_project_scope?
+  # Per-target check that combines authz + source-state legality.
+  # Allowed transitions:
+  #   active   → done, archived
+  #   done     → archived, active
+  #   archived → active
+  def can_transition_to?(to_state)
+    return false unless transition_lifecycle?
+    case to_state.to_sym
+    when :done     then project.active?
+    when :archived then project.active? || project.done?
+    when :active   then !project.active?
+    else false
+    end
   end
 
   # Get teams where user can create projects
@@ -135,5 +143,11 @@ class ProjectPolicy < ApplicationPolicy
 
   def admin_on_project_scope?
     user_is_project_admin? || user_is_team_admin? || user_is_organization_admin?
+  end
+
+  # "User may mutate this project" — used by update? and implicitly by
+  # transition_lifecycle?. Delegates to the existing admin check.
+  def can_modify_project?
+    admin_on_project_scope?
   end
 end

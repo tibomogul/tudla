@@ -22,7 +22,7 @@ class TaskPolicy < ApplicationPolicy
   end
 
   def create?
-    return false if task.instance_of?(Task) && task_parent_read_only?
+    return false if task.instance_of?(Task) && task_or_parent_read_only?
     is_owner? || user_is_project_member? || user_is_team_member?|| user_is_organization_admin?
   end
 
@@ -31,7 +31,7 @@ class TaskPolicy < ApplicationPolicy
   end
 
   def update?
-    return false if task.instance_of?(Task) && task.read_only?
+    return false if task.instance_of?(Task) && task_or_parent_read_only?
     is_owner? || user_is_project_member? || user_is_team_member?|| user_is_organization_admin?
   end
 
@@ -40,7 +40,7 @@ class TaskPolicy < ApplicationPolicy
   end
 
   def destroy?
-    return false if task.instance_of?(Task) && task.read_only?
+    return false if task.instance_of?(Task) && task_or_parent_read_only?
     is_owner? # can delete personal tasks
   end
 
@@ -101,7 +101,7 @@ class TaskPolicy < ApplicationPolicy
     organization_role == "admin"
   end
 
-  def task_parent_read_only?
+  def task_or_parent_read_only?
     task.read_only? || (task.project && task.project.read_only?)
   end
 end

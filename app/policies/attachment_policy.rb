@@ -1,4 +1,6 @@
 class AttachmentPolicy < ApplicationPolicy
+  include PolymorphicParentReadOnly
+
   attr_reader :user, :attachment
 
   def initialize(user, attachment)
@@ -7,11 +9,11 @@ class AttachmentPolicy < ApplicationPolicy
   end
 
   def create?
-    can_access_attachable? && !parent_read_only?
+    can_access_attachable? && !parent_read_only?(attachment, :attachable)
   end
 
   def destroy?
-    can_access_attachable? && attachment.user == user && !parent_read_only?
+    can_access_attachable? && attachment.user == user && !parent_read_only?(attachment, :attachable)
   end
 
   def download?
@@ -23,27 +25,6 @@ class AttachmentPolicy < ApplicationPolicy
   end
 
   private
-
-  def parent_read_only?
-    record = attachable_record
-    return false unless record
-    case record.class.name
-    when "Project", "Scope", "Task"
-      record.respond_to?(:read_only?) && record.read_only?
-    else
-      false
-    end
-  end
-
-  def attachable_record
-    attachable_obj = attachment.attachable
-    return nil unless attachable_obj
-    begin
-      attachable_obj.attachable
-    rescue
-      attachable_obj.attachable_type&.constantize&.find_by(id: attachable_obj.attachable_id)
-    end
-  end
 
   def can_access_attachable?
     attachable_obj = attachment.attachable

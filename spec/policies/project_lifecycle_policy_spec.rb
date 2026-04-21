@@ -18,11 +18,11 @@ RSpec.describe "Project lifecycle read-only policy enforcement", type: :policy d
         expect(ProjectPolicy.new(admin, project).update?).to be true
       end
 
-      it "admin can mark_done / archive, not reopen" do
+      it "admin can transition to done or archived, not active" do
         policy = ProjectPolicy.new(admin, project)
-        expect(policy.mark_done?).to be true
-        expect(policy.archive?).to be true
-        expect(policy.reopen?).to be false
+        expect(policy.can_transition_to?(:done)).to be true
+        expect(policy.can_transition_to?(:archived)).to be true
+        expect(policy.can_transition_to?(:active)).to be false
       end
     end
 
@@ -33,11 +33,11 @@ RSpec.describe "Project lifecycle read-only policy enforcement", type: :policy d
         expect(ProjectPolicy.new(admin, project).update?).to be false
       end
 
-      it "admin can archive or reopen but not mark_done again" do
+      it "admin can transition to archived or active, not done" do
         policy = ProjectPolicy.new(admin, project)
-        expect(policy.mark_done?).to be false
-        expect(policy.archive?).to be true
-        expect(policy.reopen?).to be true
+        expect(policy.can_transition_to?(:done)).to be false
+        expect(policy.can_transition_to?(:archived)).to be true
+        expect(policy.can_transition_to?(:active)).to be true
       end
     end
 
@@ -48,15 +48,15 @@ RSpec.describe "Project lifecycle read-only policy enforcement", type: :policy d
         expect(ProjectPolicy.new(admin, project).update?).to be false
       end
 
-      it "admin can only reopen" do
+      it "admin can only transition to active" do
         policy = ProjectPolicy.new(admin, project)
-        expect(policy.mark_done?).to be false
-        expect(policy.archive?).to be false
-        expect(policy.reopen?).to be true
+        expect(policy.can_transition_to?(:done)).to be false
+        expect(policy.can_transition_to?(:archived)).to be false
+        expect(policy.can_transition_to?(:active)).to be true
       end
 
       it "non-admin member cannot reopen" do
-        expect(ProjectPolicy.new(member, project).reopen?).to be false
+        expect(ProjectPolicy.new(member, project).can_transition_to?(:active)).to be false
       end
     end
   end

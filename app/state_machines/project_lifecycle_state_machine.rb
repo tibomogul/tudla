@@ -10,12 +10,19 @@ class ProjectLifecycleStateMachine
   transition from: :done,     to: [ :archived, :active ]
   transition from: :archived, to: [ :active ]
 
-  after_transition(after_commit: true) do |model, transition|
-    to_state = transition.to_state
-    # Skip the initial auto-transition that Statesman records on first machine
-    # materialization — it does not change state and children already default to "active".
-    next if to_state == "active" && model.lifecycle_state == "active" && model.done_at.nil? && model.archived_at.nil?
+  # Synchronous (no after_commit:) so propagation runs inside the same DB
+  # transaction as the transition insert. If update_all fails, the transition
+  # rolls back and project.lifecycle_state stays consistent with its children.
+  after_transition do |model, transition|
+    # Skip Statesman's recorded initial transition (the one inserted during
+    # machine materialization, not a user-driven transition). At that point
+    # this is the only transition row for the project. The project is already
+    # "active" by default and children default to "active" — nothing to
+    # propagate, and firing here would double the UPDATEs on first machine load.
+    next if model.project_lifecycle_transitions.count <= 1 &&
+            transition.to_state == "active"
 
+    to_state = transition.to_state
     updates = { lifecycle_state: to_state }
     updates[:done_at]     = Time.current if to_state == "done"
     updates[:archived_at] = Time.current if to_state == "archived"
