@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_21_084829) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -219,6 +219,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
     t.index ["user_id"], name: "index_pitches_on_user_id"
   end
 
+  create_table "project_lifecycle_transitions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "metadata", default: {}
+    t.boolean "most_recent", null: false
+    t.bigint "project_id", null: false
+    t.integer "sort_key", null: false
+    t.string "to_state", null: false
+    t.datetime "updated_at", null: false
+    t.index ["metadata"], name: "index_project_lifecycle_transitions_on_metadata", using: :gin
+    t.index ["project_id", "most_recent"], name: "index_project_lifecycle_transitions_parent_most_recent", unique: true, where: "most_recent"
+    t.index ["project_id", "sort_key"], name: "index_project_lifecycle_transitions_parent_sort", unique: true
+    t.index ["project_id"], name: "index_project_lifecycle_transitions_on_project_id"
+  end
+
   create_table "project_risk_transitions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.jsonb "metadata", default: {}
@@ -234,6 +248,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
   end
 
   create_table "projects", force: :cascade do |t|
+    t.datetime "archived_at"
     t.integer "cached_actual_manhours", default: 0, null: false
     t.integer "cached_ai_assisted_estimate", default: 0, null: false
     t.integer "cached_unassisted_estimate", default: 0, null: false
@@ -241,6 +256,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
     t.bigint "cycle_id"
     t.datetime "deleted_at"
     t.text "description"
+    t.datetime "done_at"
+    t.string "lifecycle_state", default: "active", null: false
     t.string "name"
     t.bigint "pitch_id"
     t.string "risk_state"
@@ -248,6 +265,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
     t.datetime "updated_at", null: false
     t.index ["cycle_id"], name: "index_projects_on_cycle_id"
     t.index ["deleted_at"], name: "index_projects_on_deleted_at", where: "(deleted_at IS NULL)"
+    t.index ["lifecycle_state"], name: "index_projects_on_lifecycle_state"
     t.index ["name"], name: "index_projects_on_name"
     t.index ["pitch_id"], name: "index_projects_on_pitch_id"
     t.index ["risk_state"], name: "index_projects_on_risk_state"
@@ -300,11 +318,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
     t.string "name"
     t.boolean "nice_to_have", default: false, null: false
     t.bigint "project_id", null: false
+    t.string "project_lifecycle_state", default: "active", null: false
     t.integer "project_position"
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_scopes_on_deleted_at", where: "(deleted_at IS NULL)"
     t.index ["name"], name: "index_scopes_on_name"
     t.index ["project_id"], name: "index_scopes_on_project_id"
+    t.index ["project_lifecycle_state"], name: "index_scopes_on_project_lifecycle_state"
   end
 
   create_table "subscribables", force: :cascade do |t|
@@ -350,6 +370,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
     t.string "name"
     t.boolean "nice_to_have", default: false, null: false
     t.bigint "project_id"
+    t.string "project_lifecycle_state", default: "active", null: false
     t.bigint "responsible_user_id"
     t.bigint "scope_id"
     t.integer "scope_position"
@@ -361,6 +382,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
     t.index ["due_at"], name: "index_tasks_on_due_at"
     t.index ["name"], name: "index_tasks_on_name"
     t.index ["project_id"], name: "index_tasks_on_project_id"
+    t.index ["project_lifecycle_state"], name: "index_tasks_on_project_lifecycle_state"
     t.index ["responsible_user_id", "in_today", "backlog_position"], name: "index_tasks_on_user_backlog_pos"
     t.index ["responsible_user_id", "in_today", "today_position"], name: "index_tasks_on_user_today_pos"
     t.index ["scope_id", "scope_position"], name: "index_tasks_on_scope_pos"
@@ -568,6 +590,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000001) do
   add_foreign_key "pitch_transitions", "pitches"
   add_foreign_key "pitches", "organizations"
   add_foreign_key "pitches", "users"
+  add_foreign_key "project_lifecycle_transitions", "projects"
   add_foreign_key "project_risk_transitions", "projects"
   add_foreign_key "projects", "cycles", validate: false
   add_foreign_key "projects", "pitches", validate: false

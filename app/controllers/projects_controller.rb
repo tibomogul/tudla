@@ -1,6 +1,6 @@
 class ProjectsController < ApplicationController
   include ActionView::RecordIdentifier
-  before_action :set_project, only: %i[ show edit update destroy analytics_by_user cycle_time risk_history update_risk_state reorder_scopes ]
+  before_action :set_project, only: %i[ show edit update destroy analytics_by_user cycle_time risk_history update_risk_state reorder_scopes mark_done archive reopen ]
 
   # GET /projects or /projects.json
   def index
@@ -178,6 +178,24 @@ class ProjectsController < ApplicationController
     end
   end
 
+  # PATCH /projects/1/mark_done
+  def mark_done
+    authorize @project, :mark_done?
+    transition_lifecycle(:done, "Project marked as done.")
+  end
+
+  # PATCH /projects/1/archive
+  def archive
+    authorize @project, :archive?
+    transition_lifecycle(:archived, "Project archived.")
+  end
+
+  # PATCH /projects/1/reopen
+  def reopen
+    authorize @project, :reopen?
+    transition_lifecycle(:active, "Project reopened.")
+  end
+
   # PATCH /projects/1/reorder_scopes
   def reorder_scopes
     authorize @project, :update?
@@ -195,6 +213,15 @@ class ProjectsController < ApplicationController
   end
 
   private
+    def transition_lifecycle(new_state, notice)
+      if @project.lifecycle_state_machine.can_transition_to?(new_state)
+        @project.lifecycle_state_machine.transition_to!(new_state, user_id: current_user.id)
+        redirect_to @project, notice: notice, status: :see_other
+      else
+        redirect_to @project, alert: "Cannot transition project to #{new_state}."
+      end
+    end
+
     # Use callbacks to share common setup or constraints between actions.
     def set_project
       @project = Project.find(params.expect(:id))
@@ -223,6 +250,8 @@ class ProjectsController < ApplicationController
       if params[:project_name].present?
         projects = projects.where("projects.name ILIKE ?", "%#{params[:project_name]}%")
       end
+
+      projects = projects.not_archived unless ActiveModel::Type::Boolean.new.cast(params[:include_archived])
 
       @pagy_projects, @projects = pagy(:offset, projects, limit: 20)
     end

@@ -7,15 +7,15 @@ class LinkPolicy < ApplicationPolicy
   end
 
   def create?
-    can_access_linkable?
+    can_access_linkable? && !parent_read_only?
   end
 
   def update?
-    can_access_linkable? && link.user == user
+    can_access_linkable? && link.user == user && !parent_read_only?
   end
 
   def destroy?
-    can_access_linkable? && link.user == user
+    can_access_linkable? && link.user == user && !parent_read_only?
   end
 
   def edit?
@@ -23,6 +23,27 @@ class LinkPolicy < ApplicationPolicy
   end
 
   private
+
+  def parent_read_only?
+    record = linkable_record
+    return false unless record
+    case record.class.name
+    when "Project", "Scope", "Task"
+      record.respond_to?(:read_only?) && record.read_only?
+    else
+      false
+    end
+  end
+
+  def linkable_record
+    linkable_obj = link.linkable
+    return nil unless linkable_obj
+    begin
+      linkable_obj.linkable
+    rescue
+      linkable_obj.linkable_type&.constantize&.find_by(id: linkable_obj.linkable_id)
+    end
+  end
 
   def can_access_linkable?
     linkable_obj = link.linkable

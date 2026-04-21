@@ -13,6 +13,12 @@ class Scope < ApplicationRecord
   has_one :linkable, as: :linkable, dependent: :destroy
   has_many :links, through: :linkable
 
+  before_create :inherit_lifecycle_from_project
+
+  def read_only?
+    project_lifecycle_state.to_s != "active"
+  end
+
   def percent_done
     total = tasks.active.count
     return 0 if total.zero?
@@ -24,5 +30,11 @@ class Scope < ApplicationRecord
       .count(:id)
 
     ((done_count.to_f / total) * 100).round
+  end
+
+  private
+
+  def inherit_lifecycle_from_project
+    self.project_lifecycle_state = project.lifecycle_state if project
   end
 end

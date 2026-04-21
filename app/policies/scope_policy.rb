@@ -20,6 +20,7 @@ class ScopePolicy < ApplicationPolicy
   end
 
   def create?
+    return false if scope.instance_of?(::Scope) && scope.read_only?
     user_is_project_member? || user_is_team_member? || user_is_organization_admin?
   end
 
@@ -28,6 +29,7 @@ class ScopePolicy < ApplicationPolicy
   end
 
   def update?
+    return false if scope.instance_of?(::Scope) && scope.read_only?
     user_is_project_member? || user_is_team_member? || user_is_organization_admin?
   end
 

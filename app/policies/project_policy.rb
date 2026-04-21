@@ -37,6 +37,7 @@ class ProjectPolicy < ApplicationPolicy
   end
 
   def update?
+    return false if project.instance_of?(Project) && project.read_only?
     create?
   end
 
@@ -46,6 +47,19 @@ class ProjectPolicy < ApplicationPolicy
 
   def destroy?
     false # nobody can delete right now
+  end
+
+  def mark_done?
+    project.instance_of?(Project) && project.active? && admin_on_project_scope?
+  end
+
+  def archive?
+    project.instance_of?(Project) &&
+      (project.active? || project.done?) && admin_on_project_scope?
+  end
+
+  def reopen?
+    project.instance_of?(Project) && !project.active? && admin_on_project_scope?
   end
 
   # Get teams where user can create projects
@@ -117,5 +131,9 @@ class ProjectPolicy < ApplicationPolicy
 
   def user_is_organization_admin?
     organization_role == "admin"
+  end
+
+  def admin_on_project_scope?
+    user_is_project_admin? || user_is_team_admin? || user_is_organization_admin?
   end
 end

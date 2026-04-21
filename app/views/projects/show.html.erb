@@ -20,6 +20,31 @@
   </div>
   <%= render partial: "shared/subscribable_subscription", locals: { subscribable: @subscribable } %>
 
+  <% if @project.read_only? %>
+    <div class="alert alert-warning my-3" role="alert">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+      </svg>
+      <span>
+        This project is <strong><%= @project.lifecycle_state %></strong> and read-only.
+        <% if @project.done_at %>Marked done <%= @project.format_in_timezone(@project.done_at) %>.<% end %>
+        <% if @project.archived_at %>Archived <%= @project.format_in_timezone(@project.archived_at) %>.<% end %>
+      </span>
+    </div>
+  <% end %>
+
+  <div class="flex flex-wrap gap-2 my-3">
+    <% if policy(@project).mark_done? %>
+      <%= button_to "Mark as Done", mark_done_project_path(@project), method: :patch, class: "btn btn-sm btn-success", form_class: "inline-block", data: { turbo_confirm: "Mark this project as done? It will become read-only." } %>
+    <% end %>
+    <% if policy(@project).archive? %>
+      <%= button_to "Archive", archive_project_path(@project), method: :patch, class: "btn btn-sm btn-warning", form_class: "inline-block", data: { turbo_confirm: "Archive this project? It will be hidden from default lists." } %>
+    <% end %>
+    <% if policy(@project).reopen? %>
+      <%= button_to "Reopen", reopen_project_path(@project), method: :patch, class: "btn btn-sm btn-primary", form_class: "inline-block", data: { turbo_confirm: "Reopen this project?" } %>
+    <% end %>
+  </div>
+
   <div role="tablist" class="tabs tabs-boxed my-4">
     <%= link_to "Details",
       project_path(@project),

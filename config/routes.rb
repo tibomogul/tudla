@@ -96,6 +96,9 @@ Rails.application.routes.draw do
       get :risk_history
       patch :update_risk_state
       patch :reorder_scopes
+      patch :mark_done
+      patch :archive
+      patch :reopen
     end
   end
   post "subscribables/:id/subscribe", to: "subscribables#create_subscription", as: :create_subscription

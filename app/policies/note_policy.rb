@@ -7,15 +7,15 @@ class NotePolicy < ApplicationPolicy
   end
 
   def create?
-    can_access_notable?
+    can_access_notable? && !parent_read_only?
   end
 
   def update?
-    can_access_notable? && note.user == user
+    can_access_notable? && note.user == user && !parent_read_only?
   end
 
   def destroy?
-    can_access_notable? && note.user == user
+    can_access_notable? && note.user == user && !parent_read_only?
   end
 
   def edit?
@@ -23,6 +23,27 @@ class NotePolicy < ApplicationPolicy
   end
 
   private
+
+  def parent_read_only?
+    record = notable_record
+    return false unless record
+    case record.class.name
+    when "Project", "Scope", "Task"
+      record.respond_to?(:read_only?) && record.read_only?
+    else
+      false
+    end
+  end
+
+  def notable_record
+    notable_obj = note.notable
+    return nil unless notable_obj
+    begin
+      notable_obj.notable
+    rescue
+      notable_obj.notable_type&.constantize&.find_by(id: notable_obj.notable_id)
+    end
+  end
 
   def can_access_notable?
     notable_obj = note.notable

@@ -28,7 +28,13 @@ class Task < ApplicationRecord
   # Include estimate rollup caching to scopes/projects
   include EstimateCacheable
 
+  before_create :inherit_lifecycle_from_project
+
   after_commit :broadcast_task_update, if: :persisted?
+
+  def read_only?
+    project_lifecycle_state.to_s != "active"
+  end
 
   def state_machine
     @state_machine ||= TaskStateMachine.new(self, transition_class: TaskTransition,
@@ -77,6 +83,10 @@ class Task < ApplicationRecord
   end
 
   private
+
+  def inherit_lifecycle_from_project
+    self.project_lifecycle_state = project.lifecycle_state if project
+  end
 
   def broadcast_task_update
     return unless ActionCable.server.pubsub.respond_to?(:broadcast)

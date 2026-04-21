@@ -24,12 +24,15 @@ class Project < ApplicationRecord
   has_many :links, through: :linkable
 
   has_many :project_risk_transitions, autosave: false
+  has_many :project_lifecycle_transitions, autosave: false
 
   # Include Statesman adapter (now compatible without default_scope)
   include Statesman::Adapters::ActiveRecordQueries[
     transition_class: ProjectRiskTransition,
     initial_state: :green
   ]
+
+  scope :not_archived, -> { where.not(lifecycle_state: "archived") }
 
   # Include soft delete
   include SoftDeletable
@@ -44,6 +47,46 @@ class Project < ApplicationRecord
 
   def risk_current_state
     risk_state || risk_state_machine.current_state
+  end
+
+  def lifecycle_state_machine
+    @lifecycle_state_machine ||= ProjectLifecycleStateMachine.new(
+      self,
+      transition_class: ProjectLifecycleTransition,
+      association_name: :project_lifecycle_transitions,
+      initial_transition: true
+    )
+  end
+
+  def current_lifecycle_state
+    lifecycle_state || lifecycle_state_machine.current_state
+  end
+
+  def active?
+    current_lifecycle_state.to_s == "active"
+  end
+
+  def done?
+    current_lifecycle_state.to_s == "done"
+  end
+
+  def archived?
+    current_lifecycle_state.to_s == "archived"
+  end
+
+  def read_only?
+    !active?
+  end
+
+  # Bulk-propagate lifecycle_state to all child scopes/tasks in one shot.
+  # Uses update_all to skip callbacks/broadcasts — a single UPDATE per table,
+  # regardless of the number of children. Matches the EstimateCacheable pattern.
+  def propagate_lifecycle_to_children!
+    state = lifecycle_state
+    Project.transaction do
+      scopes.update_all(project_lifecycle_state: state)
+      tasks.update_all(project_lifecycle_state: state)
+    end
   end
 
   def time_in_current_risk_state
