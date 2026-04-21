@@ -1,10 +1,13 @@
-<ul 
-  class="space-y-2" 
-  id="<%= dom_id(project, :scope_list) %>" 
+<% locked = project.read_only? %>
+<ul
+  class="space-y-2"
+  id="<%= dom_id(project, :scope_list) %>"
+  <% unless locked %>
   data-controller="sortable-scope"
   data-sortable-scope-reorder-url-value="<%= reorder_scopes_project_path(project) %>"
+  <% end %>
 >
   <% project.scopes.order(:project_position).each do |scope| %>
-    <%= render partial: "shared/scope_list_item", locals: { scope: scope, show_drag_handle: true } %>
+    <%= render partial: "shared/scope_list_item", locals: { scope: scope, show_drag_handle: !locked } %>
   <% end %>
 </ul>

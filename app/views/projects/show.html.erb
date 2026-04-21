@@ -70,7 +70,7 @@
         </svg>
         Hill Chart Progress
       </h3>
-      <div data-controller="hillchart" data-hillchart-dots-value="<%= @dots.to_json %>">
+      <div data-controller="hillchart" data-hillchart-dots-value="<%= @dots.to_json %>" data-hillchart-editable-value="<%= !@project.read_only? %>">
         <div id="chart"></div>
       </div>
     </div>

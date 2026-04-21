@@ -2,21 +2,23 @@ import { Controller } from "@hotwired/stimulus"
 import { HillChart } from "hillchart"
 
 export default class extends Controller {
-  static values = { dots: Array }
+  static values = { dots: Array, editable: { type: Boolean, default: true } }
 
   connect() {
-    console.log("HillChart controller connected");
-    const chart = new HillChart(document.getElementById('chart'), {
+    console.log("HillChart controller connected (editable=" + this.editableValue + ")");
+    new HillChart(document.getElementById('chart'), {
       width: 500,
       height: 250,
-      editable: true,
+      editable: this.editableValue,
       truncateLength: 15,
       dots: this.dotsValue
     });
 
-    document.getElementById('chart').addEventListener('hillchart:save', (e) => {
-      this.saveHillchartData(e.detail);
-    });
+    if (this.editableValue) {
+      document.getElementById('chart').addEventListener('hillchart:save', (e) => {
+        this.saveHillchartData(e.detail);
+      });
+    }
   }
 
   saveHillchartData(data) {

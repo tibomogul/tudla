@@ -1,6 +1,7 @@
 <li id="<%= dom_id(task) %>" data-task-id="<%= task.id %>" class="flex items-center gap-3 p-3 hover:bg-base-200 rounded-lg transition-colors group">
   <% show_drag_handle = local_assigns.fetch(:show_drag_handle, false) %>
   <% update_context = local_assigns.fetch(:update_context, 'list_item') %>
+  <% task_locked = task.read_only? %>
   
   <% if show_drag_handle %>
     <!-- Drag Handle -->
@@ -26,11 +27,13 @@
       <% end %>
       
       <!-- Display Mode -->
-      <span 
+      <span
         id="<%= dom_id(task, :estimates_display) %>"
-        class="flex items-center gap-1 <%= task.unassisted_estimate || task.ai_assisted_estimate || task.actual_manhours ? 'opacity-0 group-hover:opacity-100' : 'opacity-50' %> transition-opacity cursor-pointer hover:text-base-content"
+        class="flex items-center gap-1 <%= task.unassisted_estimate || task.ai_assisted_estimate || task.actual_manhours ? 'opacity-0 group-hover:opacity-100' : 'opacity-50' %> transition-opacity <%= 'cursor-pointer hover:text-base-content' unless task_locked %>"
+        <% unless task_locked %>
         onclick="document.getElementById('<%= dom_id(task, :estimates_display) %>').classList.add('hidden'); document.getElementById('<%= dom_id(task, :estimates_form) %>').classList.remove('hidden'); document.querySelector('#<%= dom_id(task, :estimates_form) %> input').focus();"
         title="Click to edit estimates"
+        <% end %>
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -41,6 +44,7 @@
       </span>
 
       <!-- Edit Mode (Hidden by default) -->
+      <% unless task_locked %>
       <%= form_with model: task, url: task_path(task), method: :patch, data: { turbo_stream: true }, html: { id: dom_id(task, :estimates_form), class: "hidden flex items-center gap-1" } do |f| %>
         <%= f.hidden_field :update_context, value: update_context %>
         
@@ -71,6 +75,7 @@
           </svg>
         </button>
       <% end %>
+      <% end %>
     </div>
   </div>
 
@@ -80,6 +85,7 @@
   </div>
 
   <!-- State Change Dropdown -->
+  <% unless task_locked %>
   <div class="flex-shrink-0 dropdown dropdown-end">
     <button 
       tabindex="0" 
@@ -120,6 +126,7 @@
       <% end %>
     </ul>
   </div>
+  <% end %>
 
   <!-- View Action -->
   <div class="flex-shrink-0">

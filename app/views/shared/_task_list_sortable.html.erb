@@ -1,10 +1,13 @@
-<ul 
-  class="space-y-2" 
-  id="<%= container_id %>" 
+<% locked = tasks.first&.read_only? %>
+<ul
+  class="space-y-2"
+  id="<%= container_id %>"
+  <% unless locked %>
   data-controller="sortable-scope"
   data-sortable-scope-reorder-url-value="<%= reorder_url %>"
+  <% end %>
 >
   <% tasks.each do |task| %>
-    <%= render "shared/task_list_item", task: task, show_drag_handle: true, update_context: "scope_list_item" %>
+    <%= render "shared/task_list_item", task: task, show_drag_handle: !locked, update_context: "scope_list_item" %>
   <% end %>
 </ul>

@@ -149,7 +149,7 @@
 
     <!-- Risk State Transitions Card -->
     <% allowed_states = project.risk_state_machine.allowed_transitions %>
-    <% if allowed_states.any? %>
+    <% if allowed_states.any? && !project.read_only? %>
       <div class="card bg-base-100 shadow-sm">
         <div class="card-body p-4">
           <h3 class="font-semibold text-base mb-3 flex items-center gap-2">

@@ -103,7 +103,8 @@
             </svg>
             Time Estimates
           </h3>
-          <button 
+          <% unless task.read_only? %>
+          <button
             onclick="document.getElementById('estimates-display').classList.add('hidden'); document.getElementById('estimates-form').classList.remove('hidden'); document.querySelector('#estimates-form input').focus();"
             class="btn btn-ghost btn-xs"
             id="edit-estimates-btn"
@@ -113,6 +114,7 @@
             </svg>
             Edit
           </button>
+          <% end %>
         </div>
 
         <!-- Display Mode -->
@@ -219,6 +221,7 @@
         when :done then [:in_review]
         else []
       end
+      possible_states = [] if task.read_only?
     %>
     <div class="card bg-base-100 shadow-sm">
       <div class="card-body p-4">
