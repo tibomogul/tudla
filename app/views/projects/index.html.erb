@@ -13,8 +13,10 @@
   <%= turbo_stream_from "projects" %>
 
   <% current_lifecycle = params[:lifecycle].presence || (ActiveModel::Type::Boolean.new.cast(params[:include_archived]) ? "all" : "active") %>
+  <% lifecycle_tabs = %w[active done all] %>
+  <% lifecycle_tabs.insert(2, "archived") if ProjectPolicy.can_unarchive_any?(current_user) %>
   <div role="tablist" class="tabs tabs-boxed mb-3 w-fit">
-    <% %w[active done archived all].each do |state| %>
+    <% lifecycle_tabs.each do |state| %>
       <%= link_to state.humanize,
             projects_path(params.permit(:project_name).to_h.merge(lifecycle: state)),
             class: "tab #{'tab-active' if current_lifecycle == state}",

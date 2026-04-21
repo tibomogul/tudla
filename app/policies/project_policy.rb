@@ -70,6 +70,14 @@ class ProjectPolicy < ApplicationPolicy
     end
   end
 
+  # Class-level check used by list views to decide whether to expose the
+  # "Archived" filter. A user can unarchive a project only if they hold an
+  # admin role on at least one project, team, or organization.
+  def self.can_unarchive_any?(user)
+    return false unless user
+    UserPartyRole.where(user: user, role: "admin").exists?
+  end
+
   # Get teams where user can create projects
   # Returns Team relation
   def allowed_teams
