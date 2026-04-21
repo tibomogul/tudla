@@ -82,6 +82,7 @@ class ProjectsController < ApplicationController
 
   # PATCH/PUT /projects/1 or /projects/1.json
   def update
+    authorize @project
     # Validate team change if team_id is being updated
     if params[:project][:team_id].present?
       new_team = Team.find_by(id: params[:project][:team_id])
@@ -104,6 +105,7 @@ class ProjectsController < ApplicationController
 
   # DELETE /projects/1 or /projects/1.json
   def destroy
+    authorize @project
     @project.destroy
 
     respond_to do |format|

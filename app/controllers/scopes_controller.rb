@@ -57,6 +57,7 @@ class ScopesController < ApplicationController
 
   # PATCH/PUT /scopes/1 or /scopes/1.json
   def update
+    authorize @scope
     respond_to do |format|
       if @scope.update(scope_params)
         format.html { redirect_to @scope, notice: "Scope was successfully updated.", status: :see_other }

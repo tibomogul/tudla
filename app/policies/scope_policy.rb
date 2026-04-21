@@ -20,7 +20,7 @@ class ScopePolicy < ApplicationPolicy
   end
 
   def create?
-    return false if scope.instance_of?(::Scope) && scope.read_only?
+    return false if scope.instance_of?(::Scope) && scope_parent_read_only?
     user_is_project_member? || user_is_team_member? || user_is_organization_admin?
   end
 
@@ -89,5 +89,11 @@ class ScopePolicy < ApplicationPolicy
 
   def user_is_organization_admin?
     organization_role == "admin"
+  end
+
+  # For new (unsaved) scopes, the denormalized project_lifecycle_state is not yet set.
+  # Consult the parent project for authoritative read-only state.
+  def scope_parent_read_only?
+    scope.read_only? || (scope.project && scope.project.read_only?)
   end
 end
