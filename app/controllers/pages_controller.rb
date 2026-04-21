@@ -7,7 +7,7 @@ class PagesController < ApplicationController
   end
 
   def dashboard
-    params.permit(:project_id, :scope_id, :project_name, :page)
+    params.permit(:project_id, :scope_id, :project_name, :page, :lifecycle, :include_archived)
 
     load_paginated_projects
 
@@ -47,12 +47,28 @@ class PagesController < ApplicationController
                 .where(team_id: current_organization_team_ids)
                 .includes(:team)
                 .select("projects.*, (SELECT COUNT(*) FROM tasks WHERE tasks.project_id = projects.id AND tasks.deleted_at IS NULL) AS tasks_count")
-                .order(:name)
+                .order(updated_at: :desc)
 
     if params[:project_name].present?
       projects = projects.where("name ILIKE ?", "%#{params[:project_name]}%")
     end
 
+    projects = lifecycle_filter.call(projects)
+
     @pagy_projects, @projects = pagy(:offset, projects)
+  end
+
+  # Resolves params[:lifecycle] (active|done|archived|all). Default: active only.
+  # Back-compat: ?include_archived=1 → all.
+  def lifecycle_filter
+    state = params[:lifecycle].presence
+    state ||= "all" if ActiveModel::Type::Boolean.new.cast(params[:include_archived])
+
+    case state
+    when "done"     then ->(rel) { rel.where(lifecycle_state: "done") }
+    when "archived" then ->(rel) { rel.where(lifecycle_state: "archived") }
+    when "all"      then ->(rel) { rel }
+    else                 ->(rel) { rel.visible }
+    end
   end
 end

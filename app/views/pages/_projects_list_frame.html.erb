@@ -1,3 +1,13 @@
+<% current_lifecycle = params[:lifecycle].presence || (ActiveModel::Type::Boolean.new.cast(params[:include_archived]) ? "all" : "active") %>
+<div role="tablist" class="tabs tabs-boxed mb-3 w-fit">
+  <% %w[active done archived all].each do |state| %>
+    <%= link_to state.humanize,
+          user_root_path(params.permit(:project_name).to_h.merge(lifecycle: state)),
+          class: "tab #{'tab-active' if current_lifecycle == state}",
+          data: { turbo_frame: "projects_list" } %>
+  <% end %>
+</div>
+
 <%= render(PaginatedListComponent.new(
   filter_url: user_root_path,
   frame_id: "projects_list",

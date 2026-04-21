@@ -249,14 +249,28 @@ class ProjectsController < ApplicationController
                     "(SELECT COUNT(*) FROM tasks WHERE tasks.project_id = projects.id AND tasks.deleted_at IS NULL) AS tasks_count",
                     "(SELECT COUNT(*) FROM scopes WHERE scopes.project_id = projects.id AND scopes.deleted_at IS NULL) AS scopes_count"
                   )
-                  .order(:name)
+                  .order(updated_at: :desc)
 
       if params[:project_name].present?
         projects = projects.where("projects.name ILIKE ?", "%#{params[:project_name]}%")
       end
 
-      projects = projects.not_archived unless ActiveModel::Type::Boolean.new.cast(params[:include_archived])
+      projects = lifecycle_filter.call(projects)
 
       @pagy_projects, @projects = pagy(:offset, projects, limit: 20)
+    end
+
+    # Resolves the lifecycle filter from params[:lifecycle] (active|done|archived|all).
+    # Default: visible (active only). Back-compat: legacy ?include_archived=1 → all.
+    def lifecycle_filter
+      state = params[:lifecycle].presence
+      state ||= "all" if ActiveModel::Type::Boolean.new.cast(params[:include_archived])
+
+      case state
+      when "done"     then ->(rel) { rel.where(lifecycle_state: "done") }
+      when "archived" then ->(rel) { rel.where(lifecycle_state: "archived") }
+      when "all"      then ->(rel) { rel }
+      else                 ->(rel) { rel.visible }
+      end
     end
 end

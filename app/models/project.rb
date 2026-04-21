@@ -34,9 +34,12 @@ class Project < ApplicationRecord
 
   # Composes with SoftDeletable.active — the two filters are orthogonal:
   # .active drops soft-deleted rows, .not_archived drops archived rows.
-  # ProjectsController#index chains policy_scope(Project).not_archived for the
-  # default "visible" filter; pass ?include_archived=1 to bypass.
   scope :not_archived, -> { where.not(lifecycle_state: "archived") }
+
+  # Default scope for end-user list views. Hides both done and archived so the
+  # UI surfaces only in-flight work. Use #lifecycle_filter in controllers to
+  # let users toggle to done / archived / all.
+  scope :visible, -> { where(lifecycle_state: "active") }
 
   # Include soft delete
   include SoftDeletable

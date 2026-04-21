@@ -11,6 +11,11 @@
                   <h3 class="font-semibold text-lg truncate">
                     <%= link_to project.name, project_path(project), class: "hover:underline", data: { turbo_frame: "_top" } %>
                   </h3>
+                  <% unless project.active? %>
+                    <span class="badge badge-sm badge-ghost">
+                      <%= project.lifecycle_state.humanize %>
+                    </span>
+                  <% end %>
                   <% risk_state = project.risk_current_state %>
                   <% if risk_state %>
                     <span class="badge badge-sm <%= case risk_state.to_s

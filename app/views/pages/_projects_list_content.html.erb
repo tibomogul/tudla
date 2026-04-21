@@ -14,6 +14,11 @@
             <% end %>
           </div>
           <div class="flex items-center gap-2">
+            <% unless project.active? %>
+              <span class="badge badge-sm badge-ghost">
+                <%= project.lifecycle_state.humanize %>
+              </span>
+            <% end %>
             <span class="badge badge-outline <%= risk_badge_color(project.risk_current_state) %>">
               <%= project.risk_current_state.to_s.humanize %>
             </span>
