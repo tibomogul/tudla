@@ -1,4 +1,20 @@
 module ApplicationHelper
+  # Renders a button that opens or closes a <dialog> via the dialog-trigger
+  # Stimulus controller. `action` is :show or :close.
+  def dialog_trigger_button(dialog_id:, action: :show, label: nil, **opts, &block)
+    data = (opts.delete(:data) || {}).merge(
+      controller: "dialog-trigger",
+      dialog_trigger_dialog_id_value: dialog_id,
+      action: "click->dialog-trigger##{action}"
+    )
+    attrs = { type: "button", data: data }.merge(opts)
+    if block
+      content_tag(:button, **attrs, &block)
+    else
+      content_tag(:button, label, **attrs)
+    end
+  end
+
   def flash_class_for(type)
     case type.to_sym
     when :notice

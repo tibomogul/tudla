@@ -58,10 +58,10 @@ RSpec.describe "Organization Users", type: :request do
         sign_in(member_user)
       end
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          get organization_users_url(organization)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        get organization_users_url(organization)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 
@@ -189,10 +189,10 @@ RSpec.describe "Organization Users", type: :request do
         sign_in(member_user)
       end
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          get lookup_organization_users_url(organization), params: { email: "test@example.com" }
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        get lookup_organization_users_url(organization), params: { email: "test@example.com" }
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
   end

@@ -50,10 +50,10 @@ RSpec.describe "Attachments", type: :request do
     context "when authenticated but unauthorized" do
       before { sign_in unauthorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          get download_attachment_path(image_attachment)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        get download_attachment_path(image_attachment)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 
@@ -95,20 +95,21 @@ RSpec.describe "Attachments", type: :request do
     context "when authenticated as non-owner org member" do
       before { sign_in authorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          delete attachment_path(image_attachment)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash and does not delete" do
+        delete attachment_path(image_attachment)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
+        expect(image_attachment.reload.deleted_at).to be_nil
       end
     end
 
     context "when authenticated but unauthorized for the project" do
       before { sign_in unauthorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          delete attachment_path(image_attachment)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        delete attachment_path(image_attachment)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 
@@ -205,10 +206,10 @@ RSpec.describe "Attachments", type: :request do
     context "when authenticated but unauthorized" do
       before { sign_in unauthorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          get preview_attachment_path(image_attachment)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        get preview_attachment_path(image_attachment)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 

@@ -29,8 +29,7 @@ class AssignTaskTool < ApplicationTool
     authorize(task, :update?)
 
     if task.update(responsible_user_id: user.id)
-      user_name = user.username || user.preferred_name || user.email
-      "Task assigned successfully to #{user_name}!\n\n#{call_tool(GetTaskTool, task_id: task.id)}"
+      "Task assigned successfully to #{user.display_name}!\n\n#{call_tool(GetTaskTool, task_id: task.id)}"
     else
       raise "Failed to assign task: #{task.errors.full_messages.join(', ')}"
     end

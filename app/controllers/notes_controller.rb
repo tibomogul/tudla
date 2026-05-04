@@ -1,6 +1,15 @@
 class NotesController < ApplicationController
   before_action :set_notable, only: [ :create ]
-  before_action :set_note, only: [ :edit, :update, :destroy ]
+  before_action :set_note, only: [ :show, :edit, :update, :destroy ]
+
+  def show
+    authorize @note
+    if turbo_frame_request?
+      render partial: "notes/show", locals: { note: @note }
+    else
+      redirect_to polymorphic_path(@note.parent_record, anchor: dom_id(@note))
+    end
+  end
 
   def create
     @note = @notable.notes.build(note_params)

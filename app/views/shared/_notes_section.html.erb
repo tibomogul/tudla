@@ -3,9 +3,9 @@
   # - record: The model instance (Project, Task, Scope, Team, or Organization)
   # - can_create: Boolean to show/hide create button (required)
   # - notable: The notable record (optional - will be fetched if not provided)
-  
+
   notable ||= record.notable
-  notes = notable&.notes&.active&.order(created_at: :desc) || Note.none
+  notes = notable&.notes&.active&.with_last_editor&.order(created_at: :desc) || Note.none
 %>
 
 <div class="mt-8">
@@ -15,23 +15,38 @@
     <div class="flex items-center gap-2">
       <span class="badge badge-ghost"><%= notes.count %></span>
       <% if can_create %>
-        <button onclick="new_note_modal.showModal()" class="btn btn-primary">
+        <%= dialog_trigger_button(dialog_id: "new_note_modal", action: :show, class: "btn btn-primary") do %>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           New Note
-        </button>
+        <% end %>
       <% end %>
     </div>
   </div>
 
   <!-- New Note Modal -->
   <% if can_create %>
-    <%= render "shared/notes_form", 
-      notable_type: record.class.name, 
+    <%= render "shared/notes_form",
+      notable_type: record.class.name,
       notable_id: record.id %>
   <% end %>
 
   <!-- Notes List -->
-  <%= render "shared/notes_list", notes: notes, show_header: false %>
+  <%= render "shared/notes_list", notes: notes, show_header: false, parent: record %>
+
+  <!-- Shared Show Modal -->
+  <dialog id="note_show_modal" class="modal">
+    <div class="modal-box max-w-3xl">
+      <%= dialog_trigger_button(dialog_id: "note_show_modal", action: :close, label: "✕",
+            class: "btn btn-sm btn-circle btn-ghost absolute right-2 top-2",
+            aria: { label: "Close" }) %>
+      <%= turbo_frame_tag "note_modal_frame" do %>
+        <div class="text-center py-8 text-base-content/50">Loading…</div>
+      <% end %>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
 </div>

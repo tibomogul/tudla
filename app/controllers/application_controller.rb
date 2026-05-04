@@ -12,6 +12,8 @@ class ApplicationController < ActionController::Base
   include ActionView::RecordIdentifier
   include Pagy::Method
 
+  rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
+
   protected
 
   def configure_permitted_parameters
@@ -60,6 +62,14 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  def user_not_authorized
+    respond_to do |format|
+      format.html { redirect_back_or_to(root_path, alert: "You are not authorized to perform this action.") }
+      format.json { render json: { error: "Not authorized", error_code: "not_authorized" }, status: :forbidden }
+      format.any  { head :forbidden }
+    end
+  end
 
   def broadcast_flash
     return unless flash.any?

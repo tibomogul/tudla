@@ -16,6 +16,10 @@ class User < ApplicationRecord
 
   has_many :notifications
 
+  def display_name
+    preferred_name.presence || username.presence || email
+  end
+
   # Caches full AR objects (not just IDs) to avoid an extra query on every page load.
   # Trade-off: if an Organization name changes or is soft-deleted, this serves stale data
   # until the next UserPartyRole change busts the cache. Acceptable because org-level

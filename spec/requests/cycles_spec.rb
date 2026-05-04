@@ -139,17 +139,15 @@ RSpec.describe "/cycles", type: :request do
   end
 
   describe "DELETE /destroy" do
-    it "raises Pundit::NotAuthorizedError" do
-      expect {
-        delete cycle_url(cycle)
-      }.to raise_error(Pundit::NotAuthorizedError)
+    it "redirects with a not-authorized flash" do
+      delete cycle_url(cycle)
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to match(/not authorized/i)
     end
 
     it "does not soft delete the cycle" do
-      expect {
-        delete cycle_url(cycle)
-      }.to raise_error(Pundit::NotAuthorizedError)
-
+      delete cycle_url(cycle)
+      expect(response).to redirect_to(root_path)
       expect(cycle.reload.deleted_at).to be_nil
     end
   end
@@ -184,27 +182,21 @@ RSpec.describe "/cycles", type: :request do
     end
 
     it "prevents non-admin from creating cycles" do
-      expect {
-        post cycles_url, params: { cycle: { name: "Test", start_date: Date.current, end_date: Date.current + 6.weeks } }
-      }.to raise_error(Pundit::NotAuthorizedError)
-
+      post cycles_url, params: { cycle: { name: "Test", start_date: Date.current, end_date: Date.current + 6.weeks } }
+      expect(flash[:alert]).to match(/not authorized/i)
       expect(Cycle.where(name: "Test")).to be_empty
     end
 
     it "prevents non-admin from updating cycles" do
-      expect {
-        patch cycle_url(cycle), params: { cycle: { name: "Updated" } }
-      }.to raise_error(Pundit::NotAuthorizedError)
-
+      patch cycle_url(cycle), params: { cycle: { name: "Updated" } }
+      expect(flash[:alert]).to match(/not authorized/i)
       cycle.reload
       expect(cycle.name).not_to eq("Updated")
     end
 
     it "prevents non-admin from transitioning cycles" do
-      expect {
-        patch transition_cycle_url(cycle), params: { state: "betting" }
-      }.to raise_error(Pundit::NotAuthorizedError)
-
+      patch transition_cycle_url(cycle), params: { state: "betting" }
+      expect(flash[:alert]).to match(/not authorized/i)
       cycle.reload
       expect(cycle.current_state).to eq("shaping")
     end

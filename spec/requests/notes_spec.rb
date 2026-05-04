@@ -18,6 +18,61 @@ RSpec.describe "Notes", type: :request do
     UserPartyRole.create!(user: authorized_user, party: organization, role: "member")
   end
 
+  describe "GET /notes/:id" do
+    context "when authenticated as a member of the parent org" do
+      before { sign_in authorized_user }
+
+      it "renders the show partial inside the shared turbo frame on Turbo Frame requests" do
+        get note_path(note), headers: { "Turbo-Frame" => "note_modal_frame" }
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Test Note")
+        expect(response.body).to include("Test note content")
+        expect(response.body).to include('id="note_modal_frame"')
+      end
+
+      it "redirects to the parent project with an anchor on a plain HTML request" do
+        get note_path(note)
+        expect(response).to redirect_to(project_path(project, anchor: ActionView::RecordIdentifier.dom_id(note)))
+      end
+
+      it "redirects to the parent scope when notable is a Scope" do
+        scope_record = create(:scope, project: project)
+        scope_notable = Notable.create!(notable: scope_record)
+        scope_note = Note.create!(notable: scope_notable, user: owner, content: "Scope note", title: "S")
+        get note_path(scope_note)
+        expect(response).to redirect_to(scope_path(scope_record, anchor: ActionView::RecordIdentifier.dom_id(scope_note)))
+      end
+
+      it "redirects to the parent task when notable is a Task" do
+        task_record = create(:task, project: project)
+        task_notable = Notable.create!(notable: task_record)
+        task_note = Note.create!(notable: task_notable, user: owner, content: "Task note", title: "T")
+        get note_path(task_note)
+        expect(response).to redirect_to(task_path(task_record, anchor: ActionView::RecordIdentifier.dom_id(task_note)))
+      end
+    end
+
+    context "when authenticated but unauthorized" do
+      before { sign_in unauthorized_user }
+
+      it "redirects with a not-authorized flash" do
+        get note_path(note)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
+      end
+    end
+
+    context "when the note is soft-deleted" do
+      before { sign_in owner }
+
+      it "returns 404" do
+        note.soft_delete
+        get note_path(note)
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe "DELETE /notes/:id" do
     context "when authenticated as the note owner" do
       before { sign_in owner }
@@ -48,20 +103,22 @@ RSpec.describe "Notes", type: :request do
     context "when authenticated but not the note owner" do
       before { sign_in authorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          delete note_path(note)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash and does not delete" do
+        delete note_path(note)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
+        note.reload
+        expect(note.deleted_at).to be_nil
       end
     end
 
     context "when authenticated but unauthorized for the project" do
       before { sign_in unauthorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          delete note_path(note)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        delete note_path(note)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 

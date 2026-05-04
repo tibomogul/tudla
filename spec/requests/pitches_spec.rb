@@ -341,9 +341,10 @@ RSpec.describe "/pitches", type: :request do
     context "when creator tries to update non-draft pitch" do
       it "prevents creator from updating ready_for_betting pitch" do
         pitch.state_machine.transition_to!(:ready_for_betting)
-        expect {
-          patch pitch_url(pitch), params: { pitch: { title: "Sneaky Update" } }
-        }.to raise_error(Pundit::NotAuthorizedError)
+        patch pitch_url(pitch), params: { pitch: { title: "Sneaky Update" } }
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
+        expect(pitch.reload.title).not_to eq("Sneaky Update")
       end
     end
   end
@@ -376,9 +377,10 @@ RSpec.describe "/pitches", type: :request do
     context "when pitch is not in draft state" do
       it "prevents creator from deleting non-draft pitch" do
         pitch.state_machine.transition_to!(:ready_for_betting)
-        expect {
-          delete pitch_url(pitch)
-        }.to raise_error(Pundit::NotAuthorizedError)
+        delete pitch_url(pitch)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
+        expect(pitch.reload.deleted_at).to be_nil
       end
     end
   end
@@ -512,9 +514,9 @@ RSpec.describe "/pitches", type: :request do
         team = create(:team, organization: organization)
         cycle = create(:cycle, organization: organization)
 
-        expect {
-          post bet_pitch_url(pitch), params: { team_id: team.id, cycle_id: cycle.id }
-        }.to raise_error(Pundit::NotAuthorizedError)
+        post bet_pitch_url(pitch), params: { team_id: team.id, cycle_id: cycle.id }
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 
@@ -562,10 +564,9 @@ RSpec.describe "/pitches", type: :request do
     end
 
     it "prevents non-member from creating pitches" do
-      expect {
-        post pitches_url, params: { pitch: { title: "Test", appetite: 2 } }
-      }.to raise_error(Pundit::NotAuthorizedError)
-
+      post pitches_url, params: { pitch: { title: "Test", appetite: 2 } }
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to match(/not authorized/i)
       expect(Pitch.where(title: "Test")).to be_empty
     end
 

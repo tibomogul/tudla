@@ -35,7 +35,7 @@ Rails.application.routes.draw do
       get :preview
     end
   end
-  resources :notes, only: [ :create, :edit, :update, :destroy ]
+  resources :notes, only: [ :show, :create, :edit, :update, :destroy ]
   resources :links, only: [ :create, :edit, :update, :destroy ]
   resources :teams
   resources :organizations do

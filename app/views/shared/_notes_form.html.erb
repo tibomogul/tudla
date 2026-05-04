@@ -6,9 +6,9 @@
 
 <dialog id="new_note_modal" class="modal">
   <div class="modal-box w-11/12 max-w-3xl">
-    <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-    </form>
+    <%= dialog_trigger_button(dialog_id: "new_note_modal", action: :close, label: "✕",
+          class: "btn btn-sm btn-circle btn-ghost absolute right-2 top-2",
+          aria: { label: "Close" }) %>
     
     <h3 class="font-bold text-lg mb-4">New Note</h3>
     
@@ -43,7 +43,7 @@
       </div>
 
       <div class="modal-action">
-        <button type="button" onclick="new_note_modal.close()" class="btn btn-ghost">Cancel</button>
+        <%= dialog_trigger_button(dialog_id: "new_note_modal", action: :close, label: "Cancel", class: "btn btn-ghost") %>
         <%= f.button type: :submit, class: "btn btn-primary" do %>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

@@ -31,10 +31,10 @@ RSpec.describe "Organization Settings", type: :request do
         sign_in(member_user)
       end
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          get organization_settings_url(organization)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        get organization_settings_url(organization)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
   end
@@ -131,10 +131,10 @@ RSpec.describe "Organization Settings", type: :request do
         sign_in(member_user)
       end
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          patch organization_settings_url(organization), params: llm_params
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        patch organization_settings_url(organization), params: llm_params
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
   end

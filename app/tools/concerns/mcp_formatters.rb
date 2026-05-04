@@ -216,7 +216,7 @@ module McpFormatters
   def format_user(user)
     return "Unassigned" unless user
 
-    user.username || user.preferred_name || user.email
+    user.display_name
   end
 
   def format_datetime(datetime)

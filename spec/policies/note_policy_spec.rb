@@ -21,6 +21,14 @@ RSpec.describe NotePolicy, type: :policy do
     it "prevents non-member from creating" do
       expect(described_class.new(non_member, note).create?).to be false
     end
+
+    it "allows org member to show" do
+      expect(described_class.new(member, note).show?).to be true
+    end
+
+    it "prevents non-member from showing" do
+      expect(described_class.new(non_member, note).show?).to be false
+    end
   end
 
   describe "with Cycle notable" do

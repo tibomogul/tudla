@@ -48,20 +48,20 @@ RSpec.describe "Links", type: :request do
     context "when authenticated but not the link owner" do
       before { sign_in authorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          delete link_path(link)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        delete link_path(link)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 
     context "when authenticated but unauthorized for the project" do
       before { sign_in unauthorized_user }
 
-      it "raises Pundit::NotAuthorizedError" do
-        expect {
-          delete link_path(link)
-        }.to raise_error(Pundit::NotAuthorizedError)
+      it "redirects with a not-authorized flash" do
+        delete link_path(link)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to match(/not authorized/i)
       end
     end
 

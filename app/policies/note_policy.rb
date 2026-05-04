@@ -12,6 +12,10 @@ class NotePolicy < ApplicationPolicy
     can_access_notable? && !parent_read_only?(note, :notable)
   end
 
+  def show?
+    can_access_notable?
+  end
+
   def update?
     can_access_notable? && note.user == user && !parent_read_only?(note, :notable)
   end
@@ -27,18 +31,7 @@ class NotePolicy < ApplicationPolicy
   private
 
   def can_access_notable?
-    notable_obj = note.notable
-    return false unless notable_obj
-    
-    # For delegated types, we need to get the actual record
-    # Use the polymorphic attributes directly if the delegated type accessor doesn't work
-    notable_record = begin
-      notable_obj.notable
-    rescue
-      # If delegated type fails, manually fetch the record
-      notable_obj.notable_type&.constantize&.find_by(id: notable_obj.notable_id)
-    end
-    
+    notable_record = note.parent_record
     return false unless notable_record
 
     # Use class name comparison to avoid class reloading issues in development
