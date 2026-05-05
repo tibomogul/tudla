@@ -6,6 +6,11 @@ class Note < ApplicationRecord
 
   belongs_to :last_editor, class_name: "User", optional: true
 
+  # Callers may set `current_editor` explicitly (e.g. service objects that don't
+  # run inside a controller request) instead of relying on PaperTrail's
+  # thread-local whodunnit.
+  attr_accessor :current_editor
+
   validates :content, presence: true
 
   before_save :assign_last_editor
@@ -27,11 +32,13 @@ class Note < ApplicationRecord
 
   # PaperTrail still owns the full history; this column is just a denormalized
   # cache so list rendering doesn't have to materialize every version row.
+  # Only bumped when the note's content/title is actually edited — saves that
+  # only touch other columns leave `last_editor_id` alone.
   def assign_last_editor
-    actor_id = PaperTrail.request.whodunnit.presence
+    actor_id = current_editor&.id || Integer(PaperTrail.request.whodunnit.to_s, exception: false)
     if new_record?
       self.last_editor_id ||= actor_id || user_id
-    elsif actor_id
+    elsif actor_id && (will_save_change_to_content? || will_save_change_to_title?)
       self.last_editor_id = actor_id
     end
   end

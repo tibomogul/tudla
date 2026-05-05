@@ -46,14 +46,17 @@
       </div>
     <% end %>
 
-    <div data-controller="turbo-confirm">
+    <div data-controller="turbo-confirm" data-turbo-permanent id="turbo-confirm-wrapper">
       <dialog id="turbo-confirm" class="modal">
         <div class="modal-box">
           <h3 class="text-lg font-bold mb-2">Please confirm</h3>
           <p class="py-2" data-turbo-confirm-target="message"></p>
           <div class="modal-action">
             <button type="button" class="btn btn-ghost" data-action="click->turbo-confirm#cancel">Cancel</button>
-            <button type="button" class="btn btn-error" data-action="click->turbo-confirm#confirm">Confirm</button>
+            <button type="button"
+                    class="btn btn-error"
+                    data-turbo-confirm-target="confirmButton"
+                    data-action="click->turbo-confirm#confirm">Confirm</button>
           </div>
         </div>
         <form method="dialog" class="modal-backdrop">

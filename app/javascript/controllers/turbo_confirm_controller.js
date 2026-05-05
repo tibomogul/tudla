@@ -1,17 +1,20 @@
 import { Controller } from "@hotwired/stimulus";
 
 // Replaces the native window.confirm() that Turbo uses for `data-turbo-confirm`
-// with a DaisyUI <dialog>. Mounted on <body> so it owns the document-wide hook.
+// with a DaisyUI <dialog>. Reads optional per-call attributes from the form or
+// its submitter:
+//   data-turbo-confirm-button-label="Delete"   -> button text
+//   data-turbo-confirm-destructive="true"      -> red styling (default)
+//   data-turbo-confirm-destructive="false"     -> primary styling
 //
 // Markup (rendered in the layout): a singleton dialog with id="turbo-confirm".
-// Inside: a <p data-turbo-confirm-target="message"> for the prompt and two
-// buttons with data-action #confirm / #cancel.
 export default class extends Controller {
-  static targets = ["message"];
+  static targets = ["message", "confirmButton"];
 
   connect() {
     if (window.Turbo) {
-      window.Turbo.config.forms.confirm = (message) => this._prompt(message);
+      window.Turbo.config.forms.confirm = (message, formElement, submitter) =>
+        this._prompt(message, submitter || formElement);
     }
     this._resolve = null;
   }
@@ -26,10 +29,21 @@ export default class extends Controller {
     this._dialog().close();
   }
 
-  _prompt(message) {
+  _prompt(message, source) {
     this.messageTarget.textContent = message;
+    this._applyButtonOptions(source);
     this._dialog().showModal();
     return new Promise((resolve) => { this._resolve = resolve; });
+  }
+
+  _applyButtonOptions(source) {
+    const btn = this.confirmButtonTarget;
+    const label = source?.dataset?.turboConfirmButtonLabel || "Confirm";
+    const destructiveAttr = source?.dataset?.turboConfirmDestructive;
+    const destructive = destructiveAttr === undefined ? true : destructiveAttr !== "false";
+    btn.textContent = label;
+    btn.classList.toggle("btn-error", destructive);
+    btn.classList.toggle("btn-primary", !destructive);
   }
 
   _dialog() {

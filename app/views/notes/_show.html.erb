@@ -1,7 +1,7 @@
 <%= turbo_frame_tag "note_modal_frame" do %>
   <h3 class="text-xl font-bold mb-1"><%= note.title.presence || "Untitled note" %></h3>
   <p class="text-xs text-base-content/60 mb-4">
-    Updated <%= time_ago_in_words(note.updated_at) %> ago by <%= note.last_editor.display_name %>
+    Updated <%= time_ago_in_words(note.updated_at) %> ago by <%= note.last_editor&.display_name || "Unknown" %>
   </p>
   <div class="overflow-y-auto max-h-[65vh]">
     <%= render_markdown(note.content) %>

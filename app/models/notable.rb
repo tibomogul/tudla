@@ -7,7 +7,7 @@ class Notable < ApplicationRecord
   # raise; falls back to a manual lookup using the polymorphic columns.
   def resolve_record
     notable
-  rescue
+  rescue NameError, ActiveRecord::SubclassNotFound
     notable_type&.constantize&.find_by(id: notable_id)
   end
 end
