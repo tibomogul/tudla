@@ -111,8 +111,14 @@ class Pitch < ApplicationRecord
     datetime.in_time_zone(timezone).strftime(format)
   end
 
+  # super (SoftDeletable) uses update_column, which bypasses the
+  # dependent: :destroy on pitch_co_authors — so prune the join rows explicitly,
+  # honoring that intent and keeping the PaperTrail audit. Sits alongside the
+  # project-link nullification, which already treats soft-delete as discarding
+  # association state.
   def soft_delete
     projects.update_all(pitch_id: nil)
+    pitch_co_authors.find_each(&:destroy)
     super
   end
 

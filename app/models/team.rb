@@ -20,10 +20,17 @@ class Team < ApplicationRecord
   # soft_delete uses update_column, which bypasses after_update — so bust the
   # cache explicitly here (mirrors User#soft_delete). A soft-deleted team drops
   # out of member_organizations' Team.active filter, so members may lose access.
+  # Any member who loses org membership as a result must also lose co-authorship
+  # of that org's pitches (membership is a precondition); bust each cache BEFORE
+  # the prune so prune_orphaned_for rechecks against fresh membership.
   def soft_delete
     affected = team_role_user_ids
+    org_id = organization_id
     super
-    User.where(id: affected).find_each(&:bust_organizations_cache)
+    User.where(id: affected).find_each do |member|
+      member.bust_organizations_cache
+      PitchCoAuthor.prune_orphaned_for(member, org_id)
+    end
   end
 
   # restore also uses update_column and bypasses after_update — bust explicitly
@@ -36,6 +43,13 @@ class Team < ApplicationRecord
 
   private
 
+  # NOTE: this busts only users with a role ON this team. A project-only role
+  # under this team also derives accessible_organizations from this team's
+  # organization_id, so reparenting the team leaves those users'
+  # accessible_organizations cache stale until their next role change. They are
+  # intentionally excluded from member_organizations (project roles don't confer
+  # org membership), so the membership path — the one that gates pitches — is
+  # correct; only the broader access cache has this known, low-impact gap.
   def bust_member_caches
     User.where(id: team_role_user_ids).find_each(&:bust_organizations_cache)
   end

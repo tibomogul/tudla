@@ -312,6 +312,21 @@ RSpec.describe Pitch, type: :model do
       pitch.destroy
       expect(project.reload.pitch_id).to be_nil
     end
+
+    it "destroys co-author join rows (honoring dependent: :destroy past update_column)" do
+      co_author = create(:user)
+      PitchCoAuthor.create!(pitch: pitch, user: co_author)
+
+      expect { pitch.destroy }
+        .to change { PitchCoAuthor.where(pitch: pitch).count }.from(1).to(0)
+    end
+
+    it "records a PaperTrail destroy version for each pruned co-author row" do
+      PitchCoAuthor.create!(pitch: pitch, user: create(:user))
+
+      expect { pitch.destroy }
+        .to change { PaperTrail::Version.where(item_type: "PitchCoAuthor", event: "destroy").count }.by(1)
+    end
   end
 
   describe "paper trail" do

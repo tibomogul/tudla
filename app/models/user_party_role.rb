@@ -18,16 +18,13 @@ class UserPartyRole < ApplicationRecord
 
   # When a role is removed and the user no longer belongs to the affected org,
   # drop their co-author rows for that org's pitches — co-authorship requires
-  # current membership. Per-row destroy keeps PaperTrail audits, mirroring
-  # User#soft_delete and Pitch#sync_co_authors.
+  # current membership. The cache bust above runs first (declared earlier), so
+  # the membership recheck inside prune_orphaned_for sees fresh data.
   def prune_orphaned_pitch_co_authorships
     org_id = affected_organization_id
     return unless org_id
-    return if user.member_organization_ids.include?(org_id)
 
-    PitchCoAuthor.joins(:pitch)
-      .where(user_id: user_id, pitches: { organization_id: org_id })
-      .find_each(&:destroy)
+    PitchCoAuthor.prune_orphaned_for(user, org_id)
   end
 
   # Org and Team roles map to an organization; a Project-only role never granted
