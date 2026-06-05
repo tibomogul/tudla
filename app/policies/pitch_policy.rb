@@ -51,11 +51,12 @@ class PitchPolicy < ApplicationPolicy
     user_is_organization_admin?
   end
 
-  # Only the creator or an organization admin may change authorship, and only
-  # while the pitch is still a draft. Co-authors can edit/submit/delete the
-  # pitch, but cannot alter who the authors are.
+  # Org admins may change authorship at any status (so a mistaken grant can be
+  # fixed post-submission). A non-admin creator may only do so while the pitch
+  # is still a draft. Co-authors can edit/submit/delete the pitch, but cannot
+  # alter who the authors are.
   def manage_co_authors?
-    draft? && (is_creator? || user_is_organization_admin?)
+    user_is_organization_admin? || (is_creator? && draft?)
   end
 
   class Scope
@@ -64,14 +65,14 @@ class PitchPolicy < ApplicationPolicy
       @scope = scope
     end
 
-    # Pitches are visible across the full org hierarchy: a user reaches a pitch
-    # if they hold any role (org, team, or project) within the pitch's
-    # organization. accessible_organizations is the cached reverse lookup of
-    # that hierarchy, invalidated by UserPartyRole's after_commit hook.
+    # Pitches are visible to users who belong to the pitch's organization via a
+    # direct org role or a team role (NOT a project-only role). member_organizations
+    # is the cached reverse lookup of that membership, invalidated by
+    # UserPartyRole's after_commit hook.
     def resolve
       return scope.none unless user
 
-      org_ids = user.accessible_organizations.map(&:id)
+      org_ids = user.member_organizations.map(&:id)
       scope
         .active
         .where(organization_id: org_ids)
@@ -109,12 +110,12 @@ class PitchPolicy < ApplicationPolicy
     pitch.current_state == "draft"
   end
 
-  # Hierarchy-wide membership: any org/team/project role within the pitch's
-  # organization counts. Shares its definition with Scope#resolve.
+  # Membership via a direct org role or a team role (not a project-only role)
+  # within the pitch's organization. Shares its definition with Scope#resolve.
   def user_is_organization_member?
     return @user_is_organization_member if defined?(@user_is_organization_member)
     @user_is_organization_member = org.present? && user.present? &&
-      user.accessible_organizations.any? { |o| o.id == org.id }
+      user.member_organizations.any? { |o| o.id == org.id }
   end
 
   # Admin remains an explicit organization-level role, not hierarchy-derived.

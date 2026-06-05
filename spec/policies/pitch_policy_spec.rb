@@ -57,6 +57,22 @@ RSpec.describe PitchPolicy, type: :policy do
     it "prevents non-member from seeing any pitch" do
       expect(described_class.new(non_member, ready_pitch).show?).to be false
     end
+
+    it "allows a user who only holds a team role in the org to see a pitch" do
+      team_member = create(:user)
+      team = create(:team, organization: organization)
+      UserPartyRole.create!(user: team_member, party: team, role: "member")
+      expect(described_class.new(team_member, draft_pitch).show?).to be true
+    end
+
+    it "prevents a user who only holds a project role from seeing a pitch" do
+      project_member = create(:user)
+      team = create(:team, organization: organization)
+      project = create(:project, team: team)
+      UserPartyRole.create!(user: project_member, party: project, role: "member")
+      expect(described_class.new(project_member, draft_pitch).show?).to be false
+      expect(described_class.new(project_member, ready_pitch).show?).to be false
+    end
   end
 
   describe "#create?" do
@@ -177,8 +193,8 @@ RSpec.describe PitchPolicy, type: :policy do
       expect(described_class.new(creator, ready_pitch).manage_co_authors?).to be false
     end
 
-    it "prevents an admin from managing co-authors on a non-draft pitch" do
-      expect(described_class.new(admin, ready_pitch).manage_co_authors?).to be false
+    it "allows an admin to manage co-authors on a non-draft pitch" do
+      expect(described_class.new(admin, ready_pitch).manage_co_authors?).to be true
     end
   end
 
@@ -257,6 +273,16 @@ RSpec.describe PitchPolicy, type: :policy do
 
       resolved = described_class::Scope.new(creator, Pitch).resolve
       expect(resolved).to include(team_org_pitch)
+    end
+
+    it "excludes pitches from an org where the user only holds a project role" do
+      project_user = create(:user)
+      team = create(:team, organization: organization)
+      project = create(:project, team: team)
+      UserPartyRole.create!(user: project_user, party: project, role: "member")
+
+      resolved = described_class::Scope.new(project_user, Pitch).resolve
+      expect(resolved).not_to include(own_draft, ready)
     end
   end
 end

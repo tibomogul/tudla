@@ -28,4 +28,19 @@ RSpec.describe User, type: :model do
       expect(user.display_name).to eq("owen.h@example.com")
     end
   end
+
+  describe "#soft_delete" do
+    let(:organization) { create(:organization) }
+    let(:creator) { create(:user) }
+    let(:co_author) { create(:user) }
+    let(:pitch) { create(:pitch, user: creator, organization: organization) }
+
+    it "destroys the user's co-author join rows so they lose authorship" do
+      PitchCoAuthor.create!(pitch: pitch, user: co_author)
+
+      expect { co_author.destroy }
+        .to change { PitchCoAuthor.where(user: co_author).count }.from(1).to(0)
+      expect(co_author.reload).to be_deleted
+    end
+  end
 end

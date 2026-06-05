@@ -133,9 +133,7 @@ class PitchesController < ApplicationController
   def co_authors
     authorize @pitch, :manage_co_authors?
 
-    requested_ids = Array(params[:co_author_ids]).reject(&:blank?).map(&:to_i)
-    # Only allow eligible organization members; ignores anything tampered in.
-    @pitch.co_author_ids = requested_ids & @pitch.assignable_co_authors.pluck(:id)
+    @pitch.sync_co_authors(params[:co_author_ids])
 
     redirect_to @pitch, notice: "Co-authors updated.", status: :see_other
   end

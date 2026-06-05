@@ -10,6 +10,7 @@ class User < ApplicationRecord
 
   has_many :user_party_roles
   has_many :api_tokens, dependent: :destroy
+  has_many :pitch_co_authors, dependent: :destroy
 
   has_many :subscriptions
   has_many :subscribables, through: :subscriptions
@@ -45,12 +46,45 @@ class User < ApplicationRecord
     end
   end
 
+  # Organizations the user belongs to via a DIRECT organization role or a TEAM
+  # role. Unlike #accessible_organizations, a project-only role does NOT count —
+  # project membership does not imply membership in the project's organization.
+  # Used for pitch visibility. Same cache-staleness trade-off as
+  # #accessible_organizations (see above); busted by the same hooks.
+  def member_organizations
+    Rails.cache.fetch(member_organizations_cache_key) do
+      org_ids = user_party_roles
+        .where(party_type: "Organization")
+        .pluck(:party_id)
+
+      team_org_ids = Team.active.where(
+        id: user_party_roles.where(party_type: "Team").pluck(:party_id)
+      ).pluck(:organization_id)
+
+      Organization.active.where(id: (org_ids + team_org_ids).uniq).order(:name).to_a
+    end
+  end
+
   def organizations_cache_key
     "user/#{id}/accessible_organizations"
   end
 
+  def member_organizations_cache_key
+    "user/#{id}/member_organizations"
+  end
+
   def bust_organizations_cache
     Rails.cache.delete(organizations_cache_key)
+    Rails.cache.delete(member_organizations_cache_key)
+  end
+
+  # Soft-delete bypasses destroy callbacks, so the dependent: :destroy on
+  # pitch_co_authors won't fire. Prune the join rows explicitly here so a
+  # removed user immediately loses co-authorship (and can't silently regain it
+  # via the active-scoped association on restore). Each destroy is PaperTrail-audited.
+  def soft_delete
+    pitch_co_authors.find_each(&:destroy)
+    super
   end
 
   # Get all teams where user can create projects

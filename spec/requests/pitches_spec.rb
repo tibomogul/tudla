@@ -437,12 +437,25 @@ RSpec.describe "/pitches", type: :request do
       expect(pitch.reload.co_author_ids).to be_empty
     end
 
-    it "prevents managing co-authors once the pitch is no longer a draft" do
+    it "prevents the creator from managing co-authors once the pitch is no longer a draft" do
       pitch.co_authors << member_a
       pitch.state_machine.transition_to!(:ready_for_betting)
       patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_a.id, member_b.id ] }
       expect(response).to redirect_to(root_path)
       expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id)
+    end
+
+    it "lets an organization admin manage co-authors on a non-draft pitch" do
+      admin = create(:user)
+      UserPartyRole.create!(user: admin, party: organization, role: "admin")
+      pitch.co_authors << member_a
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      sign_in(admin)
+
+      patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_b.id ] }
+
+      expect(response).to redirect_to(pitch_url(pitch))
+      expect(pitch.reload.co_author_ids).to contain_exactly(member_b.id)
     end
   end
 

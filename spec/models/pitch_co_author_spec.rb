@@ -32,4 +32,19 @@ RSpec.describe PitchCoAuthor, type: :model do
       expect(described_class.new(pitch: other_pitch, user: user)).to be_valid
     end
   end
+
+  describe "auditing" do
+    it "records a PaperTrail version when a co-author is added" do
+      record = nil
+      expect { record = described_class.create!(pitch: pitch, user: user) }
+        .to change { PaperTrail::Version.where(item_type: "PitchCoAuthor").count }.by(1)
+      expect(record.versions.last.event).to eq("create")
+    end
+
+    it "records a PaperTrail version when a co-author is removed" do
+      record = described_class.create!(pitch: pitch, user: user)
+      expect { record.destroy }
+        .to change { PaperTrail::Version.where(item_type: "PitchCoAuthor", event: "destroy").count }.by(1)
+    end
+  end
 end

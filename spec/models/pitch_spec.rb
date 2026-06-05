@@ -106,9 +106,68 @@ RSpec.describe Pitch, type: :model do
       expect(assignable).not_to include(user)
     end
 
+    it "includes a user who only holds a team role in the org" do
+      team_member = create(:user)
+      team = create(:team, organization: organization)
+      UserPartyRole.create!(user: team_member, party: team, role: "member")
+      expect(pitch.assignable_co_authors).to include(team_member)
+    end
+
+    it "excludes a user who only holds a project role" do
+      project_member = create(:user)
+      team = create(:team, organization: organization)
+      project = create(:project, team: team)
+      UserPartyRole.create!(user: project_member, party: project, role: "member")
+      expect(pitch.assignable_co_authors).not_to include(project_member)
+    end
+
     it "returns no users when the pitch has no organization" do
       new_pitch = Pitch.new(title: "No org")
       expect(new_pitch.assignable_co_authors).to be_empty
+    end
+  end
+
+  describe "#sync_co_authors" do
+    let(:member_a) { create(:user) }
+    let(:member_b) { create(:user) }
+    let(:outsider) { create(:user) }
+
+    before do
+      UserPartyRole.create!(user: member_a, party: organization, role: "member")
+      UserPartyRole.create!(user: member_b, party: organization, role: "member")
+    end
+
+    it "adds the given assignable members as co-authors" do
+      pitch.sync_co_authors([ member_a.id, member_b.id ])
+      expect(pitch.reload.co_authors).to contain_exactly(member_a, member_b)
+    end
+
+    it "removes co-authors not in the given list" do
+      pitch.sync_co_authors([ member_a.id, member_b.id ])
+      pitch.sync_co_authors([ member_a.id ])
+      expect(pitch.reload.co_authors).to contain_exactly(member_a)
+    end
+
+    it "ignores ids that are not assignable members" do
+      pitch.sync_co_authors([ member_a.id, outsider.id, user.id ])
+      expect(pitch.reload.co_authors).to contain_exactly(member_a)
+    end
+
+    it "clears all co-authors when given a blank list" do
+      pitch.sync_co_authors([ member_a.id ])
+      pitch.sync_co_authors(nil)
+      expect(pitch.reload.co_authors).to be_empty
+    end
+
+    it "prunes an orphaned join row for a soft-deleted user via the unscoped join" do
+      pitch.sync_co_authors([ member_a.id, member_b.id ])
+      # Orphan the row directly (bypassing User#soft_delete's cascade) so we
+      # exercise sync_co_authors' own unscoped reconciliation.
+      member_b.update_column(:deleted_at, Time.current)
+
+      pitch.sync_co_authors([ member_a.id ])
+
+      expect(PitchCoAuthor.where(pitch: pitch).pluck(:user_id)).to contain_exactly(member_a.id)
     end
   end
 

@@ -32,11 +32,28 @@ class Pitch < ApplicationRecord
   validates :title, presence: true
   validates :appetite, inclusion: { in: 1..6 }
 
-  # All active members of the pitch's organization eligible to be added as
-  # co-authors, excluding the creator who already authors the pitch.
+  # Active members of the pitch's organization eligible to be added as
+  # co-authors, excluding the creator who already authors the pitch. Mirrors
+  # pitch visibility: direct org members and team members only. Omitting
+  # :project_ids makes Organization#hierarchy_roles skip project-level roles.
   def assignable_co_authors
     return User.none unless organization
-    organization.members.where.not(id: user_id)
+    hierarchy = { org_id: organization.id, team_ids: organization.teams.active.pluck(:id).to_set }
+    organization.members(hierarchy: hierarchy).where.not(id: user_id)
+  end
+
+  # Reconciles co-authors against the given user ids, sanitized to assignable
+  # members (so tampered or non-eligible ids are ignored). Operates on the
+  # UNSCOPED pitch_co_authors join so rows for soft-deleted users are pruned
+  # too; removals go through destroy() so PaperTrail audits each change.
+  def sync_co_authors(user_ids)
+    allowed = (assignable_co_authors.pluck(:id) & Array(user_ids).map(&:to_i)).to_set
+    transaction do
+      pitch_co_authors.each { |pca| pca.destroy unless allowed.include?(pca.user_id) }
+      (allowed - pitch_co_authors.reload.map(&:user_id)).each do |uid|
+        pitch_co_authors.create!(user_id: uid)
+      end
+    end
   end
 
   def state_machine
