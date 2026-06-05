@@ -34,12 +34,11 @@ class Pitch < ApplicationRecord
 
   # Active members of the pitch's organization eligible to be added as
   # co-authors, excluding the creator who already authors the pitch. Mirrors
-  # pitch visibility: direct org members and team members only. Omitting
-  # :project_ids makes Organization#hierarchy_roles skip project-level roles.
+  # pitch visibility: direct org members and team members only (include_projects:
+  # false excludes project-only roles, matching User#member_organizations).
   def assignable_co_authors
     return User.none unless organization
-    hierarchy = { org_id: organization.id, team_ids: organization.teams.active.pluck(:id).to_set }
-    organization.members(hierarchy: hierarchy).where.not(id: user_id)
+    organization.members(include_projects: false).where.not(id: user_id)
   end
 
   # Reconciles co-authors against the given user ids, sanitized to assignable

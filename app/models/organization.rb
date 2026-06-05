@@ -20,11 +20,28 @@ class Organization < ApplicationRecord
     read_attribute_before_type_cast(:llm_api_key).present? && llm_api_base.present? && llm_model.present?
   end
 
+  # soft_delete/restore use update_column, which bypasses the after_update hook
+  # above — so bust members' caches explicitly (mirrors Team#soft_delete). On
+  # soft-delete the org drops out of member_organizations' Organization.active
+  # filter, so capture the member set BEFORE super while it is still resolvable.
+  def soft_delete
+    affected = members.to_a
+    super
+    affected.each(&:bust_organizations_cache)
+  end
+
+  def restore
+    super
+    bust_members_organizations_cache
+  end
+
   # Returns the set of IDs for entities in this organization's hierarchy.
   # Used to efficiently check membership and filter roles without N+1 queries.
-  def hierarchy_ids
+  # Pass include_projects: false to scope to direct org + team roles only
+  # (e.g. pitch membership, which excludes project-only roles).
+  def hierarchy_ids(include_projects: true)
     team_ids = teams.active.pluck(:id)
-    project_ids = Project.active.where(team_id: team_ids).pluck(:id)
+    project_ids = include_projects ? Project.active.where(team_id: team_ids).pluck(:id) : []
     { org_id: id, team_ids: team_ids.to_set, project_ids: project_ids.to_set }
   end
 
@@ -46,8 +63,9 @@ class Organization < ApplicationRecord
 
   # Returns an ActiveRecord relation of active users who have any role
   # within this organization's hierarchy.
-  def members(hierarchy: nil)
-    user_ids = hierarchy_roles(hierarchy: hierarchy).distinct.pluck(:user_id)
+  def members(hierarchy: nil, include_projects: true)
+    h = hierarchy || hierarchy_ids(include_projects: include_projects)
+    user_ids = hierarchy_roles(hierarchy: h).distinct.pluck(:user_id)
     User.active.where(id: user_ids)
   end
 

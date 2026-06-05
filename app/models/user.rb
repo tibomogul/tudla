@@ -51,14 +51,17 @@ class User < ApplicationRecord
     end
   end
 
-  # Organizations the user belongs to via a DIRECT organization role or a TEAM
-  # role. Unlike #accessible_organizations, a project-only role does NOT count —
-  # project membership does not imply membership in the project's organization.
-  # Used for pitch visibility. See #accessible_organizations above for the
+  # IDs of organizations the user belongs to via a DIRECT organization role or a
+  # TEAM role. Unlike #accessible_organizations, a project-only role does NOT
+  # count — project membership does not imply membership in the project's
+  # organization. Used for pitch visibility. Only IDs are cached (every caller
+  # needs just IDs), which keeps the entry small and avoids the stale-attribute
+  # risk of caching AR objects. See #accessible_organizations above for the
   # cache-staleness trade-off and why these two must stay separate. Busted by
-  # UserPartyRole and Organization hooks, plus Team org-change/soft-delete hooks.
-  def member_organizations
-    Rails.cache.fetch(member_organizations_cache_key) do
+  # UserPartyRole and Organization hooks, plus Team org-change/soft-delete/restore
+  # and Organization soft-delete/restore hooks.
+  def member_organization_ids
+    Rails.cache.fetch(member_organization_ids_cache_key) do
       org_ids = user_party_roles
         .where(party_type: "Organization")
         .pluck(:party_id)
@@ -67,21 +70,27 @@ class User < ApplicationRecord
         id: user_party_roles.where(party_type: "Team").pluck(:party_id)
       ).pluck(:organization_id)
 
-      Organization.active.where(id: (org_ids + team_org_ids).uniq).order(:name).to_a
+      Organization.active.where(id: (org_ids + team_org_ids).uniq).pluck(:id)
     end
+  end
+
+  # Loads the Organization records for #member_organization_ids on demand. Kept
+  # for callers that need full objects; the policy hot path uses the IDs directly.
+  def member_organizations
+    Organization.active.where(id: member_organization_ids).order(:name).to_a
   end
 
   def organizations_cache_key
     "user/#{id}/accessible_organizations"
   end
 
-  def member_organizations_cache_key
-    "user/#{id}/member_organizations"
+  def member_organization_ids_cache_key
+    "user/#{id}/member_organization_ids"
   end
 
   def bust_organizations_cache
     Rails.cache.delete(organizations_cache_key)
-    Rails.cache.delete(member_organizations_cache_key)
+    Rails.cache.delete(member_organization_ids_cache_key)
   end
 
   # Soft-delete bypasses destroy callbacks, so the dependent: :destroy on

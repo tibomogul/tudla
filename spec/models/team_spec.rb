@@ -18,6 +18,15 @@ RSpec.describe Team, type: :model do
       expect(user.member_organizations).to eq([])
     end
 
+    it "busts members' member_organizations cache on restore" do
+      team.soft_delete
+      expect(user.member_organizations).to eq([]) # warms the cache while deleted
+
+      team.restore
+
+      expect(user.member_organizations).to eq([ org_a ])
+    end
+
     it "busts members' member_organizations cache when reassigned to another org" do
       expect(user.member_organizations).to eq([ org_a ]) # warms the cache
 

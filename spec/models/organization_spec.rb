@@ -88,6 +88,34 @@ RSpec.describe Organization, type: :model do
     end
   end
 
+  # soft_delete/restore use update_column and bypass the after_update hook, so
+  # the cache must be busted explicitly. Asserted through member_organizations
+  # (cached) rather than a mock so we cover the real staleness path.
+  describe "soft_delete / restore cache busting" do
+    let(:org) { create(:organization, name: "Cache Org") }
+    let(:user) { create(:user) }
+
+    before { UserPartyRole.create!(user: user, party: org, role: "member") }
+    after { user.bust_organizations_cache }
+
+    it "busts members' cache on soft_delete" do
+      expect(user.member_organizations).to eq([ org ]) # warms the cache
+
+      org.soft_delete
+
+      expect(user.member_organizations).to eq([])
+    end
+
+    it "busts members' cache on restore" do
+      org.soft_delete
+      expect(user.member_organizations).to eq([]) # warms the cache while deleted
+
+      org.restore
+
+      expect(user.member_organizations).to eq([ org ])
+    end
+  end
+
   describe "llm_api_key encryption" do
     it "round-trips the API key through save and reload" do
       org = create(:organization, llm_api_key: "sk-secret-key-123", llm_api_base: "https://api.openai.com/v1", llm_model: "gpt-4o-mini")

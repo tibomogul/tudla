@@ -23,7 +23,7 @@ class UserPartyRole < ApplicationRecord
   def prune_orphaned_pitch_co_authorships
     org_id = affected_organization_id
     return unless org_id
-    return if user.member_organizations.any? { |o| o.id == org_id }
+    return if user.member_organization_ids.include?(org_id)
 
     PitchCoAuthor.joins(:pitch)
       .where(user_id: user_id, pitches: { organization_id: org_id })

@@ -26,6 +26,14 @@ class Team < ApplicationRecord
     User.where(id: affected).find_each(&:bust_organizations_cache)
   end
 
+  # restore also uses update_column and bypasses after_update — bust explicitly
+  # so members regain member_organizations access (mirrors #soft_delete). Role
+  # rows are untouched by restore, so the affected set is the same as today's.
+  def restore
+    super
+    User.where(id: team_role_user_ids).find_each(&:bust_organizations_cache)
+  end
+
   private
 
   def bust_member_caches

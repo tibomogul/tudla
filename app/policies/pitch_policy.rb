@@ -66,13 +66,13 @@ class PitchPolicy < ApplicationPolicy
     end
 
     # Pitches are visible to users who belong to the pitch's organization via a
-    # direct org role or a team role (NOT a project-only role). member_organizations
+    # direct org role or a team role (NOT a project-only role). member_organization_ids
     # is the cached reverse lookup of that membership, invalidated by
     # UserPartyRole's after_commit hook.
     def resolve
       return scope.none unless user
 
-      org_ids = user.member_organizations.map(&:id)
+      org_ids = user.member_organization_ids
       scope
         .active
         .where(organization_id: org_ids)
@@ -119,7 +119,7 @@ class PitchPolicy < ApplicationPolicy
   def user_is_organization_member?
     return @user_is_organization_member if defined?(@user_is_organization_member)
     @user_is_organization_member = org.present? && user.present? &&
-      user.member_organizations.any? { |o| o.id == org.id }
+      user.member_organization_ids.include?(org.id)
   end
 
   # Admin remains an explicit organization-level role, not hierarchy-derived.

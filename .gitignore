@@ -38,3 +38,5 @@
 
 coverage
 .DS_Store
+# Claude Code machine-local settings (do not track)
+/.claude/settings.local.json

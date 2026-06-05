@@ -56,6 +56,14 @@ RSpec.describe "User#member_organizations", type: :model do
     expect(user.member_organizations).to eq([])
   end
 
+  it "exposes the same set as IDs via #member_organization_ids" do
+    UserPartyRole.create!(user: user, party: org_a, role: "admin")
+    team = create(:team, organization: org_b)
+    UserPartyRole.create!(user: user, party: team, role: "member")
+
+    expect(user.member_organization_ids).to contain_exactly(org_a.id, org_b.id)
+  end
+
   it "busts the cache when a UserPartyRole changes" do
     expect(user.member_organizations).to eq([])
 
