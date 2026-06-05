@@ -168,6 +168,27 @@ RSpec.describe PitchPolicy, type: :policy do
     end
   end
 
+  describe "co-author who has lost org membership" do
+    before do
+      draft_pitch # materialize the pitch and its co-author join row
+      # Remove the membership WITHOUT triggering the prune callback, leaving a
+      # stale join row — this exercises the policy's membership gate directly.
+      UserPartyRole.where(user: co_author, party: organization).delete_all
+      co_author.bust_organizations_cache
+    end
+
+    it "is denied show? on a draft pitch" do
+      expect(described_class.new(co_author, draft_pitch).show?).to be false
+    end
+
+    it "is denied update?, submit?, and destroy? on a draft pitch" do
+      policy = described_class.new(co_author, draft_pitch)
+      expect(policy.update?).to be false
+      expect(policy.submit?).to be false
+      expect(policy.destroy?).to be false
+    end
+  end
+
   describe "#manage_co_authors?" do
     it "allows the creator on a draft pitch" do
       expect(described_class.new(creator, draft_pitch).manage_co_authors?).to be true

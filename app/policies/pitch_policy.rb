@@ -97,9 +97,13 @@ class PitchPolicy < ApplicationPolicy
     @is_creator = pitch.is_a?(Pitch) && pitch.user_id.present? && pitch.user_id == user&.id
   end
 
+  # Co-authorship grants rights only while the user is still an org member. The
+  # membership check guards against stale join rows surviving a role removal
+  # before the prune in UserPartyRole has run (or if it ever misses a path).
   def is_co_author?
     return @is_co_author if defined?(@is_co_author)
-    @is_co_author = user.present? && pitch.is_a?(Pitch) && pitch.co_author_ids.include?(user.id)
+    @is_co_author = user.present? && pitch.is_a?(Pitch) &&
+      pitch.co_author_ids.include?(user.id) && user_is_organization_member?
   end
 
   def is_author?

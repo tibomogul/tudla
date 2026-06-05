@@ -49,9 +49,12 @@ class Pitch < ApplicationRecord
   def sync_co_authors(user_ids)
     allowed = (assignable_co_authors.pluck(:id) & Array(user_ids).map(&:to_i)).to_set
     transaction do
-      pitch_co_authors.each { |pca| pca.destroy unless allowed.include?(pca.user_id) }
-      (allowed - pitch_co_authors.reload.map(&:user_id)).each do |uid|
-        pitch_co_authors.create!(user_id: uid)
+      pitch_co_authors.where.not(user_id: allowed.to_a).find_each(&:destroy)
+      existing = pitch_co_authors.reload.map(&:user_id).to_set
+      (allowed - existing).each do |uid|
+        # first_or_create! keeps this idempotent if a row already exists (e.g. a
+        # concurrent save), so we don't trip the pitch_id/user_id unique index.
+        pitch_co_authors.where(user_id: uid).first_or_create!
       end
     end
   end

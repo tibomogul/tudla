@@ -26,6 +26,11 @@ class User < ApplicationRecord
   # until the next UserPartyRole change busts the cache. Acceptable because org-level
   # mutations are rare and the cached set is small (typically 1-5 orgs per user).
   # The multiple queries inside the block only run on cache miss.
+  #
+  # NOTE: distinct from #member_organizations and must NOT be merged with it.
+  # accessible = org + team + project roles; member = org + team only (a
+  # project-only role does not make you a member of the project's org). The two
+  # back different features (general access vs. pitch visibility).
   def accessible_organizations
     Rails.cache.fetch(organizations_cache_key) do
       org_ids = user_party_roles
@@ -49,8 +54,9 @@ class User < ApplicationRecord
   # Organizations the user belongs to via a DIRECT organization role or a TEAM
   # role. Unlike #accessible_organizations, a project-only role does NOT count —
   # project membership does not imply membership in the project's organization.
-  # Used for pitch visibility. Same cache-staleness trade-off as
-  # #accessible_organizations (see above); busted by the same hooks.
+  # Used for pitch visibility. See #accessible_organizations above for the
+  # cache-staleness trade-off and why these two must stay separate. Busted by
+  # UserPartyRole and Organization hooks, plus Team org-change/soft-delete hooks.
   def member_organizations
     Rails.cache.fetch(member_organizations_cache_key) do
       org_ids = user_party_roles

@@ -136,6 +136,8 @@ class PitchesController < ApplicationController
     @pitch.sync_co_authors(params[:co_author_ids])
 
     redirect_to @pitch, notice: "Co-authors updated.", status: :see_other
+  rescue ActiveRecord::RecordNotUnique
+    redirect_to @pitch, alert: "Co-authors changed concurrently — please retry.", status: :see_other
   end
 
   private

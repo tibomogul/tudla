@@ -169,6 +169,23 @@ RSpec.describe Pitch, type: :model do
 
       expect(PitchCoAuthor.where(pitch: pitch).pluck(:user_id)).to contain_exactly(member_a.id)
     end
+
+    it "is idempotent when re-run with the same ids" do
+      pitch.sync_co_authors([ member_a.id, member_b.id ])
+      expect {
+        pitch.sync_co_authors([ member_a.id, member_b.id ])
+      }.not_to change { PitchCoAuthor.where(pitch: pitch).count }
+      expect(pitch.reload.co_authors).to contain_exactly(member_a, member_b)
+    end
+
+    it "tolerates a pre-existing row for an allowed id without raising" do
+      PitchCoAuthor.create!(pitch: pitch, user: member_a)
+
+      expect {
+        pitch.sync_co_authors([ member_a.id, member_b.id ])
+      }.not_to raise_error
+      expect(pitch.reload.co_authors).to contain_exactly(member_a, member_b)
+    end
   end
 
   describe "#appetite_label" do
