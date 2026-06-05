@@ -1,15 +1,9 @@
 class PitchPolicy < ApplicationPolicy
-  attr_reader :user, :pitch, :organization_role, :is_creator, :is_co_author
+  attr_reader :user, :pitch
 
   def initialize(user, pitch)
     @user = user
     @pitch = pitch
-    if pitch.class.name == "Pitch" && pitch.organization.present?
-      @organization_role = UserPartyRole.where(user: user, party: pitch.organization).first&.role
-      @is_creator = pitch.user_id.present? && pitch.user_id == user&.id
-      @is_co_author = user.present? && pitch.respond_to?(:co_author_ids) &&
-        pitch.co_author_ids.include?(user.id)
-    end
   end
 
   def index?
@@ -57,8 +51,11 @@ class PitchPolicy < ApplicationPolicy
     user_is_organization_admin?
   end
 
+  # Only the creator or an organization admin may change authorship, and only
+  # while the pitch is still a draft. Co-authors can edit/submit/delete the
+  # pitch, but cannot alter who the authors are.
   def manage_co_authors?
-    is_author? || user_is_organization_admin?
+    draft? && (is_creator? || user_is_organization_admin?)
   end
 
   class Scope
@@ -67,11 +64,14 @@ class PitchPolicy < ApplicationPolicy
       @scope = scope
     end
 
+    # Pitches are visible across the full org hierarchy: a user reaches a pitch
+    # if they hold any role (org, team, or project) within the pitch's
+    # organization. accessible_organizations is the cached reverse lookup of
+    # that hierarchy, invalidated by UserPartyRole's after_commit hook.
     def resolve
-      org_ids = UserPartyRole
-        .where(user: user, party_type: "Organization")
-        .pluck(:party_id)
+      return scope.none unless user
 
+      org_ids = user.accessible_organizations.map(&:id)
       scope
         .active
         .where(organization_id: org_ids)
@@ -84,20 +84,45 @@ class PitchPolicy < ApplicationPolicy
 
   private
 
+  # The policy may be instantiated with the Pitch class (e.g. authorize Pitch),
+  # in which case there is no concrete record to derive an organization from.
+  def org
+    return @org if defined?(@org)
+    @org = pitch.is_a?(Pitch) ? pitch.organization : nil
+  end
+
   def is_creator?
-    is_creator
+    return @is_creator if defined?(@is_creator)
+    @is_creator = pitch.is_a?(Pitch) && pitch.user_id.present? && pitch.user_id == user&.id
+  end
+
+  def is_co_author?
+    return @is_co_author if defined?(@is_co_author)
+    @is_co_author = user.present? && pitch.is_a?(Pitch) && pitch.co_author_ids.include?(user.id)
   end
 
   def is_author?
-    is_creator || is_co_author
+    is_creator? || is_co_author?
   end
 
   def draft?
     pitch.current_state == "draft"
   end
 
+  # Hierarchy-wide membership: any org/team/project role within the pitch's
+  # organization counts. Shares its definition with Scope#resolve.
   def user_is_organization_member?
-    organization_role.present?
+    return @user_is_organization_member if defined?(@user_is_organization_member)
+    @user_is_organization_member = org.present? && user.present? &&
+      user.accessible_organizations.any? { |o| o.id == org.id }
+  end
+
+  # Admin remains an explicit organization-level role, not hierarchy-derived.
+  def organization_role
+    return @organization_role if defined?(@organization_role)
+    @organization_role = if org && user
+      UserPartyRole.where(user: user, party: org).first&.role
+    end
   end
 
   def user_is_organization_admin?

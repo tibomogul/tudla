@@ -33,6 +33,21 @@ docker compose exec rails bash -lc "bin/rails db:reset"
 docker compose exec rails bash -lc "bin/rails console"
 ```
 
+**Multi-DB schema gotcha** — `db:reset` / `db:migrate:reset` only touch the **primary** database.
+The `queue` and `cable` databases (Solid Queue / Solid Cable) keep their own schemas, and if they
+aren't loaded the `que` process in `bin/dev` crashes on boot — which makes foreman tear down every
+process, so the web server never comes up. After any reset, also load those schemas (this is exactly
+what `bin/setup` does):
+
+```bash
+docker compose exec rails bash -lc "bin/rails db:schema:load:queue"
+docker compose exec rails bash -lc "bin/rails db:schema:load:cable"
+```
+
+Prefer `bin/setup` for a full re-bootstrap — it runs the reset *and* loads the queue/cable schemas.
+If you only need to regenerate `db/schema.rb` (e.g. after editing a migration), run
+`db:migrate:reset` followed by the two `db:schema:load:*` commands above before starting `bin/dev`.
+
 ## Architecture Overview
 
 Rails 8.1 task management app (Ruby 3.3.4) for teams using the Shape Up methodology. PostgreSQL 18, Hotwire (Turbo + Stimulus), Importmap, Tailwind CSS + DaisyUI 5.

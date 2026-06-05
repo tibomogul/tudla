@@ -25,6 +25,16 @@ RSpec.describe Pitch, type: :model do
     it "has many co_authors" do
       expect(pitch).to respond_to(:co_authors)
     end
+
+    it "excludes soft-deleted users from co_authors" do
+      active_co_author = create(:user)
+      removed_co_author = create(:user)
+      pitch.co_authors << active_co_author
+      pitch.co_authors << removed_co_author
+      removed_co_author.destroy
+
+      expect(pitch.reload.co_authors).to contain_exactly(active_co_author)
+    end
   end
 
   describe "validations" do

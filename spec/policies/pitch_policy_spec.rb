@@ -153,16 +153,16 @@ RSpec.describe PitchPolicy, type: :policy do
   end
 
   describe "#manage_co_authors?" do
-    it "allows the creator" do
+    it "allows the creator on a draft pitch" do
       expect(described_class.new(creator, draft_pitch).manage_co_authors?).to be true
     end
 
-    it "allows an existing co-author" do
-      expect(described_class.new(co_author, draft_pitch).manage_co_authors?).to be true
+    it "allows an organization admin on a draft pitch" do
+      expect(described_class.new(admin, draft_pitch).manage_co_authors?).to be true
     end
 
-    it "allows an organization admin" do
-      expect(described_class.new(admin, draft_pitch).manage_co_authors?).to be true
+    it "prevents an existing co-author from managing the list" do
+      expect(described_class.new(co_author, draft_pitch).manage_co_authors?).to be false
     end
 
     it "prevents a plain organization member" do
@@ -171,6 +171,14 @@ RSpec.describe PitchPolicy, type: :policy do
 
     it "prevents a non-member" do
       expect(described_class.new(non_member, draft_pitch).manage_co_authors?).to be false
+    end
+
+    it "prevents the creator from managing co-authors on a non-draft pitch" do
+      expect(described_class.new(creator, ready_pitch).manage_co_authors?).to be false
+    end
+
+    it "prevents an admin from managing co-authors on a non-draft pitch" do
+      expect(described_class.new(admin, ready_pitch).manage_co_authors?).to be false
     end
   end
 
@@ -239,6 +247,16 @@ RSpec.describe PitchPolicy, type: :policy do
     it "excludes pitches from other organizations" do
       resolved = described_class::Scope.new(creator, Pitch).resolve
       expect(resolved).not_to include(other_org_pitch)
+    end
+
+    it "includes pitches from an org where the user only holds a team role" do
+      team_org = create(:organization)
+      team = create(:team, organization: team_org)
+      UserPartyRole.create!(user: creator, party: team, role: "member")
+      team_org_pitch = create(:pitch, user: member, organization: team_org)
+
+      resolved = described_class::Scope.new(creator, Pitch).resolve
+      expect(resolved).to include(team_org_pitch)
     end
   end
 end

@@ -7,7 +7,7 @@ class Pitch < ApplicationRecord
   has_many :projects
 
   has_many :pitch_co_authors, dependent: :destroy
-  has_many :co_authors, through: :pitch_co_authors, source: :user
+  has_many :co_authors, -> { active }, through: :pitch_co_authors, source: :user
 
   has_one :notable, as: :notable, dependent: :destroy
   has_many :notes, through: :notable

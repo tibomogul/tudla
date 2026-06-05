@@ -14,7 +14,7 @@
               <%= check_box_tag "co_author_ids[]", member.id,
                 pitch.co_author_ids.include?(member.id), class: "checkbox checkbox-sm" %>
               <span class="text-sm">
-                <%= member.preferred_name || member.username || member.email %>
+                <%= member.display_name %>
                 <% if member.username && member.preferred_name %>
                   <span class="text-xs text-base-content/70">@<%= member.username %></span>
                 <% end %>

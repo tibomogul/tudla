@@ -194,7 +194,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_000001) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["pitch_id", "user_id"], name: "index_pitch_co_authors_on_pitch_id_and_user_id", unique: true
-    t.index ["pitch_id"], name: "index_pitch_co_authors_on_pitch_id"
     t.index ["user_id"], name: "index_pitch_co_authors_on_user_id"
   end
 

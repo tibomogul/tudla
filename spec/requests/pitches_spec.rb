@@ -422,11 +422,12 @@ RSpec.describe "/pitches", type: :request do
       expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id)
     end
 
-    it "lets an existing co-author manage the list" do
+    it "prevents an existing co-author from managing the list" do
       pitch.co_authors << member_a
       sign_in(member_a)
       patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_a.id, member_b.id ] }
-      expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id, member_b.id)
+      expect(response).to redirect_to(root_path)
+      expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id)
     end
 
     it "prevents a plain member from managing co-authors" do
@@ -434,6 +435,14 @@ RSpec.describe "/pitches", type: :request do
       patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_b.id ] }
       expect(response).to redirect_to(root_path)
       expect(pitch.reload.co_author_ids).to be_empty
+    end
+
+    it "prevents managing co-authors once the pitch is no longer a draft" do
+      pitch.co_authors << member_a
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_a.id, member_b.id ] }
+      expect(response).to redirect_to(root_path)
+      expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id)
     end
   end
 
