@@ -6,6 +6,9 @@ class Pitch < ApplicationRecord
   belongs_to :organization
   has_many :projects
 
+  has_many :pitch_co_authors, dependent: :destroy
+  has_many :co_authors, through: :pitch_co_authors, source: :user
+
   has_one :notable, as: :notable, dependent: :destroy
   has_many :notes, through: :notable
   has_one :linkable, as: :linkable, dependent: :destroy
@@ -29,12 +32,12 @@ class Pitch < ApplicationRecord
   validates :title, presence: true
   validates :appetite, inclusion: { in: 1..6 }
 
-  # Draft pitches are only visible to their creator;
-  # all other statuses are visible to organization members
-  scope :visible_to, ->(user) {
-    where(status: %w[ready_for_betting bet rejected])
-      .or(where(user: user, status: "draft"))
-  }
+  # All active members of the pitch's organization eligible to be added as
+  # co-authors, excluding the creator who already authors the pitch.
+  def assignable_co_authors
+    return User.none unless organization
+    organization.members.where.not(id: user_id)
+  end
 
   def state_machine
     @state_machine ||= PitchStateMachine.new(self, transition_class: PitchTransition,

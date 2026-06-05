@@ -1,5 +1,5 @@
 class PitchPolicy < ApplicationPolicy
-  attr_reader :user, :pitch, :organization_role, :is_creator
+  attr_reader :user, :pitch, :organization_role, :is_creator, :is_co_author
 
   def initialize(user, pitch)
     @user = user
@@ -7,6 +7,8 @@ class PitchPolicy < ApplicationPolicy
     if pitch.class.name == "Pitch" && pitch.organization.present?
       @organization_role = UserPartyRole.where(user: user, party: pitch.organization).first&.role
       @is_creator = pitch.user_id.present? && pitch.user_id == user&.id
+      @is_co_author = user.present? && pitch.respond_to?(:co_author_ids) &&
+        pitch.co_author_ids.include?(user.id)
     end
   end
 
@@ -15,7 +17,7 @@ class PitchPolicy < ApplicationPolicy
   end
 
   def show?
-    is_creator? || (user_is_organization_member? && !draft?)
+    is_author? || user_is_organization_member?
   end
 
   def create?
@@ -32,7 +34,7 @@ class PitchPolicy < ApplicationPolicy
   end
 
   def update?
-    (is_creator? && draft?) || user_is_organization_admin?
+    (is_author? && draft?) || user_is_organization_admin?
   end
 
   def edit?
@@ -40,11 +42,11 @@ class PitchPolicy < ApplicationPolicy
   end
 
   def destroy?
-    is_creator? && draft?
+    is_author? && draft?
   end
 
   def submit?
-    is_creator? && draft?
+    is_author? && draft?
   end
 
   def bet?
@@ -53,6 +55,10 @@ class PitchPolicy < ApplicationPolicy
 
   def reject?
     user_is_organization_admin?
+  end
+
+  def manage_co_authors?
+    is_author? || user_is_organization_admin?
   end
 
   class Scope
@@ -68,7 +74,6 @@ class PitchPolicy < ApplicationPolicy
 
       scope
         .active
-        .merge(Pitch.visible_to(user))
         .where(organization_id: org_ids)
     end
 
@@ -81,6 +86,10 @@ class PitchPolicy < ApplicationPolicy
 
   def is_creator?
     is_creator
+  end
+
+  def is_author?
+    is_creator || is_co_author
   end
 
   def draft?

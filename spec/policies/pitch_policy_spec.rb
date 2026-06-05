@@ -5,17 +5,24 @@ RSpec.describe PitchPolicy, type: :policy do
   let(:creator) { create(:user) }
   let(:member) { create(:user) }
   let(:admin) { create(:user) }
+  let(:co_author) { create(:user) }
   let(:non_member) { create(:user) }
 
   before do
     UserPartyRole.create!(user: creator, party: organization, role: "member")
     UserPartyRole.create!(user: member, party: organization, role: "member")
     UserPartyRole.create!(user: admin, party: organization, role: "admin")
+    UserPartyRole.create!(user: co_author, party: organization, role: "member")
   end
 
-  let(:draft_pitch) { create(:pitch, user: creator, organization: organization) }
+  let(:draft_pitch) do
+    create(:pitch, user: creator, organization: organization).tap do |p|
+      p.co_authors << co_author
+    end
+  end
   let(:ready_pitch) do
     p = create(:pitch, user: creator, organization: organization)
+    p.co_authors << co_author
     p.state_machine.transition_to!(:ready_for_betting)
     p
   end
@@ -31,8 +38,12 @@ RSpec.describe PitchPolicy, type: :policy do
       expect(described_class.new(creator, draft_pitch).show?).to be true
     end
 
-    it "prevents non-creator member from seeing draft pitch" do
-      expect(described_class.new(member, draft_pitch).show?).to be false
+    it "allows any organization member to see draft pitch" do
+      expect(described_class.new(member, draft_pitch).show?).to be true
+    end
+
+    it "prevents non-member from seeing draft pitch" do
+      expect(described_class.new(non_member, draft_pitch).show?).to be false
     end
 
     it "allows member to see non-draft pitch" do
@@ -87,6 +98,14 @@ RSpec.describe PitchPolicy, type: :policy do
       expect(described_class.new(admin, draft_pitch).update?).to be true
       expect(described_class.new(admin, ready_pitch).update?).to be true
     end
+
+    it "allows co-author to update draft pitch" do
+      expect(described_class.new(co_author, draft_pitch).update?).to be true
+    end
+
+    it "prevents co-author from updating non-draft pitch" do
+      expect(described_class.new(co_author, ready_pitch).update?).to be false
+    end
   end
 
   describe "#destroy?" do
@@ -105,6 +124,14 @@ RSpec.describe PitchPolicy, type: :policy do
     it "prevents admin from destroying pitch they did not create" do
       expect(described_class.new(admin, draft_pitch).destroy?).to be false
     end
+
+    it "allows co-author to destroy draft pitch" do
+      expect(described_class.new(co_author, draft_pitch).destroy?).to be true
+    end
+
+    it "prevents co-author from destroying non-draft pitch" do
+      expect(described_class.new(co_author, ready_pitch).destroy?).to be false
+    end
   end
 
   describe "#submit?" do
@@ -118,6 +145,32 @@ RSpec.describe PitchPolicy, type: :policy do
 
     it "prevents submitting non-draft pitch" do
       expect(described_class.new(creator, ready_pitch).submit?).to be false
+    end
+
+    it "allows co-author to submit draft pitch" do
+      expect(described_class.new(co_author, draft_pitch).submit?).to be true
+    end
+  end
+
+  describe "#manage_co_authors?" do
+    it "allows the creator" do
+      expect(described_class.new(creator, draft_pitch).manage_co_authors?).to be true
+    end
+
+    it "allows an existing co-author" do
+      expect(described_class.new(co_author, draft_pitch).manage_co_authors?).to be true
+    end
+
+    it "allows an organization admin" do
+      expect(described_class.new(admin, draft_pitch).manage_co_authors?).to be true
+    end
+
+    it "prevents a plain organization member" do
+      expect(described_class.new(member, draft_pitch).manage_co_authors?).to be false
+    end
+
+    it "prevents a non-member" do
+      expect(described_class.new(non_member, draft_pitch).manage_co_authors?).to be false
     end
   end
 
@@ -168,9 +221,9 @@ RSpec.describe PitchPolicy, type: :policy do
       expect(resolved).to include(own_draft)
     end
 
-    it "excludes other users' draft pitches" do
+    it "includes other organization members' draft pitches" do
       resolved = described_class::Scope.new(creator, Pitch).resolve
-      expect(resolved).not_to include(other_draft)
+      expect(resolved).to include(other_draft)
     end
 
     it "includes non-draft pitches from other users" do

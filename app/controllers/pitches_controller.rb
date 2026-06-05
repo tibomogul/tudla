@@ -2,7 +2,7 @@ class PitchesController < ApplicationController
   include ActionView::RecordIdentifier
   include OrganizationScoping
 
-  before_action :set_pitch, only: %i[show edit update destroy transition bet]
+  before_action :set_pitch, only: %i[show edit update destroy transition bet co_authors]
 
   def index
     load_paginated_index_pitches
@@ -128,6 +128,16 @@ class PitchesController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid => e
     redirect_to @pitch, alert: e.message
+  end
+
+  def co_authors
+    authorize @pitch, :manage_co_authors?
+
+    requested_ids = Array(params[:co_author_ids]).reject(&:blank?).map(&:to_i)
+    # Only allow eligible organization members; ignores anything tampered in.
+    @pitch.co_author_ids = requested_ids & @pitch.assignable_co_authors.pluck(:id)
+
+    redirect_to @pitch, notice: "Co-authors updated.", status: :see_other
   end
 
   private

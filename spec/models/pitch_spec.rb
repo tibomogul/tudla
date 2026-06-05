@@ -21,6 +21,10 @@ RSpec.describe Pitch, type: :model do
     it "has many pitch_transitions" do
       expect(pitch).to respond_to(:pitch_transitions)
     end
+
+    it "has many co_authors" do
+      expect(pitch).to respond_to(:co_authors)
+    end
   end
 
   describe "validations" do
@@ -76,37 +80,25 @@ RSpec.describe Pitch, type: :model do
     end
   end
 
-  describe ".visible_to" do
-    let(:other_user) { create(:user) }
-    let!(:draft_pitch) { create(:pitch, user: user, organization: organization) }
-    let!(:ready_pitch) { create(:pitch, user: other_user, organization: organization) }
+  describe "#assignable_co_authors" do
+    let(:other_member) { create(:user) }
+    let(:another_member) { create(:user) }
 
     before do
-      ready_pitch.update_column(:status, "ready_for_betting")
+      UserPartyRole.create!(user: user, party: organization, role: "member")
+      UserPartyRole.create!(user: other_member, party: organization, role: "member")
+      UserPartyRole.create!(user: another_member, party: organization, role: "member")
     end
 
-    it "shows draft pitches only to creator" do
-      expect(Pitch.visible_to(user)).to include(draft_pitch)
-      expect(Pitch.visible_to(other_user)).not_to include(draft_pitch)
+    it "returns active organization members excluding the creator" do
+      assignable = pitch.assignable_co_authors
+      expect(assignable).to include(other_member, another_member)
+      expect(assignable).not_to include(user)
     end
 
-    it "shows ready_for_betting pitches to everyone" do
-      expect(Pitch.visible_to(user)).to include(ready_pitch)
-      expect(Pitch.visible_to(other_user)).to include(ready_pitch)
-    end
-
-    it "shows bet pitches to everyone" do
-      bet_pitch = create(:pitch, user: other_user, organization: organization)
-      bet_pitch.state_machine.transition_to!(:ready_for_betting)
-      bet_pitch.state_machine.transition_to!(:bet)
-      expect(Pitch.visible_to(user)).to include(bet_pitch)
-    end
-
-    it "shows rejected pitches to everyone" do
-      rejected_pitch = create(:pitch, user: other_user, organization: organization)
-      rejected_pitch.state_machine.transition_to!(:ready_for_betting)
-      rejected_pitch.state_machine.transition_to!(:rejected)
-      expect(Pitch.visible_to(user)).to include(rejected_pitch)
+    it "returns no users when the pitch has no organization" do
+      new_pitch = Pitch.new(title: "No org")
+      expect(new_pitch.assignable_co_authors).to be_empty
     end
   end
 

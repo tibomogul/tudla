@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_05_191657) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -186,6 +186,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_05_191657) do
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_organizations_on_deleted_at", where: "(deleted_at IS NULL)"
     t.index ["name"], name: "index_organizations_on_name"
+  end
+
+  create_table "pitch_co_authors", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "pitch_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["pitch_id", "user_id"], name: "index_pitch_co_authors_on_pitch_id_and_user_id", unique: true
+    t.index ["pitch_id"], name: "index_pitch_co_authors_on_pitch_id"
+    t.index ["user_id"], name: "index_pitch_co_authors_on_user_id"
   end
 
   create_table "pitch_transitions", force: :cascade do |t|
@@ -590,6 +600,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_05_191657) do
   add_foreign_key "notes", "users", column: "last_editor_id"
   add_foreign_key "notifications", "events"
   add_foreign_key "notifications", "users"
+  add_foreign_key "pitch_co_authors", "pitches"
+  add_foreign_key "pitch_co_authors", "users"
   add_foreign_key "pitch_transitions", "pitches"
   add_foreign_key "pitches", "organizations"
   add_foreign_key "pitches", "users"

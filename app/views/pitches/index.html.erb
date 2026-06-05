@@ -15,7 +15,7 @@
   <% current_status = params[:status] %>
   <div role="tablist" class="tabs tabs-boxed mb-4">
     <%= link_to "All", pitches_path, class: "tab #{current_status.blank? ? 'tab-active' : ''}" %>
-    <%= link_to "My Drafts", pitches_path(status: "draft"), class: "tab #{current_status == 'draft' ? 'tab-active' : ''}" %>
+    <%= link_to "Drafts", pitches_path(status: "draft"), class: "tab #{current_status == 'draft' ? 'tab-active' : ''}" %>
     <%= link_to "Ready for Betting", pitches_path(status: "ready_for_betting"), class: "tab #{current_status == 'ready_for_betting' ? 'tab-active' : ''}" %>
     <%= link_to "Bet", pitches_path(status: "bet"), class: "tab #{current_status == 'bet' ? 'tab-active' : ''}" %>
     <%= link_to "Rejected", pitches_path(status: "rejected"), class: "tab #{current_status == 'rejected' ? 'tab-active' : ''}" %>

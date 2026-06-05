@@ -65,6 +65,7 @@ Rails.application.routes.draw do
     member do
       patch :transition
       post :bet
+      patch :co_authors
     end
   end
 

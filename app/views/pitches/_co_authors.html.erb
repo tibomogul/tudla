@@ -1,0 +1,35 @@
+<div class="card bg-base-100 shadow-sm my-6">
+  <div class="card-body p-4">
+    <h3 class="font-semibold text-base mb-3">Co-authors</h3>
+
+    <% members = pitch.assignable_co_authors.to_a %>
+    <% if members.any? %>
+      <%= form_with url: co_authors_pitch_path(pitch), method: :patch do |form| %>
+        <p class="text-sm text-base-content/60 mb-3">
+          Co-authors can edit, submit, and delete this pitch.
+        </p>
+        <div class="flex flex-col gap-2 max-h-72 overflow-y-auto">
+          <% members.each do |member| %>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <%= check_box_tag "co_author_ids[]", member.id,
+                pitch.co_author_ids.include?(member.id), class: "checkbox checkbox-sm" %>
+              <span class="text-sm">
+                <%= member.preferred_name || member.username || member.email %>
+                <% if member.username && member.preferred_name %>
+                  <span class="text-xs text-base-content/70">@<%= member.username %></span>
+                <% end %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+        <div class="mt-4">
+          <%= form.submit "Save co-authors", class: "btn btn-soft btn-sm" %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-base-content/50 text-sm italic">
+        No other organization members are available to add as co-authors.
+      </p>
+    <% end %>
+  </div>
+</div>

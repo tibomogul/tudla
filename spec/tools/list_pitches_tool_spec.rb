@@ -57,15 +57,15 @@ RSpec.describe ListPitchesTool, type: :model do
       expect(result).to include("No pitches found.")
     end
 
-    it "respects policy scope - user cannot see drafts from other users" do
+    it "respects policy scope - user can see drafts from other organization members" do
       other_member = create(:user, email: "member@example.com", confirmation_token: "token_lp3").tap do |u|
         UserPartyRole.create!(user: u, party: organization, role: "member")
       end
-      create(:pitch, user: other_member, organization: organization, status: "draft")
+      draft = create(:pitch, user: other_member, organization: organization, status: "draft")
 
       result = tool.execute
 
-      expect(result).to include("No pitches found.")
+      expect(result).to include("ID: #{draft.id}")
     end
 
     it "respects policy scope - user cannot see pitches from other orgs" do

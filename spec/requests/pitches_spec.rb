@@ -41,13 +41,22 @@ RSpec.describe "/pitches", type: :request do
       expect(response.body).not_to include("Deleted Pitch")
     end
 
-    it "respects visibility scope" do
+    it "shows draft pitches from other organization members" do
       other_user = create(:user)
       UserPartyRole.create!(user: other_user, party: organization, role: "member")
       create(:pitch, user: other_user, organization: organization, title: "Other Draft")
       # Pitch starts in draft state by default — no transition needed
       get pitches_url
-      expect(response.body).not_to include("Other Draft")
+      expect(response.body).to include("Other Draft")
+    end
+
+    it "does not show pitches from other organizations" do
+      other_org = create(:organization)
+      other_user = create(:user)
+      UserPartyRole.create!(user: other_user, party: other_org, role: "member")
+      create(:pitch, user: other_user, organization: other_org, title: "Foreign Pitch")
+      get pitches_url
+      expect(response.body).not_to include("Foreign Pitch")
     end
   end
 
@@ -158,8 +167,15 @@ RSpec.describe "/pitches", type: :request do
         # Pitch starts in draft state by default — no transition needed
       end
 
-      it "prevents access to other user's draft pitch" do
+      it "allows organization members to view another user's draft pitch" do
         get pitch_url(other_draft_pitch)
+        expect(response).to be_successful
+      end
+
+      it "prevents non-members from viewing a draft pitch" do
+        other_org = create(:organization)
+        foreign_draft = create(:pitch, user: create(:user), organization: other_org)
+        get pitch_url(foreign_draft)
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -204,7 +220,22 @@ RSpec.describe "/pitches", type: :request do
 
       it "prevents editing other user's pitch" do
         get edit_pitch_url(other_pitch)
-        expect(response).to have_http_status(:not_found)
+        expect(response).to redirect_to(root_path)
+      end
+    end
+
+    context "when user is a co-author" do
+      let(:author) { create(:user) }
+      let(:shared_pitch) { create(:pitch, user: author, organization: organization) }
+
+      before do
+        UserPartyRole.create!(user: author, party: organization, role: "member")
+        shared_pitch.co_authors << user
+      end
+
+      it "allows a co-author to edit the draft pitch" do
+        get edit_pitch_url(shared_pitch)
+        expect(response).to be_successful
       end
     end
   end
@@ -346,6 +377,63 @@ RSpec.describe "/pitches", type: :request do
         expect(flash[:alert]).to match(/not authorized/i)
         expect(pitch.reload.title).not_to eq("Sneaky Update")
       end
+    end
+
+    context "when user is a co-author" do
+      let(:author) { create(:user) }
+      let(:shared_pitch) { create(:pitch, user: author, organization: organization) }
+
+      before do
+        UserPartyRole.create!(user: author, party: organization, role: "member")
+        shared_pitch.co_authors << user
+      end
+
+      it "allows a co-author to update the draft pitch" do
+        patch pitch_url(shared_pitch), params: { pitch: { title: "Co-author Edit" } }
+        expect(shared_pitch.reload.title).to eq("Co-author Edit")
+      end
+    end
+  end
+
+  describe "PATCH /co_authors" do
+    let(:member_a) { create(:user) }
+    let(:member_b) { create(:user) }
+
+    before do
+      UserPartyRole.create!(user: member_a, party: organization, role: "member")
+      UserPartyRole.create!(user: member_b, party: organization, role: "member")
+    end
+
+    it "lets the creator set the co-author list" do
+      patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_a.id, member_b.id ] }
+      expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id, member_b.id)
+      expect(response).to redirect_to(pitch_url(pitch))
+    end
+
+    it "lets the creator remove all co-authors" do
+      pitch.co_authors << member_a
+      patch co_authors_pitch_url(pitch), params: { co_author_ids: [ "" ] }
+      expect(pitch.reload.co_author_ids).to be_empty
+    end
+
+    it "ignores ids that are not eligible organization members" do
+      outsider = create(:user)
+      patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_a.id, outsider.id ] }
+      expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id)
+    end
+
+    it "lets an existing co-author manage the list" do
+      pitch.co_authors << member_a
+      sign_in(member_a)
+      patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_a.id, member_b.id ] }
+      expect(pitch.reload.co_author_ids).to contain_exactly(member_a.id, member_b.id)
+    end
+
+    it "prevents a plain member from managing co-authors" do
+      sign_in(member_a)
+      patch co_authors_pitch_url(pitch), params: { co_author_ids: [ member_b.id ] }
+      expect(response).to redirect_to(root_path)
+      expect(pitch.reload.co_author_ids).to be_empty
     end
   end
 

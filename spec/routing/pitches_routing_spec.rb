@@ -41,5 +41,9 @@ RSpec.describe PitchesController, type: :routing do
     it "routes to #bet via POST" do
       expect(post: "/pitches/1/bet").to route_to("pitches#bet", id: "1")
     end
+
+    it "routes to #co_authors via PATCH" do
+      expect(patch: "/pitches/1/co_authors").to route_to("pitches#co_authors", id: "1")
+    end
   end
 end

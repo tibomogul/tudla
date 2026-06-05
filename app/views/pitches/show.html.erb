@@ -24,6 +24,9 @@
   <!-- Author info -->
   <p class="text-sm text-base-content/60 mb-4">
     Shaped by <strong><%= @pitch.user&.preferred_name || @pitch.user&.email %></strong>
+    <% if @pitch.co_authors.any? %>
+      with <strong><%= @pitch.co_authors.map { |u| u.preferred_name || u.email }.to_sentence %></strong>
+    <% end %>
     on <%= @pitch.created_at.strftime("%d %b %Y") %>
   </p>
 
@@ -110,6 +113,11 @@
       <%= button_to "Delete", @pitch, method: :delete, form_class: "inline-block", class: "btn btn-soft btn-secondary", data: { turbo_confirm: "Are you sure?" } %>
     <% end %>
   </div>
+
+  <!-- Co-authors Section -->
+  <% if policy(@pitch).manage_co_authors? %>
+    <%= render "pitches/co_authors", pitch: @pitch %>
+  <% end %>
 
   <!-- Attachments Section -->
   <%= render "shared/attachments_section", record: @pitch, can_upload: policy(@pitch).update? %>
