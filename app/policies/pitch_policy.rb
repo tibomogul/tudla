@@ -11,7 +11,7 @@ class PitchPolicy < ApplicationPolicy
   end
 
   def show?
-    is_author? || user_is_organization_member?
+    is_creator? || user_is_organization_member?
   end
 
   def create?
@@ -28,7 +28,7 @@ class PitchPolicy < ApplicationPolicy
   end
 
   def update?
-    (is_author? && draft?) || user_is_organization_admin?
+    (writable_author? && draft?) || user_is_organization_admin?
   end
 
   def edit?
@@ -36,11 +36,11 @@ class PitchPolicy < ApplicationPolicy
   end
 
   def destroy?
-    is_author? && draft?
+    writable_author? && draft?
   end
 
   def submit?
-    is_author? && draft?
+    writable_author? && draft?
   end
 
   def bet?
@@ -56,7 +56,7 @@ class PitchPolicy < ApplicationPolicy
   # is still a draft. Co-authors can edit/submit/delete the pitch, but cannot
   # alter who the authors are.
   def manage_co_authors?
-    user_is_organization_admin? || (is_creator? && draft?)
+    user_is_organization_admin? || (is_creator? && draft? && user_is_organization_member?)
   end
 
   class Scope
@@ -97,17 +97,21 @@ class PitchPolicy < ApplicationPolicy
     @is_creator = pitch.is_a?(Pitch) && pitch.user_id.present? && pitch.user_id == user&.id
   end
 
-  # Co-authorship grants rights only while the user is still an org member. The
-  # membership check guards against stale join rows surviving a role removal
-  # before the prune in UserPartyRole has run (or if it ever misses a path).
-  def is_co_author?
-    return @is_co_author if defined?(@is_co_author)
-    @is_co_author = user.present? && pitch.is_a?(Pitch) &&
-      pitch.co_author_ids.include?(user.id) && user_is_organization_member?
+  # An author — the creator or a listed co-author — who is CURRENTLY an org
+  # member. Authorship grants edit/submit/delete rights only while membership
+  # lasts; losing all org roles revokes them for creator and co-author alike.
+  # The membership gate also guards against stale co-author join rows surviving
+  # a role removal before the prune in UserPartyRole has run.
+  def writable_author?
+    user_is_organization_member? && (is_creator? || listed_co_author?)
   end
 
-  def is_author?
-    is_creator? || is_co_author?
+  # Pure membership-free check: is the user in the pitch's co-author list? The
+  # org-membership gate lives in #writable_author? so both author paths share it.
+  def listed_co_author?
+    return @listed_co_author if defined?(@listed_co_author)
+    @listed_co_author = user.present? && pitch.is_a?(Pitch) &&
+      pitch.co_author_ids.include?(user.id)
   end
 
   def draft?

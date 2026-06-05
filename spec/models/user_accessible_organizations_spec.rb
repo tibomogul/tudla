@@ -53,6 +53,25 @@ RSpec.describe "User#accessible_organizations", type: :model do
       expect(user.accessible_organizations).to eq([org_a])
     end
 
+    it "excludes organizations reachable only through a role on a soft-deleted team" do
+      team = create(:team, organization: org_a)
+      UserPartyRole.create!(user: user, party: team, role: "member")
+      team.soft_delete
+      user.bust_organizations_cache
+
+      expect(user.accessible_organizations).to eq([])
+    end
+
+    it "excludes organizations reachable only through a role on a soft-deleted project" do
+      team = create(:team, organization: org_a)
+      project = create(:project, team: team)
+      UserPartyRole.create!(user: user, party: project, role: "member")
+      project.soft_delete
+      user.bust_organizations_cache
+
+      expect(user.accessible_organizations).to eq([])
+    end
+
     it "returns empty array when user has no roles" do
       expect(user.accessible_organizations).to eq([])
     end

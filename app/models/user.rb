@@ -21,33 +21,18 @@ class User < ApplicationRecord
     preferred_name.presence || username.presence || email
   end
 
-  # Caches full AR objects (not just IDs) to avoid an extra query on every page load.
-  # Trade-off: if an Organization name changes or is soft-deleted, this serves stale data
-  # until the next UserPartyRole change busts the cache. Acceptable because org-level
-  # mutations are rare and the cached set is small (typically 1-5 orgs per user).
-  # The multiple queries inside the block only run on cache miss.
+  # Organizations the user can access via any role (org, team, OR project). Caches
+  # full AR objects (not just IDs) to avoid an extra query on every page load.
+  # Trade-off: if an Organization name changes or is soft-deleted, this serves stale
+  # data until the next UserPartyRole change busts the cache. Acceptable because
+  # org-level mutations are rare and the cached set is small (typically 1-5 orgs per
+  # user). The queries inside the block only run on cache miss.
   #
-  # NOTE: distinct from #member_organizations and must NOT be merged with it.
-  # accessible = org + team + project roles; member = org + team only (a
-  # project-only role does not make you a member of the project's org). The two
-  # back different features (general access vs. pitch visibility).
+  # Shares #organization_ids(via:) with #member_organization_ids — the only
+  # difference is that access counts project-only roles and membership does not.
   def accessible_organizations
     Rails.cache.fetch(organizations_cache_key) do
-      org_ids = user_party_roles
-        .where(party_type: "Organization")
-        .pluck(:party_id)
-
-      team_org_ids = Team.where(
-        id: user_party_roles.where(party_type: "Team").pluck(:party_id)
-      ).pluck(:organization_id)
-
-      project_team_ids = Project.where(
-        id: user_party_roles.where(party_type: "Project").pluck(:party_id)
-      ).pluck(:team_id)
-      project_org_ids = Team.where(id: project_team_ids).pluck(:organization_id)
-
-      all_org_ids = (org_ids + team_org_ids + project_org_ids).uniq
-      Organization.active.where(id: all_org_ids).order(:name).to_a
+      Organization.active.where(id: organization_ids(via: :access)).order(:name).to_a
     end
   end
 
@@ -56,21 +41,12 @@ class User < ApplicationRecord
   # count — project membership does not imply membership in the project's
   # organization. Used for pitch visibility. Only IDs are cached (every caller
   # needs just IDs), which keeps the entry small and avoids the stale-attribute
-  # risk of caching AR objects. See #accessible_organizations above for the
-  # cache-staleness trade-off and why these two must stay separate. Busted by
-  # UserPartyRole and Organization hooks, plus Team org-change/soft-delete/restore
-  # and Organization soft-delete/restore hooks.
+  # risk of caching AR objects. Busted by UserPartyRole and Organization hooks,
+  # plus Team org-change/soft-delete/restore and Organization soft-delete/restore
+  # hooks. See #organization_ids for the shared lookup.
   def member_organization_ids
     Rails.cache.fetch(member_organization_ids_cache_key) do
-      org_ids = user_party_roles
-        .where(party_type: "Organization")
-        .pluck(:party_id)
-
-      team_org_ids = Team.active.where(
-        id: user_party_roles.where(party_type: "Team").pluck(:party_id)
-      ).pluck(:organization_id)
-
-      Organization.active.where(id: (org_ids + team_org_ids).uniq).pluck(:id)
+      organization_ids(via: :membership)
     end
   end
 
@@ -138,5 +114,32 @@ class User < ApplicationRecord
       end
     end
     user
+  end
+
+  private
+
+  # Single source of truth for "which organizations does this user belong to",
+  # parameterized by which role paths count:
+  #   :membership — a direct organization role or a team role only. A project-only
+  #                 role does NOT make you a member of the project's org. (pitch
+  #                 visibility)
+  #   :access     — :membership PLUS project roles. (general app access)
+  # Roles on soft-deleted teams/projects never count (.active), and the result is
+  # filtered to Organization.active. Returns a de-duplicated array of org ids. The
+  # two public callers cache the two shapes under distinct keys, both invalidated
+  # together by #bust_organizations_cache.
+  def organization_ids(via:)
+    org_ids = user_party_roles.where(party_type: "Organization").pluck(:party_id)
+
+    team_party_ids = user_party_roles.where(party_type: "Team").pluck(:party_id)
+    all_ids = org_ids + Team.active.where(id: team_party_ids).pluck(:organization_id)
+
+    if via == :access
+      project_party_ids = user_party_roles.where(party_type: "Project").pluck(:party_id)
+      project_team_ids = Project.active.where(id: project_party_ids).pluck(:team_id)
+      all_ids += Team.active.where(id: project_team_ids).pluck(:organization_id)
+    end
+
+    Organization.active.where(id: all_ids.uniq).pluck(:id)
   end
 end

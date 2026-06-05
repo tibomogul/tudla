@@ -189,6 +189,36 @@ RSpec.describe PitchPolicy, type: :policy do
     end
   end
 
+  describe "creator who has lost org membership" do
+    before do
+      draft_pitch # materialize the pitch
+      # Strip the creator's membership without touching the pitch's user_id, so
+      # they remain the creator but are no longer an org member.
+      UserPartyRole.where(user: creator, party: organization).delete_all
+      creator.bust_organizations_cache
+    end
+
+    it "may still show? their own pitch (creator fallback is intentional)" do
+      expect(described_class.new(creator, draft_pitch).show?).to be true
+    end
+
+    it "is denied update?, submit?, and destroy? — symmetric with co-authors" do
+      policy = described_class.new(creator, draft_pitch)
+      expect(policy.update?).to be false
+      expect(policy.submit?).to be false
+      expect(policy.destroy?).to be false
+    end
+
+    it "is denied manage_co_authors?" do
+      expect(described_class.new(creator, draft_pitch).manage_co_authors?).to be false
+    end
+
+    it "still lets an admin manage and update the pitch" do
+      expect(described_class.new(admin, draft_pitch).update?).to be true
+      expect(described_class.new(admin, draft_pitch).manage_co_authors?).to be true
+    end
+  end
+
   describe "#manage_co_authors?" do
     it "allows the creator on a draft pitch" do
       expect(described_class.new(creator, draft_pitch).manage_co_authors?).to be true
