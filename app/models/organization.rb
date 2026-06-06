@@ -24,6 +24,13 @@ class Organization < ApplicationRecord
   # above — so bust members' caches explicitly (mirrors Team#soft_delete). On
   # soft-delete the org drops out of member_organizations' Organization.active
   # filter, so capture the member set BEFORE super while it is still resolvable.
+  #
+  # Deliberately does NOT prune pitch co-authorships (unlike Team#soft_delete):
+  # soft-deleting the org makes EVERY one of its pitches inaccessible org-wide
+  # (the org leaves member_organization_ids, so the pitches drop out of
+  # policy_scope), which makes per-row pruning moot. Leaving the join rows intact
+  # lets co-authorship reconcile naturally on restore — and prune_orphaned_for
+  # still cleans up any individual member who later loses their role.
   def soft_delete
     affected = members.to_a
     super

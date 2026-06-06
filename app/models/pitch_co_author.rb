@@ -12,6 +12,15 @@ class PitchCoAuthor < ApplicationRecord
   # PaperTrail audit. Callers MUST bust the user's org caches first so the
   # membership recheck recomputes fresh. Shared by every revocation path
   # (role removal, team soft-delete, user soft-delete).
+  #
+  # Whodunnit: this prune is a CONSEQUENCE of a triggering action (a role being
+  # removed, a team or user being archived). We intentionally do NOT set a
+  # synthetic actor — that would clobber the real one. When the triggering
+  # action runs through a controller, PaperTrail's request context already
+  # carries the responsible admin, and these revocation rows are attributed to
+  # them. The audit is actor-less only when the trigger originates outside a
+  # request (console / rake / job), where no user is genuinely responsible —
+  # consistent with PaperTrail behaviour elsewhere in the app.
   def self.prune_orphaned_for(user, organization_id)
     return if user.blank? || organization_id.blank?
     return if user.member_organization_ids.include?(organization_id)
