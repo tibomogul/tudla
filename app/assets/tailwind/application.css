@@ -1,17 +1,317 @@
+/* === Webfonts (must precede the tailwindcss import) === */
+@import url("https://fonts.googleapis.com/css2?family=Inclusive+Sans:wght@400;500;600;700;800;900;1000&display=swap");
+
+/* === Tailwind + bundled plugin partials === */
 @import "tailwindcss" source(none);
+@import "./components.css";
+@import "./icons.css";
+
 @source "../../../public/*.html";
 @source "../../../app/helpers/**/*.rb";
 @source "../../../app/javascript/**/*.js";
 @source "../../../app/views/**/*";
+@source "../../../app/components/**/*";
 
-@plugin "./daisyui.mjs";
-
-/* Optional for custom themes – Docs: https://daisyui.com/docs/themes/#how-to-add-a-new-custom-theme */
-@plugin "./daisyui-theme.mjs"{
-  /* custom theme here */
+/* Dark variant driven by daisyUI's data-theme (with system fallback). */
+@variant dark {
+  &:where([data-theme="dark"] *, [data-theme="dim"] *, [data-theme="material-dark"] *) {
+    @slot;
+  }
+  &:not([data-theme="light"] *, [data-theme="contrast"] *, [data-theme="material"] *) {
+    @media (prefers-color-scheme: dark) {
+      @slot;
+    }
+  }
 }
 
-/* Import the CSS for your feature engines. This is enabled by Tailwind experimental engine support.
-   Here is a sample for Hubstaff  */
-/* @import "../builds/tailwind/tudla_hubstaff" */
+/* Container utility (from the Nexus preset). */
+@utility container {
+  margin-inline: auto;
+  @apply px-[1rem] md:px-[2rem] lg:px-[3rem] xl:px-[4rem] 2xl:px-[6rem];
+}
 
+html {
+  scroll-behavior: smooth;
+}
+
+/* === daisyUI (vendored bundle — no node_modules) === */
+@plugin "./daisyui.mjs" {
+  exclude: rootscrollgutter;
+}
+
+@plugin "./daisyui-theme.mjs" {
+  name: "dark";
+  color-scheme: dark;
+  prefersdark: true;
+
+  --root-bg: #121416;
+  --layout-sidebar-background: #181c20;
+  --layout-topbar-background: #181b1f;
+
+  --color-base-100: #181c20;
+  --color-base-200: #22262a;
+  --color-base-300: #2c3034;
+  --color-base-content: #f0f4f8;
+
+  --color-primary: #378dff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #b071ff;
+  --color-secondary-content: #ffffff;
+  --color-accent: #00d3bb;
+  --color-accent-content: #f3fbf6;
+  --color-neutral: #dce1e6;
+  --color-neutral-content: #1e2832;
+  --color-info: #14b4ff;
+  --color-info-content: #ffffff;
+  --color-success: #0bbf58;
+  --color-success-content: #ffffff;
+  --color-warning: #f5a524;
+  --color-warning-content: #150a00;
+  --color-error: #f31260;
+  --color-error-content: #ffffff;
+
+  --radius-field: 0.25rem;
+  --radius-box: 0.25rem;
+  --rounded-box: 0.25rem;
+  --radius-selector: 0.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --card-p: 20px;
+  --card-fs: var(--text-base);
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "./daisyui-theme.mjs" {
+  name: "light";
+  default: true;
+  color-scheme: light;
+
+  --root-bg: #fafbfc;
+  --layout-sidebar-background: #ffffff;
+  --layout-topbar-background: #ffffff;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #eef0f2;
+  --color-base-300: #dcdee0;
+  --color-base-content: #1e2328;
+
+  --color-primary: #167bff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #9c5de8;
+  --color-secondary-content: #ffffff;
+  --color-accent: #00d3bb;
+  --color-accent-content: #f3fbf6;
+  --color-neutral: #1e2832;
+  --color-neutral-content: #fafcff;
+  --color-info: #14b4ff;
+  --color-info-content: #ffffff;
+  --color-success: #0bbf58;
+  --color-success-content: #ffffff;
+  --color-warning: #f5a524;
+  --color-warning-content: #150a00;
+  --color-error: #f31260;
+  --color-error-content: #ffffff;
+
+  --radius-field: 0.25rem;
+  --radius-box: 0.25rem;
+  --rounded-box: 0.25rem;
+  --radius-selector: 0.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --card-p: 20px;
+  --card-fs: var(--text-base);
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "./daisyui-theme.mjs" {
+  name: "contrast";
+  color-scheme: light;
+
+  --root-bg: #f2f4f6;
+  --layout-sidebar-background: #fcfdff;
+  --layout-topbar-background: #fdfeff;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #eef0f2;
+  --color-base-300: #dcdee0;
+  --color-base-content: #1e2328;
+
+  --color-primary: #167bff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #9c5de8;
+  --color-secondary-content: #ffffff;
+  --color-accent: #00d3bb;
+  --color-accent-content: #f3fbf6;
+  --color-neutral: #1e2832;
+  --color-neutral-content: #fafcff;
+  --color-info: #14b4ff;
+  --color-info-content: #ffffff;
+  --color-success: #0bbf58;
+  --color-success-content: #ffffff;
+  --color-warning: #f5a524;
+  --color-warning-content: #150a00;
+  --color-error: #f31260;
+  --color-error-content: #ffffff;
+
+  --radius-field: 0.25rem;
+  --radius-box: 0.25rem;
+  --rounded-box: 0.25rem;
+  --radius-selector: 0.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --card-p: 20px;
+  --card-fs: var(--text-base);
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "./daisyui-theme.mjs" {
+  name: "material";
+  color-scheme: light;
+
+  --root-bg: #fdfeff;
+  --layout-sidebar-background: #f5f7ff;
+  --layout-topbar-background: #f5f7ff;
+
+  --color-base-100: #f6f8ff;
+  --color-base-200: #eaecfa;
+  --color-base-300: #e0e2f8;
+  --color-base-content: #191e28;
+
+  --color-primary: #167bff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #9c5de8;
+  --color-secondary-content: #ffffff;
+  --color-accent: #00d3bb;
+  --color-accent-content: #f3fbf6;
+  --color-neutral: #1e2832;
+  --color-neutral-content: #fafcff;
+  --color-info: #14b4ff;
+  --color-info-content: #ffffff;
+  --color-success: #0bbf58;
+  --color-success-content: #ffffff;
+  --color-warning: #f5a524;
+  --color-warning-content: #150a00;
+  --color-error: #f31260;
+  --color-error-content: #ffffff;
+
+  --radius-field: 20px;
+  --radius-box: 20px;
+  --rounded-box: 20px;
+  --radius-selector: 20px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --card-p: 20px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "./daisyui-theme.mjs" {
+  name: "dim";
+  color-scheme: dark;
+
+  --root-bg: #222630;
+  --layout-sidebar-background: #2a2e38;
+  --layout-topbar-background: #2a2e38;
+
+  --color-base-100: #2a2e38;
+  --color-base-200: #343842;
+  --color-base-300: #3c404a;
+  --color-base-content: #f0f4f8;
+
+  --color-primary: #378dff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #b071ff;
+  --color-secondary-content: #ffffff;
+  --color-accent: #00d3bb;
+  --color-accent-content: #f3fbf6;
+  --color-neutral: #dce1e6;
+  --color-neutral-content: #1e2832;
+  --color-info: #14b4ff;
+  --color-info-content: #ffffff;
+  --color-success: #0bbf58;
+  --color-success-content: #ffffff;
+  --color-warning: #f5a524;
+  --color-warning-content: #150a00;
+  --color-error: #f31260;
+  --color-error-content: #ffffff;
+
+  --radius-field: 0.25rem;
+  --radius-box: 0.25rem;
+  --rounded-box: 0.25rem;
+  --radius-selector: 0.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --card-p: 20px;
+  --card-fs: var(--text-base);
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "./daisyui-theme.mjs" {
+  name: "material-dark";
+  color-scheme: dark;
+
+  --root-bg: #141618;
+  --layout-sidebar-background: #181c20;
+  --layout-topbar-background: #181c22;
+
+  --color-base-100: #181e24;
+  --color-base-200: #202830;
+  --color-base-300: #2c323a;
+  --color-base-content: #f0f4f8;
+
+  --color-primary: #378dff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #b071ff;
+  --color-secondary-content: #ffffff;
+  --color-accent: #00d3bb;
+  --color-accent-content: #f3fbf6;
+  --color-neutral: #dce1e6;
+  --color-neutral-content: #1e2832;
+  --color-info: #14b4ff;
+  --color-info-content: #ffffff;
+  --color-success: #0bbf58;
+  --color-success-content: #ffffff;
+  --color-warning: #f5a524;
+  --color-warning-content: #150a00;
+  --color-error: #f31260;
+  --color-error-content: #ffffff;
+
+  --radius-field: 20px;
+  --radius-box: 20px;
+  --rounded-box: 20px;
+  --radius-selector: 20px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --card-p: 20px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* === Typography theme === */
+@theme {
+  --font-sans: "Inclusive Sans", sans-serif;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+}
+
+body {
+  @apply font-sans text-base;
+}
+
+strong {
+  @apply font-medium;
+}

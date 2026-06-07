@@ -32,7 +32,7 @@ Planned features to further support the Shape Up methodology:
 
 - **Framework**: Ruby on Rails 8.1
 - **Database**: PostgreSQL 18
-- **Frontend**: Tailwind CSS, Hotwire (Turbo + Stimulus), Importmap
+- **Frontend**: Tailwind CSS v4 + DaisyUI 5 (vendored, node-free build) with Iconify (Lucide) icons, Hotwire (Turbo + Stimulus), Importmap
 - **Background Jobs**: Solid Queue
 - **Caching**: Solid Cache
 - **WebSockets**: Solid Cable
@@ -136,6 +136,29 @@ docker compose exec rails bin/rails db:migrate
 
 # Open Rails console
 docker compose exec rails bin/rails console
+```
+
+### Styling (Tailwind & icons)
+
+Styling is a **single Tailwind CSS v4 build** compiled by `tailwindcss-rails` with **no npm / node_modules** — DaisyUI is shipped as a vendored bundle (`app/assets/tailwind/daisyui.mjs`). The design system is based on the [Nexus DaisyUI template](https://nexus.daisyui.com/). The Tailwind source lives in `app/assets/tailwind/`:
+
+- `application.css` — entry point: fonts, Tailwind import, `@source` globs, the `dark` variant, the DaisyUI plugin and its themes, and the typography theme.
+- `components.css` — custom component styles (sidebar/layout, DaisyUI overrides, scrollbar).
+- `icons.css` — **generated**; static [Iconify](https://iconify.design) mask rules for the `lucide--*` icon classes used in templates.
+
+The `css` process in `bin/dev` rebuilds `app/assets/builds/tailwind.css` automatically. After editing source manually you can force a rebuild:
+
+```bash
+# Rebuild the Tailwind stylesheet
+docker compose exec rails bin/rails tailwindcss:build
+```
+
+Icons use Iconify's CSS-mask approach (e.g. `<span class="iconify lucide--check size-4">`). There is no on-the-fly icon plugin, so after adding or removing an icon class in a template, regenerate `icons.css` and rebuild:
+
+```bash
+# Rescan templates and regenerate app/assets/tailwind/icons.css (needs network)
+docker compose exec rails bin/rails icons:build
+docker compose exec rails bin/rails tailwindcss:build
 ```
 
 ## Project Structure
@@ -375,6 +398,7 @@ Built with these excellent open source projects:
 - [Hotwire](https://hotwired.dev/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [DaisyUI](https://daisyui.com/)
+- [Iconify](https://iconify.design/)
 - [Statesman](https://github.com/gocardless/statesman)
 - [Pundit](https://github.com/varvet/pundit)
 - [Devise](https://github.com/heartcombo/devise)

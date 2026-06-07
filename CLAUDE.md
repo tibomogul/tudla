@@ -31,6 +31,10 @@ docker compose exec rails bash -lc "bundle exec brakeman"                # Secur
 docker compose exec rails bash -lc "bin/rails db:migrate"
 docker compose exec rails bash -lc "bin/rails db:reset"
 docker compose exec rails bash -lc "bin/rails console"
+
+# Styling (Tailwind / icons)
+docker compose exec rails bash -lc "bin/rails tailwindcss:build"           # Rebuild app/assets/builds/tailwind.css
+docker compose exec rails bash -lc "bin/rails icons:build"                 # Regenerate app/assets/tailwind/icons.css from used icon classes
 ```
 
 **Multi-DB schema gotcha** — `db:reset` / `db:migrate:reset` only touch the **primary** database.
@@ -81,3 +85,10 @@ State machines (Statesman): `Task` (new → in_progress → in_review → done, 
 **Authorization** — Pundit policies in `app/policies/`. All policy scopes use `UserPartyRole` to filter accessible records through the org → team → project hierarchy.
 
 **Timezone** — Organization-level timezone (default: `"Australia/Brisbane"`). All time display via `format_in_timezone`. Form inputs convert to/from org timezone, never browser timezone.
+
+**Styling / CSS build** — Single Tailwind CSS v4 build via `tailwindcss-rails`, compiled by the standalone binary with **no npm / node_modules** (DaisyUI is a vendored bundle: `app/assets/tailwind/daisyui.mjs` + `daisyui-theme.mjs`). The design system derives from the [Nexus DaisyUI template](https://nexus.daisyui.com/). Source lives in `app/assets/tailwind/`:
+- `application.css` — entry: fonts, `@import "tailwindcss"`, `@source` globs (incl. `app/components`), the `dark` variant, `@plugin "./daisyui.mjs"` + the 6 themes defined inline via `@plugin "./daisyui-theme.mjs"`, `@theme`, and `@import` of the two partials below.
+- `icons.css` — **generated, do not edit by hand.** Static [Iconify](https://iconify.design) mask rules so `class="iconify lucide--<name>"` icons render without the `@iconify/tailwind4` plugin. After adding/removing an icon class in a template, run `bin/rails icons:build` (rake task in `lib/tasks/icons.rake` — rescans `app/views`/`app/components`/`app/helpers`, fetches SVGs from the Iconify HTTP API; needs network, no npm), then `bin/rails tailwindcss:build`.
+- `components.css` — custom component CSS ported from Nexus (`#layout-sidebar`, `.sidebar-menu`, DaisyUI overrides, `.custom-scrollbar`).
+
+The compiled output `app/assets/builds/tailwind.css` is gitignored; the `css` process in `bin/dev` rebuilds it on change, and production `assets:precompile` regenerates it (node-free). The layout loads exactly two stylesheets: `tailwind` and `marksmith`. Do **not** reintroduce a second committed full CSS build.

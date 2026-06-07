@@ -8,7 +8,7 @@ Rails 8.1 task management app ("Tudla") for Shape Up methodology teams. PostgreS
 ## Tech Stack
 - **Framework**: Ruby on Rails 8.1 (Ruby 3.3.4)
 - **Database**: PostgreSQL 18 (multi-database: primary, queue, cable, cache)
-- **Frontend**: Tailwind CSS + DaisyUI 5, Stimulus, Turbo, Importmap
+- **Frontend**: Tailwind CSS v4 + DaisyUI 5 (vendored bundle, node-free build) with Iconify (Lucide) icons, Stimulus, Turbo, Importmap
 - **State Machine**: Statesman ~> 13.0.0
 - **Auth**: Devise (email/password + Google/Microsoft OAuth), Pundit (authorization)
 - **Audit**: PaperTrail ~> 17.0 (HashDiff adapter)
@@ -236,6 +236,14 @@ end
 - **MCP access**: `ListUserChangesTool` queries versions with time range and team filtering
 - **Adapter**: HashDiff for efficient object_changes storage
 
+### Styling / CSS Build
+- **Single Tailwind CSS v4 build** via `tailwindcss-rails`, compiled by the standalone binary with **no npm / node_modules**. DaisyUI is a vendored bundle (`app/assets/tailwind/daisyui.mjs` + `daisyui-theme.mjs`). Design system derives from the [Nexus DaisyUI template](https://nexus.daisyui.com/).
+- **Source** in `app/assets/tailwind/`:
+  - `application.css` — entry: fonts, `@import "tailwindcss"`, `@source` globs (incl. `app/components`), the `dark` variant, `@plugin "./daisyui.mjs"` + 6 themes defined inline via `@plugin "./daisyui-theme.mjs"`, `@theme`, and `@import` of the partials below.
+  - `icons.css` — **generated, do not hand-edit.** Static [Iconify](https://iconify.design) mask rules so `class="iconify lucide--<name>"` icons render without the `@iconify/tailwind4` plugin. After adding/removing an icon class, run `bin/rails icons:build` (`lib/tasks/icons.rake` — rescans views/components/helpers, fetches SVGs from the Iconify HTTP API; needs network, no npm), then `bin/rails tailwindcss:build`.
+  - `components.css` — custom components ported from Nexus (`#layout-sidebar`, `.sidebar-menu`, DaisyUI overrides, `.custom-scrollbar`).
+- **Output** `app/assets/builds/tailwind.css` is gitignored — the `css` process in `bin/dev` rebuilds it; production `assets:precompile` regenerates it (node-free). The layout loads exactly two stylesheets: `tailwind` and `marksmith`.
+
 ## Model Context Protocol (MCP) Integration
 
 ### Overview
@@ -302,6 +310,10 @@ docker compose exec rails bash -lc "bin/rails estimate_cache:backfill"    # Reca
 docker compose exec rails bash -lc "bin/rails report_reminders:schedule"  # Schedule reminder jobs
 docker compose exec rails bash -lc "bin/backup"                           # Backup DBs + storage
 docker compose exec rails bash -lc "bin/restore"                          # Restore from backup
+
+# Styling (Tailwind / icons)
+docker compose exec rails bash -lc "bin/rails tailwindcss:build"          # Rebuild app/assets/builds/tailwind.css
+docker compose exec rails bash -lc "bin/rails icons:build"                # Regenerate icons.css from used icon classes
 ```
 
 ### Process Management
@@ -362,9 +374,12 @@ docker compose ps                      # Check container status
 - Modify cached estimate columns directly (use EstimateCacheable callbacks)
 - Direct state assignment on Task/Project (use `state_machine.transition_to!`)
 - Use old Pagy API `pagy(collection)` — always use `pagy(:offset, collection, limit: N)` (v43 API)
+- Hand-edit `app/assets/tailwind/icons.css` (it is generated — run `bin/rails icons:build`)
+- Reintroduce a second committed full CSS build alongside the Tailwind build (causes shadowing); keep a single build
+- Add npm / node_modules for styling (DaisyUI is a vendored `.mjs` bundle — the build is node-free)
 
 ## Development Notes
-- Tailwind CSS + DaisyUI 5 for styling (see `docs/daisyui.md` for component reference)
+- Tailwind CSS v4 + DaisyUI 5 for styling, single node-free build (see the **Styling / CSS Build** pattern above and `docs/daisyui.md` for component reference)
 - Rubocop with Rails Omakase styling
 - Brakeman for security analysis
 - Strong Migrations enabled (lock_timeout: 10s, statement_timeout: 1h)
