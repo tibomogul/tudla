@@ -28,7 +28,7 @@ module ApplicationHelper
     end
   end
 
-  def render_markdown(text)
+  def render_markdown(text, full_width: false)
     # Return an empty string if the input is nil to prevent errors.
     return "" if text.nil?
 
@@ -79,8 +79,10 @@ module ApplicationHelper
     # Render the Markdown to HTML with the specified options and plugins.
     # The output is marked as.html_safe because we have sanitized it through CommonMarker.
     rendered_html = Commonmarker.to_html(text, options: options, plugins: plugin_options)
+    body_class = "marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert"
+    body_class += " ms:max-w-none" if full_width
     content_tag(:div, data: { controller: "theme-dark" }) do
-      content_tag(:div, rendered_html.html_safe, class: "marksmith-rendered-body ms:prose ms:prose-neutral ms:dark:prose-invert")
+      content_tag(:div, rendered_html.html_safe, class: body_class)
     end
   end
 

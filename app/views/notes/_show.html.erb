@@ -4,6 +4,6 @@
     Updated <%= time_ago_in_words(note.updated_at) %> ago by <%= note.last_editor&.display_name || "Unknown" %>
   </p>
   <div class="overflow-y-auto max-h-[65vh]">
-    <%= render_markdown(note.content) %>
+    <%= render_markdown(note.content, full_width: true) %>
   </div>
 <% end %>
