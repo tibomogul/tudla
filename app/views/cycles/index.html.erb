@@ -47,6 +47,6 @@
       </div>
     <% end %>
 
-    <%== pagy_nav(@pagy_cycles) if @pagy_cycles&.pages.to_i > 1 %>
+    <%= pagy_daisyui_nav(@pagy_cycles, turbo_frame: "cycles_index_list") if @pagy_cycles %>
   <% end %>
 </div>

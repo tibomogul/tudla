@@ -63,6 +63,6 @@
       </div>
     <% end %>
 
-    <%== pagy_nav(@pagy_pitches) if @pagy_pitches&.pages.to_i > 1 %>
+    <%= pagy_daisyui_nav(@pagy_pitches, turbo_frame: "pitches_index_list") if @pagy_pitches %>
   <% end %>
 </div>
