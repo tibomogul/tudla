@@ -666,6 +666,19 @@ RSpec.describe "/pitches", type: :request do
       expect(pitch.current_state).to eq("bet")
     end
 
+    it "copies the pitch's notes and links onto the new project" do
+      team = create(:team, organization: organization)
+      cycle = create(:cycle, organization: organization)
+      Notable.create!(notable: pitch).notes.create!(title: "Context", content: "Why", user: user)
+      Linkable.create!(linkable: pitch).links.create!(url: "https://example.com", user: user)
+
+      post bet_pitch_url(pitch), params: { team_id: team.id, cycle_id: cycle.id }
+
+      project = Project.last
+      expect(project.notes.active.pluck(:title)).to contain_exactly("Context")
+      expect(project.links.active.pluck(:url)).to contain_exactly("https://example.com")
+    end
+
     context "when user is not admin" do
       before do
         UserPartyRole.where(user: user, party: organization).update_all(role: "member")

@@ -81,4 +81,13 @@ RSpec.configure do |config|
 
   # Time travel helpers
   config.include ActiveSupport::Testing::TimeHelpers
+
+  # PaperTrail's whodunnit is set by a controller before_action that is never
+  # torn down in specs, so a request/controller example can leak a (now rolled
+  # back) user id into PaperTrail.request.whodunnit. A later example that reads
+  # it — e.g. Note#assign_last_editor — then writes a dangling foreign key.
+  # Reset it before each example to keep the suite order-independent.
+  config.before(:each) do
+    PaperTrail.request.whodunnit = nil
+  end
 end

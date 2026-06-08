@@ -124,6 +124,7 @@ class PitchesController < ApplicationController
         cycle_id: params[:cycle_id],
         team_id: params[:team_id]
       )
+      @pitch.copy_content_to(project)
       @pitch.state_machine.transition_to!(:bet, user_id: current_user.id)
     end
 
