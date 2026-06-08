@@ -27,6 +27,9 @@ class Pitch < ApplicationRecord
   # Include soft delete
   include SoftDeletable
 
+  # Copy notes/links/attachments to another record by value
+  include ContentDuplicatable
+
   after_commit :broadcast_pitch_update, if: :persisted?
 
   validates :title, presence: true

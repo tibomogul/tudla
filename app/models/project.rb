@@ -44,6 +44,9 @@ class Project < ApplicationRecord
   # Include soft delete
   include SoftDeletable
 
+  # Copy notes/links/attachments to another record by value
+  include ContentDuplicatable
+
   after_commit :broadcast_project_update, if: :persisted?
 
   def risk_state_machine

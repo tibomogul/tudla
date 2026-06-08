@@ -25,6 +25,9 @@ class Task < ApplicationRecord
   # Include soft delete
   include SoftDeletable
 
+  # Copy notes/links/attachments to another record by value
+  include ContentDuplicatable
+
   # Include estimate rollup caching to scopes/projects
   include EstimateCacheable
 

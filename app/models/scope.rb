@@ -1,5 +1,6 @@
 class Scope < ApplicationRecord
   include SoftDeletable
+  include ContentDuplicatable
   has_paper_trail skip: [ :project_position ]
   belongs_to :project
   has_many :tasks
