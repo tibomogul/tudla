@@ -81,16 +81,21 @@ class PitchesController < ApplicationController
     authorize_transition!(new_state)
     @update_context = params[:update_context]
 
+    # Resolve the betting cycle (if any) through the policy scope and confirm it
+    # belongs to the pitch's organization, so a stray or cross-org cycle_id can
+    # neither be stamped into the transition nor drive the betting-table render.
+    cycle = policy_scope(Cycle).find_by(id: params[:cycle_id], organization_id: @pitch.organization_id) if params[:cycle_id].present?
+
     if @pitch.state_machine.can_transition_to?(new_state)
       metadata = { user_id: current_user.id }
       # Stamp the betting cycle onto the transition so a rejected pitch (which has
       # no project to carry the link) can be surfaced again on that cycle's table.
-      metadata[:cycle_id] = params[:cycle_id].to_i if params[:cycle_id].present?
+      metadata[:cycle_id] = cycle.id if cycle
       @pitch.state_machine.transition_to!(new_state, metadata)
       respond_to do |format|
         format.turbo_stream {
-          if @update_context == "betting_table"
-            @cycle = Cycle.find(params[:cycle_id])
+          if @update_context == "betting_table" && cycle
+            @cycle = cycle
             @teams = Team.active.where(organization_id: @cycle.organization_id).includes(:users).order(:name)
             @betting_enabled = @cycle.current_state.in?(%w[shaping betting])
           end

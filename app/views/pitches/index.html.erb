@@ -14,7 +14,7 @@
   <!-- Status Filter Tabs -->
   <div role="tablist" class="tabs tabs-boxed mb-4">
     <%= link_to "My Drafts", pitches_path(status: "my_drafts"), class: "tab #{@status_tab == 'my_drafts' ? 'tab-active' : ''}" %>
-    <%= link_to "All", pitches_path, class: "tab #{@status_tab == 'all' ? 'tab-active' : ''}" %>
+    <%= link_to "Active", pitches_path, class: "tab #{@status_tab == 'all' ? 'tab-active' : ''}" %>
     <%= link_to "Drafts", pitches_path(status: "draft"), class: "tab #{@status_tab == 'draft' ? 'tab-active' : ''}" %>
     <%= link_to "Ready for Betting", pitches_path(status: "ready_for_betting"), class: "tab #{@status_tab == 'ready_for_betting' ? 'tab-active' : ''}" %>
     <%= link_to "Bet", pitches_path(status: "bet"), class: "tab #{@status_tab == 'bet' ? 'tab-active' : ''}" %>

@@ -19,11 +19,12 @@
     </div>
   </div>
 
-  <% if @project.pitch.present? %>
+  <% pitch = @project.pitch %>
+  <% if pitch && !pitch.deleted? %>
     <p class="text-sm text-base-content/60 mb-2">
       <span class="iconify lucide--lightbulb size-4 align-text-bottom"></span>
       Shaped from pitch
-      <%= link_to "PI-#{@project.pitch.id} #{@project.pitch.title}", pitch_path(@project.pitch), class: "link link-primary" %>
+      <%= link_to "PI-#{pitch.id} #{pitch.title}", pitch_path(pitch), class: "link link-primary" %>
     </p>
   <% end %>
 

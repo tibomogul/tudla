@@ -36,7 +36,7 @@
       <span class="iconify lucide--check-circle size-5"></span>
       <span>
         Bet and converted into
-        <% projects = @pitch.projects.to_a %>
+        <% projects = @pitch.projects.active.to_a %>
         <% if projects.any? %>
           <%= safe_join(projects.map { |p| link_to(p.name, project_path(p), class: "link link-primary font-semibold") }, ", ") %>.
         <% else %>
