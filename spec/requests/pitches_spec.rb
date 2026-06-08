@@ -112,12 +112,26 @@ RSpec.describe "/pitches", type: :request do
         expect(response.body).not_to include("Bet Pitch")
       end
 
-      it "shows all pitches when no status filter" do
+      it "shows only active pitches (draft + ready_for_betting) when no status filter" do
         get pitches_url
         expect(response.body).to include("Draft Pitch")
         expect(response.body).to include("Ready Pitch")
-        expect(response.body).to include("Bet Pitch")
-        expect(response.body).to include("Rejected Pitch")
+        expect(response.body).not_to include("Bet Pitch")
+        expect(response.body).not_to include("Rejected Pitch")
+      end
+
+      it "filters My Drafts to drafts the user creates or co-authors" do
+        author = create(:user)
+        UserPartyRole.create!(user: author, party: organization, role: "member")
+        co_authored = create(:pitch, user: author, organization: organization, title: "Co-authored Draft")
+        co_authored.co_authors << user
+        create(:pitch, user: author, organization: organization, title: "Someone Elses Draft")
+
+        get pitches_url(status: "my_drafts")
+        expect(response.body).to include("Draft Pitch")          # created by current user
+        expect(response.body).to include("Co-authored Draft")    # current user is co-author
+        expect(response.body).not_to include("Someone Elses Draft")
+        expect(response.body).not_to include("Ready Pitch")      # not a draft
       end
     end
 
@@ -367,6 +381,14 @@ RSpec.describe "/pitches", type: :request do
         pitch.reload
         expect(pitch.title).to eq("Updated Ready Pitch")
       end
+
+      it "prevents even an admin from updating a bet pitch" do
+        pitch.state_machine.transition_to!(:ready_for_betting)
+        pitch.state_machine.transition_to!(:bet)
+        patch pitch_url(pitch), params: { pitch: { title: "Locked Edit" } }
+        expect(response).to redirect_to(root_path)
+        expect(pitch.reload.title).not_to eq("Locked Edit")
+      end
     end
 
     context "when creator tries to update non-draft pitch" do
@@ -527,6 +549,24 @@ RSpec.describe "/pitches", type: :request do
       expect(pitch.current_state).to eq("draft")
     end
 
+    it "allows the author to pull a ready_for_betting pitch back to draft" do
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      patch transition_pitch_url(pitch), params: { state: "draft" }
+      pitch.reload
+      expect(pitch.current_state).to eq("draft")
+    end
+
+    it "prevents a stranger from pulling a pitch back to draft" do
+      other_user = create(:user)
+      UserPartyRole.create!(user: other_user, party: organization, role: "member")
+      other_pitch = create(:pitch, user: other_user, organization: organization)
+      other_pitch.state_machine.transition_to!(:ready_for_betting)
+
+      patch transition_pitch_url(other_pitch), params: { state: "draft" }
+      expect(response).to redirect_to(root_path)
+      expect(other_pitch.reload.current_state).to eq("ready_for_betting")
+    end
+
     it "redirects to the pitch" do
       patch transition_pitch_url(pitch), params: { state: "ready_for_betting" }
       expect(response).to redirect_to(pitch_url(pitch))
@@ -548,6 +588,17 @@ RSpec.describe "/pitches", type: :request do
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include("betting_card")
+    end
+
+    it "stamps the betting cycle into the rejection transition metadata" do
+      UserPartyRole.where(user: user, party: organization).update_all(role: "admin")
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      cycle = create(:cycle, organization: organization)
+
+      patch transition_pitch_url(pitch),
+        params: { state: "rejected", update_context: "betting_table", cycle_id: cycle.id }
+
+      expect(Pitch.rejected_in_cycle(cycle)).to include(pitch)
     end
 
     context "with invalid state transition" do

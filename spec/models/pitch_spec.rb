@@ -81,12 +81,90 @@ RSpec.describe Pitch, type: :model do
       expect(pitch.current_state).to eq("draft")
     end
 
+    it "allows pull back: ready_for_betting → draft" do
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      pitch.state_machine.transition_to!(:draft)
+      expect(pitch.current_state).to eq("draft")
+    end
+
+    it "treats bet as terminal" do
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      pitch.state_machine.transition_to!(:bet)
+      expect(pitch.state_machine.can_transition_to?(:draft)).to be false
+      expect(pitch.state_machine.can_transition_to?(:ready_for_betting)).to be false
+    end
+
     it "cannot transition draft → bet directly" do
       expect(pitch.state_machine.can_transition_to?(:bet)).to be false
     end
 
     it "cannot transition draft → rejected directly" do
       expect(pitch.state_machine.can_transition_to?(:rejected)).to be false
+    end
+  end
+
+  describe ".authored_by" do
+    let(:co_author) { create(:user) }
+    let(:other_user) { create(:user) }
+    let!(:own_pitch) { create(:pitch, user: user, organization: organization) }
+    let!(:co_authored_pitch) do
+      p = create(:pitch, user: other_user, organization: organization)
+      p.co_authors << co_author
+      p
+    end
+    let!(:unrelated_pitch) { create(:pitch, user: other_user, organization: organization) }
+
+    it "includes pitches the user created" do
+      expect(Pitch.authored_by(user)).to include(own_pitch)
+    end
+
+    it "includes pitches the user co-authors" do
+      expect(Pitch.authored_by(co_author)).to include(co_authored_pitch)
+    end
+
+    it "excludes pitches the user neither created nor co-authors" do
+      expect(Pitch.authored_by(user)).not_to include(co_authored_pitch, unrelated_pitch)
+    end
+
+    it "does not duplicate a pitch the user both created and co-authors" do
+      own_pitch.co_authors << user
+      result = Pitch.authored_by(user).to_a
+      expect(result.count { |p| p.id == own_pitch.id }).to eq(1)
+    end
+  end
+
+  describe ".rejected_in_cycle" do
+    let(:cycle) { create(:cycle, organization: organization) }
+    let(:other_cycle) { create(:cycle, organization: organization) }
+
+    def reject_pitch(target_cycle_id)
+      p = create(:pitch, user: user, organization: organization)
+      p.state_machine.transition_to!(:ready_for_betting)
+      p.state_machine.transition_to!(:rejected, cycle_id: target_cycle_id)
+      p
+    end
+
+    it "includes pitches rejected on that cycle" do
+      rejected_here = reject_pitch(cycle.id)
+      expect(Pitch.rejected_in_cycle(cycle)).to include(rejected_here)
+    end
+
+    it "excludes pitches rejected on a different cycle" do
+      rejected_elsewhere = reject_pitch(other_cycle.id)
+      expect(Pitch.rejected_in_cycle(cycle)).not_to include(rejected_elsewhere)
+    end
+
+    it "excludes pitches rejected without a cycle stamp" do
+      p = create(:pitch, user: user, organization: organization)
+      p.state_machine.transition_to!(:ready_for_betting)
+      p.state_machine.transition_to!(:rejected)
+      expect(Pitch.rejected_in_cycle(cycle)).not_to include(p)
+    end
+
+    it "excludes a pitch reworked back to draft even if it was rejected on the cycle" do
+      reworked = reject_pitch(cycle.id)
+      reworked.state_machine.transition_to!(:draft)
+      expect(Pitch.rejected_in_cycle(cycle)).not_to include(reworked)
     end
   end
 

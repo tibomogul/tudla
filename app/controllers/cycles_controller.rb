@@ -92,16 +92,20 @@ class CyclesController < ApplicationController
     authorize @cycle, :show?
     @betting_enabled = @cycle.current_state.in?(%w[shaping betting])
 
-    # Single query: ready_for_betting pitches OR bet/rejected pitches linked to this cycle
+    # Ready-for-betting pitches (org-wide) plus the pitches already decided on this
+    # cycle: bet pitches via their project's cycle, and rejected pitches via the cycle
+    # stamped into their rejection transition (rejected pitches have no project).
     base_scope = policy_scope(Pitch).where(organization_id: @cycle.organization_id)
-    cycle_project_pitch_ids = base_scope
-      .where(status: %w[bet rejected])
+    cycle_bet_pitch_ids = base_scope
+      .where(status: "bet")
       .joins(:projects).where(projects: { cycle_id: @cycle.id })
       .select(:id)
+    cycle_rejected_pitch_ids = base_scope.merge(Pitch.rejected_in_cycle(@cycle)).select(:id)
 
     all_pitches = base_scope
       .where(status: "ready_for_betting")
-      .or(base_scope.where(id: cycle_project_pitch_ids))
+      .or(base_scope.where(id: cycle_bet_pitch_ids))
+      .or(base_scope.where(id: cycle_rejected_pitch_ids))
       .includes(:user, projects: :team)
       .order(updated_at: :desc)
 

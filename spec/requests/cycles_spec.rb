@@ -250,6 +250,26 @@ RSpec.describe "/cycles", type: :request do
       expect(response.body).to include("Bet Pitch")
       expect(response.body).to include("opacity-60")
     end
+
+    it "re-surfaces pitches rejected on this cycle, greyed out" do
+      pitch = create(:pitch, user: user, organization: organization, title: "Rejected Here", appetite: 6)
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      pitch.state_machine.transition_to!(:rejected, cycle_id: cycle.id)
+
+      get betting_table_cycle_url(cycle)
+      expect(response.body).to include("Rejected Here")
+      expect(response.body).to include("opacity-60")
+    end
+
+    it "does not surface a pitch rejected on a different cycle" do
+      other_cycle = create(:cycle, organization: organization, name: "Other Cycle")
+      pitch = create(:pitch, user: user, organization: organization, title: "Rejected Elsewhere", appetite: 6)
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      pitch.state_machine.transition_to!(:rejected, cycle_id: other_cycle.id)
+
+      get betting_table_cycle_url(cycle)
+      expect(response.body).not_to include("Rejected Elsewhere")
+    end
   end
 
   describe "organization isolation" do

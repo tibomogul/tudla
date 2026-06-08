@@ -48,6 +48,17 @@ RSpec.describe "/projects", type: :request do
       get project_url(project)
       expect(response).to be_successful
     end
+
+    it "links back to the originating pitch when one is attached" do
+      pitch = create(:pitch, user: user, organization: organization, title: "Origin Pitch")
+      project = create(:project, team: team, pitch: pitch)
+
+      get project_url(project)
+
+      expect(response.body).to include("Shaped from pitch")
+      expect(response.body).to include(pitch_path(pitch))
+      expect(response.body).to include("Origin Pitch")
+    end
   end
 
   describe "GET /new" do

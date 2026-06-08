@@ -82,7 +82,11 @@ class PitchesController < ApplicationController
     @update_context = params[:update_context]
 
     if @pitch.state_machine.can_transition_to?(new_state)
-      @pitch.state_machine.transition_to!(new_state, user_id: current_user.id)
+      metadata = { user_id: current_user.id }
+      # Stamp the betting cycle onto the transition so a rejected pitch (which has
+      # no project to carry the link) can be surfaced again on that cycle's table.
+      metadata[:cycle_id] = params[:cycle_id].to_i if params[:cycle_id].present?
+      @pitch.state_machine.transition_to!(new_state, metadata)
       respond_to do |format|
         format.turbo_stream {
           if @update_context == "betting_table"
@@ -156,6 +160,8 @@ class PitchesController < ApplicationController
     pitches = pitches.where(organization_id: current_organization&.id) if current_organization
 
     pitches = case @status_tab
+    when "my_drafts"
+      pitches.where(status: "draft").merge(Pitch.authored_by(current_user))
     when "draft"
       pitches.where(status: "draft")
     when "ready_for_betting"
@@ -165,7 +171,9 @@ class PitchesController < ApplicationController
     when "rejected"
       pitches.where(status: "rejected")
     else
-      pitches
+      # Primary index: live shaping work only. Bet/rejected pitches live on their
+      # own tabs (and bet pitches are surfaced from their project).
+      pitches.where(status: %w[draft ready_for_betting])
     end
 
     @pagy_pitches, @pitches = pagy(:offset, pitches, limit: 20)
@@ -181,7 +189,7 @@ class PitchesController < ApplicationController
     when :rejected
       authorize @pitch, :reject?
     when :draft
-      authorize @pitch, :update?
+      authorize @pitch, :withdraw?
     else
       authorize @pitch, :update?
     end

@@ -32,6 +32,27 @@ class Pitch < ApplicationRecord
   validates :title, presence: true
   validates :appetite, inclusion: { in: 1..6 }
 
+  # Pitches the user is responsible for shaping — as creator or as a co-author.
+  # Backs the "My Drafts" index filter. distinct guards against duplicate rows
+  # from the co-author join when a user is both creator and (somehow) listed.
+  scope :authored_by, ->(user) {
+    left_outer_joins(:pitch_co_authors)
+      .where("pitches.user_id = :id OR pitch_co_authors.user_id = :id", id: user.id)
+      .distinct
+  }
+
+  # Pitches rejected at a specific cycle's betting table. A rejected pitch — unlike
+  # a bet one — produces no project to carry the cycle link, so the cycle is stamped
+  # into the rejection transition's metadata (see PitchesController#transition). The
+  # jsonb @> containment query is backed by the GIN index on pitch_transitions.metadata.
+  scope :rejected_in_cycle, ->(cycle) {
+    where(status: "rejected").where(
+      id: PitchTransition.where(to_state: "rejected")
+        .where("metadata @> ?", { cycle_id: cycle.id }.to_json)
+        .select(:pitch_id)
+    )
+  }
+
   # Active members of the pitch's organization eligible to be added as
   # co-authors, excluding the creator who already authors the pitch. Mirrors
   # pitch visibility: direct org members and team members only (include_projects:

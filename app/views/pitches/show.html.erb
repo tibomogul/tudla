@@ -30,25 +30,45 @@
     on <%= @pitch.created_at.strftime("%d %b %Y") %>
   </p>
 
-  <!-- State Transition Buttons -->
-  <% if policy(@pitch).update? %>
-    <div class="flex flex-wrap gap-2 mb-4">
-      <% if @pitch.current_state == "draft" && policy(@pitch).submit? %>
-        <%= button_to "Submit for Betting", transition_pitch_path(@pitch, state: "ready_for_betting"),
-          method: :patch, class: "btn btn-info btn-sm",
-          data: { turbo_confirm: "Submit this pitch for the betting table?" } %>
-      <% end %>
-      <% if @pitch.current_state == "ready_for_betting" && policy(@pitch).reject? %>
-        <%= button_to "Reject", transition_pitch_path(@pitch, state: "rejected"),
-          method: :patch, class: "btn btn-error btn-sm",
-          data: { turbo_confirm: "Reject this pitch?" } %>
-      <% end %>
-      <% if @pitch.current_state == "rejected" %>
-        <%= button_to "Rework (Back to Draft)", transition_pitch_path(@pitch, state: "draft"),
-          method: :patch, class: "btn btn-warning btn-sm" %>
-      <% end %>
+  <!-- Bet: locked record linking to its project(s) -->
+  <% if @pitch.current_state == "bet" %>
+    <div class="alert alert-success my-4" role="alert">
+      <span class="iconify lucide--check-circle size-5"></span>
+      <span>
+        Bet and converted into
+        <% projects = @pitch.projects.to_a %>
+        <% if projects.any? %>
+          <%= safe_join(projects.map { |p| link_to(p.name, project_path(p), class: "link link-primary font-semibold") }, ", ") %>.
+        <% else %>
+          a project.
+        <% end %>
+        This pitch is now a locked record and can no longer be edited.
+      </span>
     </div>
   <% end %>
+
+  <!-- State Transition Buttons -->
+  <div class="flex flex-wrap gap-2 mb-4">
+    <% if @pitch.current_state == "draft" && policy(@pitch).submit? %>
+      <%= button_to "Submit for Betting", transition_pitch_path(@pitch, state: "ready_for_betting"),
+        method: :patch, class: "btn btn-info btn-sm",
+        data: { turbo_confirm: "Submit this pitch for the betting table?" } %>
+    <% end %>
+    <% if @pitch.current_state == "ready_for_betting" && policy(@pitch).withdraw? %>
+      <%= button_to "Pull Back to Draft", transition_pitch_path(@pitch, state: "draft"),
+        method: :patch, class: "btn btn-warning btn-sm",
+        data: { turbo_confirm: "Pull this pitch back to draft to keep shaping?" } %>
+    <% end %>
+    <% if @pitch.current_state == "ready_for_betting" && policy(@pitch).reject? %>
+      <%= button_to "Reject", transition_pitch_path(@pitch, state: "rejected"),
+        method: :patch, class: "btn btn-error btn-sm",
+        data: { turbo_confirm: "Reject this pitch?" } %>
+    <% end %>
+    <% if @pitch.current_state == "rejected" && policy(@pitch).withdraw? %>
+      <%= button_to "Rework (Back to Draft)", transition_pitch_path(@pitch, state: "draft"),
+        method: :patch, class: "btn btn-warning btn-sm" %>
+    <% end %>
+  </div>
 
   <!-- Pitch Ingredients -->
   <div class="flex flex-col gap-6 my-6">

@@ -28,11 +28,21 @@ class PitchPolicy < ApplicationPolicy
   end
 
   def update?
+    return false if locked?
     (writable_author? && draft?) || user_is_organization_admin?
   end
 
   def edit?
     update?
+  end
+
+  # A bet pitch is a locked historical record of what was shaped and bet on. It
+  # returns to ready_for_betting only by undoing the bet (not modelled), and is
+  # never directly editable again. Rejected pitches go back to draft to rework;
+  # ready_for_betting pitches can be pulled back to draft to keep shaping.
+  def withdraw?
+    return false unless pitch.current_state.in?(%w[ready_for_betting rejected])
+    writable_author? || user_is_organization_admin?
   end
 
   def destroy?
@@ -56,6 +66,7 @@ class PitchPolicy < ApplicationPolicy
   # is still a draft. Co-authors can edit/submit/delete the pitch, but cannot
   # alter who the authors are.
   def manage_co_authors?
+    return false if locked?
     user_is_organization_admin? || (is_creator? && draft? && user_is_organization_member?)
   end
 
@@ -116,6 +127,13 @@ class PitchPolicy < ApplicationPolicy
 
   def draft?
     pitch.current_state == "draft"
+  end
+
+  # Bet pitches are frozen: once converted to a project the pitch is a read-only
+  # record for everyone, including org admins. This also freezes notes,
+  # attachments and links, whose views key off #update?.
+  def locked?
+    pitch.current_state == "bet"
   end
 
   # Membership via a direct org role or a team role (not a project-only role)

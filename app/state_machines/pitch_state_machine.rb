@@ -8,7 +8,7 @@ class PitchStateMachine
   state :rejected
 
   transition from: :draft, to: [ :ready_for_betting ]
-  transition from: :ready_for_betting, to: [ :bet, :rejected ]
+  transition from: :ready_for_betting, to: [ :bet, :rejected, :draft ] # :draft = pull back
   transition from: :rejected, to: [ :draft ] # allow rework
 
   after_transition(after_commit: true) do |model, transition|

@@ -26,6 +26,19 @@ RSpec.describe PitchPolicy, type: :policy do
     p.state_machine.transition_to!(:ready_for_betting)
     p
   end
+  let(:bet_pitch) do
+    p = create(:pitch, user: creator, organization: organization)
+    p.co_authors << co_author
+    p.state_machine.transition_to!(:ready_for_betting)
+    p.state_machine.transition_to!(:bet)
+    p
+  end
+  let(:rejected_pitch) do
+    p = create(:pitch, user: creator, organization: organization)
+    p.state_machine.transition_to!(:ready_for_betting)
+    p.state_machine.transition_to!(:rejected)
+    p
+  end
 
   describe "#index?" do
     it "allows anyone" do
@@ -121,6 +134,50 @@ RSpec.describe PitchPolicy, type: :policy do
 
     it "prevents co-author from updating non-draft pitch" do
       expect(described_class.new(co_author, ready_pitch).update?).to be false
+    end
+  end
+
+  describe "bet pitches are fully locked" do
+    it "prevents the creator from updating a bet pitch" do
+      expect(described_class.new(creator, bet_pitch).update?).to be false
+    end
+
+    it "prevents an admin from updating a bet pitch" do
+      expect(described_class.new(admin, bet_pitch).update?).to be false
+    end
+
+    it "prevents an admin from managing co-authors on a bet pitch" do
+      expect(described_class.new(admin, bet_pitch).manage_co_authors?).to be false
+    end
+  end
+
+  describe "#withdraw?" do
+    it "allows the creator to pull a ready_for_betting pitch back to draft" do
+      expect(described_class.new(creator, ready_pitch).withdraw?).to be true
+    end
+
+    it "allows a co-author to pull a ready_for_betting pitch back to draft" do
+      expect(described_class.new(co_author, ready_pitch).withdraw?).to be true
+    end
+
+    it "allows an admin to pull a ready_for_betting pitch back to draft" do
+      expect(described_class.new(admin, ready_pitch).withdraw?).to be true
+    end
+
+    it "allows the creator to rework a rejected pitch back to draft" do
+      expect(described_class.new(creator, rejected_pitch).withdraw?).to be true
+    end
+
+    it "prevents a plain member from withdrawing" do
+      expect(described_class.new(member, ready_pitch).withdraw?).to be false
+    end
+
+    it "is false on a draft pitch" do
+      expect(described_class.new(creator, draft_pitch).withdraw?).to be false
+    end
+
+    it "is false on a bet pitch" do
+      expect(described_class.new(admin, bet_pitch).withdraw?).to be false
     end
   end
 
