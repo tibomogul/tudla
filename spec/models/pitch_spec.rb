@@ -166,6 +166,16 @@ RSpec.describe Pitch, type: :model do
       reworked.state_machine.transition_to!(:draft)
       expect(Pitch.rejected_in_cycle(cycle)).not_to include(reworked)
     end
+
+    it "follows the live rejection when reworked and re-rejected on another cycle" do
+      pitch = reject_pitch(cycle.id)
+      pitch.state_machine.transition_to!(:draft)
+      pitch.state_machine.transition_to!(:ready_for_betting)
+      pitch.state_machine.transition_to!(:rejected, cycle_id: other_cycle.id)
+
+      expect(Pitch.rejected_in_cycle(other_cycle)).to include(pitch)
+      expect(Pitch.rejected_in_cycle(cycle)).not_to include(pitch)
+    end
   end
 
   describe "#assignable_co_authors" do

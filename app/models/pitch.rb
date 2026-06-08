@@ -33,11 +33,13 @@ class Pitch < ApplicationRecord
   validates :appetite, inclusion: { in: 1..6 }
 
   # Pitches the user is responsible for shaping — as creator or as a co-author.
-  # Backs the "My Drafts" index filter. distinct guards against duplicate rows
-  # from the co-author join when a user is both creator and (somehow) listed.
+  # Backs the "My Drafts" index filter. The co-author side joins through the
+  # active-scoped association so a soft-deleted co-author link doesn't match.
+  # distinct guards against duplicate rows when a user is both creator and
+  # (somehow) listed as a co-author.
   scope :authored_by, ->(user) {
-    left_outer_joins(:pitch_co_authors)
-      .where("pitches.user_id = :id OR pitch_co_authors.user_id = :id", id: user.id)
+    left_outer_joins(:co_authors)
+      .where("pitches.user_id = :id OR users.id = :id", id: user.id)
       .distinct
   }
 
@@ -45,9 +47,14 @@ class Pitch < ApplicationRecord
   # a bet one — produces no project to carry the cycle link, so the cycle is stamped
   # into the rejection transition's metadata (see PitchesController#transition). The
   # jsonb @> containment query is backed by the GIN index on pitch_transitions.metadata.
+  #
+  # Anchored to most_recent so a pitch reworked and re-rejected on a *different*
+  # cycle doesn't keep surfacing on every cycle it was ever rejected on — only its
+  # live rejection counts. (status == "rejected" already implies the most-recent
+  # transition is the rejection, so this just disambiguates which cycle owns it.)
   scope :rejected_in_cycle, ->(cycle) {
     where(status: "rejected").where(
-      id: PitchTransition.where(to_state: "rejected")
+      id: PitchTransition.where(to_state: "rejected", most_recent: true)
         .where("metadata @> ?", { cycle_id: cycle.id }.to_json)
         .select(:pitch_id)
     )

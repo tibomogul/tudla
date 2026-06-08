@@ -1,4 +1,4 @@
-<% if @update_context == "betting_table" %>
+<% if @update_context == "betting_table" && @cycle %>
   <%= turbo_stream.replace dom_id(@pitch, :betting_card) do %>
     <%= render "cycles/betting_pitch_card", pitch: @pitch, cycle: @cycle, teams: @teams, betting_enabled: @betting_enabled %>
   <% end %>
