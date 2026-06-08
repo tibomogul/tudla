@@ -34,7 +34,8 @@ class Pitch < ApplicationRecord
 
   # Pitches the user is responsible for shaping — as creator or as a co-author.
   # Backs the "My Drafts" index filter. The co-author side joins through the
-  # active-scoped association so a soft-deleted co-author link doesn't match.
+  # co_authors association, whose -> { active } scope excludes soft-deleted users
+  # (the join rows themselves are hard-deleted on revocation, not soft-deleted).
   # distinct guards against duplicate rows when a user is both creator and
   # (somehow) listed as a co-author.
   scope :authored_by, ->(user) {

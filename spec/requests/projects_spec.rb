@@ -59,6 +59,23 @@ RSpec.describe "/projects", type: :request do
       expect(response.body).to include(pitch_path(pitch))
       expect(response.body).to include("Origin Pitch")
     end
+
+    it "hides the pitch link from a project-only member who cannot see the pitch" do
+      author = create(:user)
+      UserPartyRole.create!(user: author, party: organization, role: "member")
+      pitch = create(:pitch, user: author, organization: organization, title: "Hidden Pitch")
+      project = create(:project, team: team, pitch: pitch)
+
+      viewer = create(:user)
+      UserPartyRole.create!(user: viewer, party: project, role: "member")
+      sign_in(viewer)
+
+      get project_url(project)
+
+      expect(response).to be_successful
+      expect(response.body).not_to include("Shaped from pitch")
+      expect(response.body).not_to include("Hidden Pitch")
+    end
   end
 
   describe "GET /new" do

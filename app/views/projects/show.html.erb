@@ -20,7 +20,7 @@
   </div>
 
   <% pitch = @project.pitch %>
-  <% if pitch && !pitch.deleted? %>
+  <% if pitch && !pitch.deleted? && policy(pitch).show? %>
     <p class="text-sm text-base-content/60 mb-2">
       <span class="iconify lucide--lightbulb size-4 align-text-bottom"></span>
       Shaped from pitch
