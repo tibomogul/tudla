@@ -21,11 +21,15 @@ RSpec.describe ListUserChangesTool, type: :model do
   let(:tool) { described_class.new({ user: user }) }
 
   before do
+    @paper_trail_was_enabled = PaperTrail.enabled?
     PaperTrail.enabled = true
   end
 
   after do
-    PaperTrail.enabled = false
+    # Restore the prior global state instead of forcing `false`. PaperTrail is
+    # enabled by default in this app's test env, and hardcoding `false` here
+    # leaked into any spec that ran afterward under random order.
+    PaperTrail.enabled = @paper_trail_was_enabled
   end
 
   # Helper to create a note attached to a record via notable

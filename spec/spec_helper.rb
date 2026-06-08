@@ -52,6 +52,12 @@ RSpec.configure do |config|
   # triggering implicit auto-inclusion in groups with matching metadata.
   config.shared_context_metadata_behavior = :apply_to_host_groups
 
+  # Run specs in random order to surface order dependencies. If you find an
+  # order dependency and want to debug it, fix the order by passing the seed
+  # printed after each run: `--seed 1234`.
+  config.order = :random
+  Kernel.srand config.seed
+
 # The settings below are suggested to provide a good initial experience
 # with RSpec, but feel free to customize to your heart's content.
 =begin

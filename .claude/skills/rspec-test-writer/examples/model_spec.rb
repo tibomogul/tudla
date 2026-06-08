@@ -11,17 +11,25 @@ RSpec.describe Task, type: :model do
   let(:team)         { create(:team, organization: organization) }
   let(:project)      { create(:project, team: team) }
   let(:scope)        { create(:scope, project: project) }
+  let(:user)         { create(:user) }
 
   describe "associations" do
-    it { is_expected.to belong_to(:project).optional }
-    it { is_expected.to belong_to(:scope).optional }
-    it { is_expected.to belong_to(:responsible_user).class_name("User").optional }
-    # NOTE: shoulda-matchers are NOT in the Gemfile by default — if they are not
-    # available, assert associations behaviourally instead:
-    #   it "belongs to a project" do
-    #     task = create(:task, project: project)
-    #     expect(task.project).to eq(project)
-    #   end
+    # NOTE: shoulda-matchers is NOT in the Gemfile, so the one-line
+    # `it { is_expected.to belong_to(:project) }` form is unavailable and will
+    # raise NoMethodError. Assert associations behaviourally instead:
+    it "belongs to a project (optional)" do
+      expect(create(:task, project: project).project).to eq(project)
+      expect(create(:task).project).to be_nil
+    end
+
+    it "belongs to a scope (optional)" do
+      expect(create(:task, project: project, scope: scope).scope).to eq(scope)
+    end
+
+    it "belongs to a responsible_user via the User class (optional)" do
+      task = create(:task, project: project, responsible_user: user)
+      expect(task.responsible_user).to eq(user)
+    end
   end
 
   describe "#organization" do

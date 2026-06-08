@@ -143,8 +143,11 @@ expect(note.versions.last.whodunnit).to eq(other.id.to_s)
 ### Enable/disable toggle — a whole example group
 
 ```ruby
-before { PaperTrail.enabled = true }
-after  { PaperTrail.enabled = false }
+before do
+  @paper_trail_was_enabled = PaperTrail.enabled?
+  PaperTrail.enabled = true
+end
+after { PaperTrail.enabled = @paper_trail_was_enabled }
 
 it "records the actor" do
   PaperTrail.request.whodunnit = user.id.to_s
@@ -153,7 +156,7 @@ it "records the actor" do
 end
 ```
 
-Always reset `PaperTrail.enabled = false` in an `after` so versioning does not leak into unrelated examples.
+**Restore the prior value** in the `after` — capture `PaperTrail.enabled?` in the `before` and set it back, rather than hardcoding `PaperTrail.enabled = false`. PaperTrail is enabled by default in the test env, so forcing it off in teardown disables versioning for whatever spec runs next under random order (this exact leak broke `note_spec`/`user_party_role_spec` once random ordering was turned on).
 
 ## What to assert
 

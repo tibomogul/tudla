@@ -56,7 +56,7 @@ Never `require "spec_helper"` directly from a spec — `rails_helper` requires i
 - `ActiveSupport::Testing::TimeHelpers` everywhere — `travel_to` is available without any extra include.
 - `use_transactional_fixtures = true` — every example rolls back. Do not call `DatabaseCleaner`.
 
-`mocks.verify_partial_doubles = true` is on (`spec/spec_helper.rb`). Stubs against typo'd or removed methods raise — good. Fix the stub, never disable verification. `config.order = :random`; never let one example mutate state another reads.
+`mocks.verify_partial_doubles = true` is on (`spec/spec_helper.rb`). Stubs against typo'd or removed methods raise — good. Fix the stub, never disable verification. `config.order = :random` is on (`spec/spec_helper.rb`), so examples run in a random, seed-reproducible order — never let one example depend on another's setup or mutate global state another reads. Each example must build its own data, and any global toggle (e.g. `PaperTrail.enabled`) must be **restored to its prior value** in an `after`, not hardcoded — forcing it off leaks into whatever spec runs next. Reproduce an order-dependent failure with `--seed <n>` from the run output.
 
 ## Factories — the rule
 
@@ -247,11 +247,14 @@ PaperTrail is wired on several models (`has_paper_trail`). Two patterns are in u
   PaperTrail.request(whodunnit: other.id) { note.update!(content: "edited") }
   expect(note.versions.last.whodunnit).to eq(other.id.to_s)
   ```
-- **Enable/disable toggle** (tool spec style) when a whole example group exercises versioning:
+- **Enable/disable toggle** (tool spec style) when a whole example group exercises versioning. PaperTrail is enabled by default in the test env, so **capture and restore** the prior state — never hardcode `after { PaperTrail.enabled = false }`, which disables versioning for whatever spec runs next under random order:
 
   ```ruby
-  before { PaperTrail.enabled = true }
-  after  { PaperTrail.enabled = false }
+  before do
+    @paper_trail_was_enabled = PaperTrail.enabled?
+    PaperTrail.enabled = true
+  end
+  after { PaperTrail.enabled = @paper_trail_was_enabled }
   # set whodunnit per change:
   PaperTrail.request.whodunnit = user.id.to_s
   ```
