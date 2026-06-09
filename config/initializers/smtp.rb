@@ -4,6 +4,7 @@ ActionMailer::Base.smtp_settings = if ENV["ACTION_MAILER_ADDRESS"]
     port: ENV.fetch("ACTION_MAILER_PORT") { 1025 },
     user_name: ENV["ACTION_MAILER_USERNAME"],
     password: ENV["ACTION_MAILER_PASSWORD"],
+    domain: ENV.fetch("ACTION_MAILER_DOMAIN") { "example.com" },
     authentication: "plain",
     enable_starttls: true
   }
