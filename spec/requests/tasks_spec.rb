@@ -32,12 +32,11 @@ RSpec.describe "/tasks", type: :request do
     }
   end
 
-  # NOTE: the Task model declares no validations, so `@task.save` / `@task.update`
-  # never return false for attribute-level bad input. The controller's
-  # "unprocessable_entity" branches are therefore only reachable via a database
-  # constraint error (which raises rather than returning false). There is no
-  # meaningful "invalid params re-renders the form" path to assert for this
-  # model, so those scaffold examples are intentionally omitted.
+  # Task validates presence of :name, so a blank name makes `@task.save` /
+  # `@task.update` return false and the controller renders its
+  # unprocessable_entity branch. The invalid-params examples below drive this
+  # through the turbo_stream format (the real quick-add path), which has dedicated
+  # inline-error partials.
 
   describe "GET /index" do
     it "renders a successful response" do
@@ -140,6 +139,22 @@ RSpec.describe "/tasks", type: :request do
       end
     end
 
+    context "with invalid parameters (blank name)" do
+      let(:invalid_attributes) { valid_attributes.merge(name: "") }
+
+      it "does not create a task" do
+        expect {
+          post tasks_url, params: { task: invalid_attributes }, as: :turbo_stream
+        }.not_to change(Task.active, :count)
+      end
+
+      it "responds with 422" do
+        post tasks_url, params: { task: invalid_attributes }, as: :turbo_stream
+
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+    end
+
     context "when the user has no access to the target project" do
       let(:outsider) { create(:user) }
 
@@ -183,6 +198,20 @@ RSpec.describe "/tasks", type: :request do
       it "recomputes the parent scope estimate cache" do
         patch task_url(task), params: { task: new_attributes }
         expect(scope_record.reload.cached_unassisted_estimate).to eq(10)
+      end
+    end
+
+    context "with invalid parameters (blank name)" do
+      it "does not change the task" do
+        patch task_url(task), params: { task: { name: "" } }, as: :turbo_stream
+
+        expect(task.reload.name).to eq("Before")
+      end
+
+      it "responds with 422" do
+        patch task_url(task), params: { task: { name: "" } }, as: :turbo_stream
+
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 

@@ -8,6 +8,7 @@ class TeamsController < ApplicationController
 
   # GET /teams/1 or /teams/1.json
   def show
+    authorize @team
     # Load recent reports for the team (last 20, ordered by as_of_at descending)
     @recent_reports = if @team.reportable
       policy_scope(@team.reports)
@@ -22,15 +23,18 @@ class TeamsController < ApplicationController
   # GET /teams/new
   def new
     @team = Team.new
+    authorize @team
   end
 
   # GET /teams/1/edit
   def edit
+    authorize @team
   end
 
   # POST /teams or /teams.json
   def create
     @team = Team.new(team_params)
+    authorize @team
 
     respond_to do |format|
       if @team.save
@@ -45,6 +49,7 @@ class TeamsController < ApplicationController
 
   # PATCH/PUT /teams/1 or /teams/1.json
   def update
+    authorize @team
     respond_to do |format|
       if @team.update(team_params)
         format.html { redirect_to @team, notice: "Team was successfully updated.", status: :see_other }
@@ -58,6 +63,7 @@ class TeamsController < ApplicationController
 
   # DELETE /teams/1 or /teams/1.json
   def destroy
+    authorize @team
     @team.destroy
 
     respond_to do |format|

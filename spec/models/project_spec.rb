@@ -5,6 +5,15 @@ RSpec.describe Project, type: :model do
   let(:team) { create(:team, organization: organization) }
   let(:project) { create(:project, team: team) }
 
+  describe "validations" do
+    it "requires a name" do
+      record = build(:project, name: nil)
+
+      expect(record).not_to be_valid
+      expect(record.errors[:name]).to include("can't be blank")
+    end
+  end
+
   describe "associations" do
     it "has many scopes" do
       scope = create(:scope, project: project)

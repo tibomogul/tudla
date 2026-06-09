@@ -1,5 +1,8 @@
 class Team < ApplicationRecord
   include SoftDeletable
+
+  validates :name, presence: true
+
   belongs_to :organization
   has_many :projects
   has_many :user_party_roles, as: :party

@@ -62,12 +62,10 @@ RSpec.describe "/projects", type: :request do
       expect(response).to be_successful
     end
 
-    # xit: source gap — ProjectsController#show does not call `authorize @project`,
-    # so any signed-in user can view any project by ID, regardless of role. The
-    # ProjectPolicy#show? rule exists but is never invoked by this action. Fixing
-    # requires editing the controller (out of scope here); this example documents
-    # the intended behaviour and will pass once `authorize @project` is added.
-    xit "denies access to a user with no role in the project's hierarchy" do
+    # ProjectsController#show calls `authorize @project`, so a signed-in user with
+    # no role in the project's org/team/project hierarchy is denied. Pundit raises
+    # NotAuthorizedError, rescued by ApplicationController into a redirect to root.
+    it "denies access to a user with no role in the project's hierarchy" do
       outsider = create(:user)
       sign_out(user)
       sign_in(outsider)
@@ -75,7 +73,7 @@ RSpec.describe "/projects", type: :request do
 
       get project_url(project)
 
-      expect(response).not_to be_successful
+      expect(response).to redirect_to(root_path)
     end
 
     it "links back to the originating pitch when one is attached" do

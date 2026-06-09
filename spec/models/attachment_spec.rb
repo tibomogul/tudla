@@ -18,12 +18,10 @@ RSpec.describe Attachment, type: :model do
       expect(attachment.user).to eq(user)
     end
 
-    # xit: production bug — Attachable declares `has_many :attachments, dependent: :destroy`,
-    # but SoftDeletable overrides Attachment#destroy to only set deleted_at (the row is never
-    # removed). Destroying the attachable therefore leaves orphan attachment rows and the DB
-    # foreign key (fk_rails_4d49aa5129) raises PG::ForeignKeyViolation. Cannot be fixed from
-    # the spec without touching app code.
-    xit "is destroyed when its attachable is destroyed" do
+    # Attachable#before_destroy hard-deletes its attachments via #destroy! (the real
+    # destroy), so destroying the attachable removes the rows rather than soft-deleting
+    # them — no orphan rows against the attachments→attachables FK.
+    it "is destroyed when its attachable is destroyed" do
       attachable = create(:attachable)
       attachment = create(:attachment, attachable: attachable)
 

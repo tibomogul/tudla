@@ -2,6 +2,8 @@ class Project < ApplicationRecord
   include ActionView::RecordIdentifier # for dom_id
   has_paper_trail
 
+  validates :name, presence: true
+
   has_many :scopes
   has_many :tasks
   has_many :unscoped_tasks, -> { where(scope_id: nil) }, class_name: "Task"

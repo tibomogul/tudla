@@ -8,19 +8,15 @@ require "rails_helper"
 #     organizations on which the user holds an Organization-level UserPartyRole.
 #     A team/project-only role does NOT surface the org in the index, and
 #     soft-deleted orgs are filtered out by `scope.active`.
-#   * show/edit use `set_organization` (`Organization.find`) and the controller
-#     does NOT call `authorize`, so those actions — like create/update/destroy —
-#     are reachable by any signed-in user. These specs lock in the ACTUAL
-#     controller behaviour, not the (stricter) OrganizationPolicy booleans
-#     (create?/destroy? are false, show?/update? gate on membership/admin).
-#   * Organization includes SoftDeletable, so `destroy` is a soft delete: it sets
-#     deleted_at and removes the org from `Organization.active`, but the raw
-#     `Organization.count` row count is unchanged. The redirect uses :see_other.
-#   * update also redirects with :see_other.
-#   * Only `:name` is a permitted param and `name` has no presence validation
-#     (nullable column, no model validation), so a payload submitted through the
-#     permitted params can never fail validation — there is no reachable 422
-#     path. The "blank name" examples document that real behaviour instead.
+#   * The controller authorizes every action via OrganizationPolicy:
+#       - show        → organization member
+#       - edit/update → organization ADMIN
+#       - new/create/destroy → denied for everyone (policy returns false)
+#     Denied actions raise Pundit::NotAuthorizedError, rescued by
+#     ApplicationController into a redirect to root_path.
+#   * Organization includes SoftDeletable; with authorization enforced, destroy is
+#     denied entirely. update redirects with :see_other.
+#   * Organization validates presence of :name, so a blank name re-renders 422.
 RSpec.describe "/organizations", type: :request do
   let(:user) { create(:user) }
 
@@ -91,11 +87,13 @@ RSpec.describe "/organizations", type: :request do
       end
     end
 
+    # new/create/destroy are denied for everyone (OrganizationPolicy returns
+    # false), even for an org admin. edit/update remain available to org admins.
     describe "GET /new" do
-      it "renders a successful response" do
+      it "denies access and redirects to root" do
         get new_organization_url
 
-        expect(response).to be_successful
+        expect(response).to redirect_to(root_path)
       end
     end
 
@@ -108,32 +106,12 @@ RSpec.describe "/organizations", type: :request do
     end
 
     describe "POST /create" do
-      it "creates a new Organization" do
+      it "is denied and creates no organization" do
         expect {
           post organizations_url, params: { organization: valid_attributes }
-        }.to change(Organization, :count).by(1)
-      end
+        }.not_to change(Organization, :count)
 
-      it "persists the submitted attributes" do
-        post organizations_url, params: { organization: { name: "Initech" } }
-
-        expect(Organization.last.name).to eq("Initech")
-      end
-
-      it "redirects to the created organization" do
-        post organizations_url, params: { organization: valid_attributes }
-
-        expect(response).to redirect_to(organization_url(Organization.last))
-      end
-
-      # Only :name is permitted and it has no presence validation, so even a
-      # blank name persists — documenting that there is no reachable 422 path.
-      it "still creates an organization with a blank name" do
-        expect {
-          post organizations_url, params: { organization: { name: "" } }
-        }.to change(Organization, :count).by(1)
-
-        expect(response).to redirect_to(organization_url(Organization.last))
+        expect(response).to redirect_to(root_path)
       end
     end
 
@@ -154,6 +132,20 @@ RSpec.describe "/organizations", type: :request do
         end
       end
 
+      context "with invalid parameters (blank name)" do
+        it "does not change the organization" do
+          patch organization_url(organization), params: { organization: { name: "" } }
+
+          expect(organization.reload.name).to eq("Acme Corp")
+        end
+
+        it "renders a response with 422 status (i.e. to display the 'edit' template)" do
+          patch organization_url(organization), params: { organization: { name: "" } }
+
+          expect(response).to have_http_status(:unprocessable_content)
+        end
+      end
+
       # Non-permitted params (e.g. LLM settings) are filtered out by
       # `params.expect(organization: [:name])` and never reach the model, so they
       # cannot trigger the model's LLM-completeness validation. The name-only
@@ -170,26 +162,13 @@ RSpec.describe "/organizations", type: :request do
     end
 
     describe "DELETE /destroy" do
-      it "soft-deletes the requested organization" do
+      it "is denied and leaves the organization active" do
         expect {
           delete organization_url(organization)
-        }.to change { Organization.active.exists?(organization.id) }.from(true).to(false)
+        }.not_to change { Organization.active.exists?(organization.id) }
 
-        expect(organization.reload.deleted_at).to be_present
-      end
-
-      it "does not hard-delete the row" do
-        org = organization
-
-        expect {
-          delete organization_url(org)
-        }.not_to change(Organization, :count)
-      end
-
-      it "redirects to the organizations list" do
-        delete organization_url(organization)
-
-        expect(response).to redirect_to(organizations_url)
+        expect(organization.reload.deleted_at).to be_nil
+        expect(response).to redirect_to(root_path)
       end
     end
   end

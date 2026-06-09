@@ -2,6 +2,8 @@ class Task < ApplicationRecord
   has_paper_trail skip: [ :backlog_position, :today_position, :scope_position, :in_today ]
   include ActionView::RecordIdentifier # for dom_id
 
+  validates :name, presence: true
+
   belongs_to :project, optional: true
   belongs_to :scope, optional: true
   belongs_to :responsible_user, optional: true, class_name: "User"
