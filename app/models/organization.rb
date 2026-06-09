@@ -12,6 +12,7 @@ class Organization < ApplicationRecord
   has_one :linkable, as: :linkable, dependent: :destroy
   has_many :links, through: :linkable
 
+  validates :name, presence: true
   validate :llm_settings_completeness
   validate :llm_api_base_format
   after_update :bust_members_organizations_cache

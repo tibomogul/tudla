@@ -7,6 +7,15 @@ RSpec.describe Task, type: :model do
   let(:scope)        { create(:scope, project: project) }
   let(:user)         { create(:user) }
 
+  describe "validations" do
+    it "requires a name" do
+      record = build(:task, name: nil)
+
+      expect(record).not_to be_valid
+      expect(record.errors[:name]).to include("can't be blank")
+    end
+  end
+
   describe "#organization" do
     it "walks project -> team -> organization" do
       task = create(:task, project: project)

@@ -17,6 +17,7 @@ class ProjectsController < ApplicationController
 
   # GET /projects/1 or /projects/1.json
   def show
+    authorize @project
     @dots = @project.scopes.map do |scope|
       {
         id: scope.id.to_s,

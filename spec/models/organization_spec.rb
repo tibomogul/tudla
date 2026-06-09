@@ -1,6 +1,15 @@
 require 'rails_helper'
 
 RSpec.describe Organization, type: :model do
+  describe "validations" do
+    it "requires a name" do
+      record = build(:organization, name: nil)
+
+      expect(record).not_to be_valid
+      expect(record.errors[:name]).to include("can't be blank")
+    end
+  end
+
   describe "#llm_configured?" do
     it "returns true when all three LLM fields are present" do
       org = build(:organization, llm_api_key: "sk-test", llm_api_base: "https://api.openai.com/v1", llm_model: "gpt-4o-mini")

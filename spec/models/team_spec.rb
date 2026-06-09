@@ -1,6 +1,15 @@
 require 'rails_helper'
 
 RSpec.describe Team, type: :model do
+  describe "validations" do
+    it "requires a name" do
+      record = build(:team, name: nil)
+
+      expect(record).not_to be_valid
+      expect(record.errors[:name]).to include("can't be blank")
+    end
+  end
+
   describe "member cache busting" do
     let(:org_a) { create(:organization, name: "Alpha Org") }
     let(:org_b) { create(:organization, name: "Beta Org") }
