@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "/pitches", type: :request do
+  include ActionCable::TestHelper
+
   let(:organization) { create(:organization) }
   let(:user) { create(:user) }
   let(:pitch) { create(:pitch, user: user, organization: organization) }
@@ -576,6 +578,37 @@ RSpec.describe "/pitches", type: :request do
       patch transition_pitch_url(pitch), params: { state: "ready_for_betting" }
       transition = pitch.pitch_transitions.order(:sort_key).last
       expect(transition.metadata["user_id"]).to eq(user.id)
+    end
+
+    it "redirects (not turbo_stream) for a Turbo submit outside the betting table" do
+      # Regression: this used to render a turbo_stream targeting dom_id(pitch),
+      # which doesn't exist on the show page — the submitter saw nothing change.
+      patch transition_pitch_url(pitch),
+        params: { state: "ready_for_betting" },
+        headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+      expect(response).to redirect_to(pitch_url(pitch))
+      expect(response).to have_http_status(:see_other)
+      expect(pitch.reload.current_state).to eq("ready_for_betting")
+    end
+
+    it "does not broadcast a re-submitter's unauthorized flash to the flash stream" do
+      # Regression: the unauthorized alert from a stale-page double submit was
+      # broadcast to a global "flash" stream that every logged-in user saw.
+      pitch.state_machine.transition_to!(:ready_for_betting)
+
+      patch transition_pitch_url(pitch),
+        params: { state: "ready_for_betting" },
+        headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml",
+                   "Referer" => pitch_url(pitch) }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to match(/not authorized/i)
+
+      assert_no_broadcasts("flash") do
+        follow_redirect!
+      end
+      expect(response.body).to include("You are not authorized to perform this action.")
     end
 
     it "returns turbo_stream for betting_table context rejection" do

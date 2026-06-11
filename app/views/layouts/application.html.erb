@@ -24,7 +24,6 @@
   </head>
 
   <body data-controller="theme">
-    <%= turbo_stream_from "flash" %>
     <div id="flash-container" class="fixed top-4 right-4 space-y-2">
       <%= render "application/flash" if flash.any? %>
     </div>

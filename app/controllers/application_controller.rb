@@ -4,7 +4,6 @@ class ApplicationController < ActionController::Base
 
   before_action :custom_authenticate_user!, unless: :devise_controller?
   before_action :configure_permitted_parameters, if: :devise_controller?
-  after_action :broadcast_flash
 
   before_action :set_paper_trail_whodunnit
 
@@ -69,21 +68,5 @@ class ApplicationController < ActionController::Base
       format.json { render json: { error: "Not authorized", error_code: "not_authorized" }, status: :forbidden }
       format.any  { head :forbidden }
     end
-  end
-
-  def broadcast_flash
-    return unless flash.any?
-    return if response.redirect? # Let redirects handle flash normally
-
-    turbo_stream = ApplicationController.render(
-      partial: "application/flash",
-      locals: { flash: flash.to_hash }
-    )
-
-    Turbo::StreamsChannel.broadcast_append_to "flash",
-      target: "flash-container",
-      html: turbo_stream
-
-    flash.discard # prevent double rendering
   end
 end

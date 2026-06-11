@@ -93,17 +93,20 @@ class PitchesController < ApplicationController
       metadata[:cycle_id] = cycle.id if cycle
       @pitch.state_machine.transition_to!(new_state, metadata)
       respond_to do |format|
-        format.turbo_stream {
-          if @update_context == "betting_table" && cycle
+        # Only the betting table has in-place stream targets; everywhere else
+        # (the pitch show page) falls through to the redirect so the page
+        # reloads and reflects the new state.
+        if @update_context == "betting_table" && cycle
+          format.turbo_stream {
             @cycle = cycle
             @teams = Team.active.where(organization_id: @cycle.organization_id).includes(:users).order(:name)
             @betting_enabled = @cycle.current_state.in?(%w[shaping betting])
-          end
-        }
-        format.html { redirect_to @pitch, notice: "Pitch moved to #{new_state}." }
+          }
+        end
+        format.html { redirect_to @pitch, notice: "Pitch moved to #{new_state}.", status: :see_other }
       end
     else
-      redirect_to @pitch, alert: "Cannot transition to #{new_state}."
+      redirect_to @pitch, alert: "Cannot transition to #{new_state}.", status: :see_other
     end
   end
 
