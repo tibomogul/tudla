@@ -1,6 +1,7 @@
 class SubscriptionsController < ApplicationController
   def destroy
-    @subscription = Subscription.find(params[:id])
+    @subscription = Pulse::Subscription.find(params[:id])
+    authorize @subscription
     @subscribable = @subscription.subscribable
     @subscription.destroy
     render turbo_stream: turbo_stream.replace("subscribable_subscription_#{@subscribable.id}",

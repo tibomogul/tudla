@@ -12,10 +12,10 @@ class User < ApplicationRecord
   has_many :api_tokens, dependent: :destroy
   has_many :pitch_co_authors, dependent: :destroy
 
-  has_many :subscriptions
+  has_many :subscriptions, class_name: "Pulse::Subscription"
   has_many :subscribables, through: :subscriptions
 
-  has_many :notifications
+  has_many :notifications, class_name: "Pulse::Notification"
 
   def display_name
     preferred_name.presence || username.presence || email

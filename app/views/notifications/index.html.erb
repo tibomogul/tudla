@@ -1,0 +1,30 @@
+<div class="mx-auto max-w-2xl">
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-xl font-semibold">Notifications</h1>
+    <% if @notifications.any? { |n| !n.read? } %>
+      <%= link_to mark_all_read_notifications_path, data: { turbo_method: :patch }, class: "btn btn-soft btn-sm" do %>
+        <span class="iconify lucide--check-check size-4"></span>
+        Mark all as read
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="card bg-base-100 shadow">
+    <% if @notifications.any? %>
+      <div class="divide-base-200 divide-y">
+        <%= render partial: "notifications/notification", collection: @notifications %>
+      </div>
+    <% else %>
+      <div class="text-base-content/60 flex flex-col items-center gap-2 px-4 py-12">
+        <span class="iconify lucide--bell size-8"></span>
+        <p>No notifications yet. Subscribe to a project, scope or task to get updates.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @pagy.pages > 1 %>
+    <div class="mt-4 flex justify-center">
+      <%= pagy_daisyui_nav(@pagy) %>
+    </div>
+  <% end %>
+</div>

@@ -54,10 +54,19 @@ class McpController < ApplicationController
     if auth_header&.start_with?("Bearer ")
       token = auth_header.sub("Bearer ", "")
       @mcp_user = ApiToken.authenticate(token)
+      set_pulse_agent_actor(token) if @mcp_user
       Rails.logger.info "MCP Auth: User #{@mcp_user&.id || 'nil'} (token #{@mcp_user ? 'valid' : 'invalid'})"
     else
       @mcp_user = nil
       Rails.logger.info "MCP Auth: No Bearer token provided"
     end
+  end
+
+  # Pulse events published from MCP tool calls are attributed to the token's
+  # user but flagged as agent activity, labeled with the token name.
+  def set_pulse_agent_actor(token)
+    Pulse::Current.user = @mcp_user
+    Pulse::Current.actor_type = "agent"
+    Pulse::Current.actor_label = ApiToken.active.find_by(token: token)&.name
   end
 end

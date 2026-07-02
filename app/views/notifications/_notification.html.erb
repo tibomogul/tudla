@@ -1,0 +1,11 @@
+<%= link_to mark_read_notification_path(notification), data: { turbo_method: :patch },
+    class: "flex items-start gap-3 px-4 py-3 hover:bg-base-200 #{'bg-base-200/50' unless notification.read?}" do %>
+  <span class="iconify lucide--bell size-4 mt-1 <%= notification.read? ? 'text-base-content/40' : 'text-primary' %>"></span>
+  <div class="min-w-0 flex-1">
+    <p class="text-sm <%= 'font-medium' unless notification.read? %>"><%= notification_text(notification) %></p>
+    <p class="text-base-content/60 text-xs mt-0.5"><%= time_ago_in_words(notification.created_at) %> ago</p>
+  </div>
+  <% unless notification.read? %>
+    <span class="bg-primary mt-2 size-2 rounded-full"></span>
+  <% end %>
+<% end %>
