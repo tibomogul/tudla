@@ -9,9 +9,10 @@ module Pulse
 
     CATALOG = %w[
       project.created project.updated project.deleted project.restored
+      project.transitioned project.risk_changed
       scope.created scope.updated scope.deleted scope.restored
       task.created task.updated task.deleted task.restored
-      task.transitioned task.assigned
+      task.transitioned task.assigned task.unassigned
       note.created
     ].freeze
 

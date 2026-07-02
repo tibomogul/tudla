@@ -9,7 +9,7 @@ module NotificationsHelper
       subject: event.metadata["subject_name"],
       from_state: event.metadata["from_state"]&.humanize,
       to_state: event.metadata["to_state"]&.humanize,
-      assignee: event.metadata["responsible_user_name"],
+      assignee: event.metadata["responsible_user_name"] || event.metadata["previous_user_name"],
       default: t("pulse.events.fallback", actor: event.actor_name, action: event.action,
                                           subject: event.metadata["subject_name"]))
   end

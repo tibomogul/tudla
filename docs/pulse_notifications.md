@@ -60,10 +60,18 @@ no-ops.
   true)` hook publishes `task.transitioned` with `from_state`/`to_state`
   metadata. The acting user is read from `transition.metadata["user_id"]` and
   passed as an explicit `user:` override. The initial `new → new` transition is
-  skipped.
-- `Task#publish_pulse_assignment_change` (`after_update` on
-  `saved_change_to_responsible_user_id?`) publishes `task.assigned` and
-  auto-subscribes the new assignee.
+  skipped. Published via `publish_pulse_event_safely` — the transition is
+  already committed, so a publish failure is logged, never raised.
+- `app/state_machines/project_lifecycle_state_machine.rb` publishes
+  `project.transitioned` (strictly — its hook runs inside the transition's
+  transaction) and `app/state_machines/project_risk_state_machine.rb` publishes
+  `project.risk_changed` (safely — its hook runs after commit), both with
+  `from_state`/`to_state` metadata and the same `user_id` actor resolution.
+- `Task#publish_pulse_assignment_change` (`after_save` on
+  `saved_change_to_responsible_user_id?`, so it also fires for tasks created
+  with an assignee) publishes `task.assigned` and auto-subscribes the new
+  assignee; clearing the assignee publishes `task.unassigned` with the
+  previous assignee in metadata.
 - `Note#publish_pulse_note_event` (`after_create`) publishes `note.created`
   against the note's parent record (project/scope/task) if that parent is
   publishable.
@@ -74,8 +82,13 @@ no-ops.
 validated against `Pulse::Event::CATALOG` (plus
 `Pulse.config.catalog_extensions`). Each action maps 1:1 to an i18n key under
 `pulse.events.*` in `config/locales/en.yml`. Current catalog:
-`project|scope|task . created|updated|deleted|restored`, `task.transitioned`,
-`task.assigned`, `note.created`.
+`project|scope|task . created|updated|deleted|restored`, `project.transitioned`,
+`project.risk_changed`, `task.transitioned`, `task.assigned`, `task.unassigned`,
+`note.created`. `spec/models/pulse/event_catalog_spec.rb` guards the catalog:
+it fails CI if app code publishes an action missing from the catalog or if a
+catalog action has no i18n copy — publishing an uncataloged action from a
+create/update callback would otherwise break the host model's save in
+production.
 
 ### Pillar 2 — Orchestration
 
@@ -312,4 +325,8 @@ end
 - Updates touching only ignored columns publish no event.
 - Unknown actions (outside catalog + extensions) fail validation.
 - Creating a record auto-subscribes the current actor; assignment
-  auto-subscribes the assignee.
+  auto-subscribes the assignee — including when the assignee is set at
+  creation time.
+- Publishes that run after the domain change is already persisted (soft
+  delete/restore, after-commit state-machine hooks) never raise on failure;
+  they log and return nil.
