@@ -41,7 +41,9 @@ class Task < ApplicationRecord
     ignore: %w[backlog_position today_position scope_position in_today state deleted_at
                responsible_user_id project_lifecycle_state]
 
-  after_update :publish_pulse_assignment_change, if: :saved_change_to_responsible_user_id?
+  # after_save (not after_update) so a task created with an assignee also
+  # publishes task.assigned and subscribes the assignee.
+  after_save :publish_pulse_assignment_change, if: :saved_change_to_responsible_user_id?
 
   before_create :inherit_lifecycle_from_project
 
@@ -104,17 +106,24 @@ class Task < ApplicationRecord
   end
 
   # Assignment is its own event (not a task.updated) and the new assignee is
-  # auto-subscribed so they see subsequent transitions on their task.
+  # auto-subscribed so they see subsequent transitions on their task. Clearing
+  # the assignee publishes task.unassigned so subscribers see that too.
   def publish_pulse_assignment_change
-    return if responsible_user_id.blank?
-
     previous_id = saved_change_to_responsible_user_id.first
-    publish_pulse_event("task.assigned", metadata: {
-      "previous_user_id" => previous_id,
-      "responsible_user_id" => responsible_user_id,
-      "responsible_user_name" => responsible_user&.display_name
-    })
-    subscribe(responsible_user)
+
+    if responsible_user_id.present?
+      publish_pulse_event("task.assigned", metadata: {
+        "previous_user_id" => previous_id,
+        "responsible_user_id" => responsible_user_id,
+        "responsible_user_name" => responsible_user&.display_name
+      })
+      subscribe(responsible_user)
+    else
+      publish_pulse_event("task.unassigned", metadata: {
+        "previous_user_id" => previous_id,
+        "previous_user_name" => User.find_by(id: previous_id)&.display_name
+      })
+    end
   end
 
   def broadcast_task_update

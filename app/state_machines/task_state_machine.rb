@@ -28,7 +28,9 @@ class TaskStateMachine
   # Publish task.transitioned to subscribers. The actor comes from the
   # transition metadata (controllers and MCP tools pass user_id) with
   # Pulse::Current as fallback; PulseRecipientResolver additionally notifies
-  # project admins when a task lands in_review.
+  # project admins when a task lands in_review. Published "safely": this runs
+  # after commit, so the transition is already persisted and a publish failure
+  # must not raise out of transition_to!.
   after_transition(after_commit: true) do |model, transition|
     previous = model.task_transitions
       .where("sort_key < ?", transition.sort_key)
@@ -39,7 +41,7 @@ class TaskStateMachine
 
     actor = User.find_by(id: transition.metadata["user_id"]) if transition.metadata["user_id"]
 
-    model.publish_pulse_event("task.transitioned",
+    model.publish_pulse_event_safely("task.transitioned",
       metadata: {
         "from_state" => from_state,
         "to_state" => transition.to_state

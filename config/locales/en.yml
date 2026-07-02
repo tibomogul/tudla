@@ -40,6 +40,8 @@ en:
         updated: "%{actor} updated project %{subject}"
         deleted: "%{actor} deleted project %{subject}"
         restored: "%{actor} restored project %{subject}"
+        transitioned: "%{actor} moved project %{subject} from %{from_state} to %{to_state}"
+        risk_changed: "%{actor} changed the risk of project %{subject} from %{from_state} to %{to_state}"
       scope:
         created: "%{actor} created scope %{subject}"
         updated: "%{actor} updated scope %{subject}"
@@ -52,5 +54,6 @@ en:
         restored: "%{actor} restored task %{subject}"
         transitioned: "%{actor} moved task %{subject} from %{from_state} to %{to_state}"
         assigned: "%{actor} assigned task %{subject} to %{assignee}"
+        unassigned: "%{actor} unassigned %{assignee} from task %{subject}"
       note:
         created: "%{actor} added a note on %{subject}"
