@@ -39,6 +39,16 @@ RSpec.describe "/notifications", type: :request do
       expect(response).to redirect_to(project_path(project))
     end
 
+    it "falls back to the inbox when the subject has been soft-deleted" do
+      notification = create_notification
+      project.soft_delete
+
+      patch mark_read_notification_path(notification)
+
+      expect(notification.reload.read?).to be true
+      expect(response).to redirect_to(notifications_path)
+    end
+
     it "rejects another user's notification" do
       other_notification = create_notification(recipient: create(:user))
 

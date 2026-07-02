@@ -1,6 +1,10 @@
 FactoryBot.define do
   factory :pulse_subscribable, class: "Pulse::Subscribable" do
     association :subscribable, factory: :project
+
+    # Pulse::Publishable already creates the container in the host model's
+    # after_create; reuse it instead of violating the unique index.
+    initialize_with { Pulse::Subscribable.find_or_initialize_by(subscribable: subscribable) }
   end
 
   factory :pulse_subscription, class: "Pulse::Subscription" do

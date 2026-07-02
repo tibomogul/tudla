@@ -53,18 +53,30 @@ module Pulse
 
     def soft_delete
       super
-      publish_pulse_event("#{pulse_event_prefix}.deleted") if pulse_event_prefix
+      publish_pulse_event_safely("#{pulse_event_prefix}.deleted") if pulse_event_prefix
     end
 
     def restore
       super
-      publish_pulse_event("#{pulse_event_prefix}.restored") if pulse_event_prefix
+      publish_pulse_event_safely("#{pulse_event_prefix}.restored") if pulse_event_prefix
     end
 
     private
 
+    # soft_delete/restore run via update_column, outside any transaction — the
+    # state change is already persisted, so a publish failure here must be
+    # swallowed rather than surface as a failed delete. (Create/update publishes
+    # stay strict: they run inside the domain transaction and roll back with it.)
+    def publish_pulse_event_safely(action)
+      publish_pulse_event(action)
+    rescue StandardError => e
+      Rails.logger.error("[Pulse] Failed to publish #{action} for #{self.class.name}##{id}: " \
+                         "#{e.class}: #{e.message}")
+      nil
+    end
+
     def create_pulse_subscribable
-      Pulse::Subscribable.find_or_create_by!(subscribable: self)
+      Pulse::Subscribable.create_or_find_by!(subscribable: self)
     end
 
     def publish_pulse_created_event

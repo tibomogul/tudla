@@ -28,6 +28,9 @@ class NotificationsController < ApplicationController
   def subject_path_for(notification)
     subject = notification.event.subscribable&.subscribable
     return notifications_path unless subject
+    # Soft-deleted subjects still generate valid URLs but their show actions
+    # scope to .active and would 404.
+    return notifications_path if subject.respond_to?(:deleted?) && subject.deleted?
 
     polymorphic_path(subject)
   rescue NoMethodError, ActionController::UrlGenerationError
