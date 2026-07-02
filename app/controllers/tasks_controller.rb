@@ -44,7 +44,10 @@ class TasksController < ApplicationController
             locals: { scope: @task.scope, project: @task.project, task: @task }
           ), status: :unprocessable_entity
         }
-        format.html { render :new, status: :unprocessable_entity }
+        format.html do
+          set_users_selection
+          render :new, status: :unprocessable_entity
+        end
         format.json { render json: @task.errors, status: :unprocessable_entity }
       end
     end
@@ -78,7 +81,10 @@ class TasksController < ApplicationController
             render turbo_stream: turbo_stream.replace(dom_id(@task), partial: "tasks/details", locals: { task: @task }), status: :unprocessable_entity
           end
         end
-        format.html { render :edit, status: :unprocessable_entity }
+        format.html do
+          set_users_selection
+          render :edit, status: :unprocessable_entity
+        end
         format.json { render json: @task.errors, status: :unprocessable_entity }
       end
     end

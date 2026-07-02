@@ -153,6 +153,16 @@ RSpec.describe "/tasks", type: :request do
 
         expect(response).to have_http_status(:unprocessable_content)
       end
+
+      it "re-renders the new form for an HTML request" do
+        # Regression: the failure branch used to render :new without
+        # set_users_selection, so the form's assignee select 500ed on a nil
+        # @team_members.
+        post tasks_url, params: { task: invalid_attributes }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(doc).to have_css("form select[name='task[responsible_user_id]']")
+      end
     end
 
     context "when the user has no access to the target project" do
@@ -212,6 +222,14 @@ RSpec.describe "/tasks", type: :request do
         patch task_url(task), params: { task: { name: "" } }, as: :turbo_stream
 
         expect(response).to have_http_status(:unprocessable_content)
+      end
+
+      it "re-renders the edit form for an HTML request" do
+        # Regression: same missing set_users_selection as the create path.
+        patch task_url(task), params: { task: { name: "" } }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(doc).to have_css("form select[name='task[responsible_user_id]']")
       end
     end
 
