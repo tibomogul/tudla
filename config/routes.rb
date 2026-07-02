@@ -102,6 +102,10 @@ Rails.application.routes.draw do
   end
   post "subscribables/:id/subscribe", to: "subscribables#create_subscription", as: :create_subscription
   delete "subscriptions/:id", to: "subscriptions#destroy", as: :destroy_subscription
+  resources :notifications, only: [ :index ] do
+    member { patch :mark_read }
+    collection { patch :mark_all_read }
+  end
   devise_for :users,
     controllers: {
       omniauth_callbacks: "users/omniauth_callbacks",

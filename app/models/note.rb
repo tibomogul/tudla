@@ -28,6 +28,11 @@ class Note < ApplicationRecord
   # Broadcasts updates to the notes list
   after_commit :broadcast_note_update, on: [ :create, :update, :destroy ]
 
+  # Notes have no subscribable of their own — note.created is published
+  # against the parent (Project/Scope/Task). Team/Organization notes are
+  # skipped because those parents don't include Pulse::Publishable.
+  after_create :publish_pulse_note_event
+
   private
 
   # PaperTrail still owns the full history; this column is just a denormalized
@@ -41,6 +46,16 @@ class Note < ApplicationRecord
     elsif actor_id && (will_save_change_to_content? || will_save_change_to_title?)
       self.last_editor_id = actor_id
     end
+  end
+
+  def publish_pulse_note_event
+    parent = parent_record
+    return unless parent.respond_to?(:publish_pulse_event)
+
+    parent.publish_pulse_event("note.created", metadata: {
+      "note_id" => id,
+      "note_excerpt" => content.to_s.truncate(120)
+    })
   end
 
   def broadcast_note_update

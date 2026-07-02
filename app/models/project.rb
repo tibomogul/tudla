@@ -13,11 +13,10 @@ class Project < ApplicationRecord
   belongs_to :pitch, optional: true
   belongs_to :cycle, optional: true
 
-  has_one :subscribable, as: :subscribable, touch: true, dependent: :destroy
+  has_one :subscribable, as: :subscribable, touch: true, dependent: :destroy, class_name: "Pulse::Subscribable"
   has_one :reportable, as: :reportable, dependent: :destroy
   has_many :reports, through: :reportable
 
-  after_create :create_subscribable_record
   has_one :attachable, as: :attachable, dependent: :destroy
   has_many :attachments, through: :attachable
   has_one :notable, as: :notable, dependent: :destroy
@@ -48,6 +47,13 @@ class Project < ApplicationRecord
 
   # Copy notes/links/attachments to another record by value
   include ContentDuplicatable
+
+  # Publish Pulse events (after SoftDeletable so soft_delete/restore overrides
+  # can call super)
+  include Pulse::Publishable
+  publishes_pulse_events prefix: :project,
+    ignore: %w[cached_actual_manhours cached_ai_assisted_estimate cached_unassisted_estimate
+               deleted_at risk_state lifecycle_state archived_at done_at]
 
   after_commit :broadcast_project_update, if: :persisted?
 
@@ -125,10 +131,6 @@ class Project < ApplicationRecord
   end
 
   private
-
-  def create_subscribable_record
-    Subscribable.create!(subscribable: self)
-  end
 
   def broadcast_project_update
     return unless ActionCable.server.pubsub.respond_to?(:broadcast)

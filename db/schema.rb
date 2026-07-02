@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_02_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -110,11 +110,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_000001) do
 
   create_table "events", force: :cascade do |t|
     t.string "action", null: false
+    t.string "actor_label"
+    t.string "actor_type", default: "user", null: false
     t.datetime "created_at", null: false
     t.jsonb "metadata", default: {}, null: false
     t.bigint "subscribable_id", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.bigint "user_id"
     t.index ["subscribable_id"], name: "index_events_on_subscribable_id"
     t.index ["user_id"], name: "index_events_on_user_id"
   end
@@ -169,6 +171,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_000001) do
     t.datetime "read_at"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.index ["event_id", "user_id"], name: "index_notifications_on_event_id_and_user_id", unique: true
     t.index ["event_id"], name: "index_notifications_on_event_id"
     t.index ["read_at"], name: "index_notifications_on_read_at", where: "(read_at IS NULL)"
     t.index ["user_id", "created_at"], name: "index_notifications_on_user_id_and_created_at", order: { created_at: :desc }
@@ -352,7 +355,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_000001) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["subscribable_id"], name: "index_subscriptions_on_subscribable_id"
-    t.index ["user_id", "subscribable_id"], name: "index_subscriptions_on_user_id_and_subscribable_id"
+    t.index ["user_id", "subscribable_id"], name: "index_subscriptions_on_user_id_and_subscribable_id", unique: true
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
 

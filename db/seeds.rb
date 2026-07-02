@@ -10,7 +10,7 @@
 
 # Helper: find_or_create a Subscribable for a given record
 def ensure_subscribable(record)
-  Subscribable.find_or_create_by!(subscribable: record)
+  Pulse::Subscribable.find_or_create_by!(subscribable: record)
 end
 
 # Helper: find_or_create a project with its subscribable

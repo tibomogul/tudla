@@ -53,6 +53,8 @@
             <span class="max-sm:hidden"><%= orgs.first.name %></span>
           </div>
         <% end %>
+        <%= turbo_stream_from "user_#{current_user.id}_notifications" %>
+        <%= render "notifications/indicator", user: current_user, can_update: false %>
         <%= render "application/theme_toggle" %>
         <div class="dropdown dropdown-bottom dropdown-end">
             <div tabindex="0" class="flex cursor-pointer items-center gap-2">

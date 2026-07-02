@@ -1,12 +1,18 @@
 class Scope < ApplicationRecord
   include SoftDeletable
   include ContentDuplicatable
+  # Publish Pulse events (after SoftDeletable so soft_delete/restore overrides
+  # can call super)
+  include Pulse::Publishable
+  publishes_pulse_events prefix: :scope,
+    ignore: %w[cached_actual_manhours cached_ai_assisted_estimate cached_unassisted_estimate
+               deleted_at project_position project_lifecycle_state]
   has_paper_trail skip: [ :project_position ]
   belongs_to :project
   has_many :tasks
   has_many :done_tasks, -> { active.where(done: true) }, class_name: "Task"
 
-  has_one :subscribable, as: :subscribable, touch: true
+  has_one :subscribable, as: :subscribable, touch: true, dependent: :destroy, class_name: "Pulse::Subscribable"
   has_one :attachable, as: :attachable, dependent: :destroy
   has_many :attachments, through: :attachable
   has_one :notable, as: :notable, dependent: :destroy

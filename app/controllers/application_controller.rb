@@ -6,6 +6,7 @@ class ApplicationController < ActionController::Base
   before_action :configure_permitted_parameters, if: :devise_controller?
 
   before_action :set_paper_trail_whodunnit
+  before_action :set_pulse_actor
 
   include Pundit::Authorization
   include ActionView::RecordIdentifier
@@ -14,6 +15,13 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
 
   protected
+
+  # Attribute Pulse events to the signed-in user. McpController overrides the
+  # actor with type "agent" after Bearer-token auth; jobs/console fall back to
+  # the "system" actor via Pulse::Current defaults.
+  def set_pulse_actor
+    Pulse::Current.user = current_user if user_signed_in?
+  end
 
   def configure_permitted_parameters
     update_attrs = [ :password, :password_confirmation, :current_password ]

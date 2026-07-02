@@ -32,3 +32,25 @@ en:
   authentication:
     failure:
       user_not_found: "You need to be registered first."
+  pulse:
+    events:
+      fallback: "%{actor} did %{action} on %{subject}"
+      project:
+        created: "%{actor} created project %{subject}"
+        updated: "%{actor} updated project %{subject}"
+        deleted: "%{actor} deleted project %{subject}"
+        restored: "%{actor} restored project %{subject}"
+      scope:
+        created: "%{actor} created scope %{subject}"
+        updated: "%{actor} updated scope %{subject}"
+        deleted: "%{actor} deleted scope %{subject}"
+        restored: "%{actor} restored scope %{subject}"
+      task:
+        created: "%{actor} created task %{subject}"
+        updated: "%{actor} updated task %{subject}"
+        deleted: "%{actor} deleted task %{subject}"
+        restored: "%{actor} restored task %{subject}"
+        transitioned: "%{actor} moved task %{subject} from %{from_state} to %{to_state}"
+        assigned: "%{actor} assigned task %{subject} to %{assignee}"
+      note:
+        created: "%{actor} added a note on %{subject}"

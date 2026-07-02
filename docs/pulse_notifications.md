@@ -1,0 +1,315 @@
+# Pulse — Event Subscription & Notification Pipeline
+
+Pulse is Tudla's in-app notification system. Domain activity (project/scope/task
+changes, task transitions, assignments, notes) is recorded as **events**, fanned
+out asynchronously to **subscribers**, and delivered as **notifications** with a
+live topbar bell, an inbox, and mark-read flows.
+
+It follows a **three-pillar design** and was deliberately built so the `Pulse::`
+namespace can later be extracted into a standalone gem / Rails engine. The second
+half of this document is a step-by-step extraction guide for an agent.
+
+---
+
+## 1. Architecture
+
+```
+┌──────────────────────┐   ┌───────────────────────┐   ┌──────────────────────┐
+│ PILLAR 1: PRODUCER   │   │ PILLAR 2:             │   │ PILLAR 3:            │
+│                      │   │ ORCHESTRATION         │   │ NOTIFICATION         │
+│ Pulse::Publishable   │   │                       │   │                      │
+│ Pulse::Publisher ────┼──▶│ Pulse::Event          │──▶│ Pulse::Channels::    │
+│ Pulse::Current       │   │  (after_create_commit)│   │   InApp              │
+│                      │   │ Pulse::FanoutJob      │   │ Pulse::Notification  │
+│ model callbacks,     │   │ Pulse::               │   │  (+ Turbo Stream     │
+│ state machine hooks, │   │   RecipientResolver   │   │   bell broadcast)    │
+│ controllers set actor│   │ Pundit visibility gate│   │ inbox UI             │
+└──────────────────────┘   └───────────────────────┘   └──────────────────────┘
+```
+
+**Transactional outbox**: the `Pulse::Event` row is created *synchronously inside
+the domain transaction* (so an event exists iff the domain change committed);
+`Pulse::FanoutJob` is enqueued via `after_create_commit`, so fan-out only runs
+after commit. Fan-out is **idempotent**: the unique index on
+`notifications [event_id, user_id]` plus `create_or_find_by!` makes job retries
+no-ops.
+
+### Pillar 1 — Producer
+
+| File | Role |
+|---|---|
+| `app/models/concerns/pulse/publishable.rb` | Concern mixed into host models. Auto-creates the model's `Pulse::Subscribable` container (`after_create`), and the `publishes_pulse_events(prefix:, ignore: [])` macro adds `created`/`updated` callbacks. Overrides `soft_delete`/`restore` (calling `super`) to publish `.deleted`/`.restored`, because `SoftDeletable` uses `update_column` and fires no AR callbacks. Also provides `subscribe`/`unsubscribe`/`subscribed?`/`pulse_subscribers`/`publish_pulse_event`. |
+| `app/services/pulse/publisher.rb` | `Pulse::Publisher.publish(subject:, action:, metadata: {}, user: :current, actor_type:, actor_label:)` — the single entry point that creates the event. Captures denormalized display metadata (`subject_type/id/name`, `actor_name`) at publish time so notification text survives later rename/deletion of the subject. |
+| `app/models/pulse/current.rb` | `ActiveSupport::CurrentAttributes` carrying `user`, `actor_type`, `actor_label`. `resolved_actor_type` falls back: explicit → `"user"` if a user is set → `"system"`. |
+
+**Actor model** — events support three actor types (`events.actor_type`):
+- `user` — a signed-in human. `ApplicationController#set_pulse_actor` sets
+  `Pulse::Current.user = current_user`.
+- `agent` — an MCP client. `McpController#set_pulse_agent_actor` sets the token's
+  user, `actor_type: "agent"`, and `actor_label` = the `ApiToken` name.
+- `system` — anything else (rake tasks, runners, jobs). The default when no
+  `Pulse::Current.user` is set; `events.user_id` is nullable for this case.
+
+**Where events are published from:**
+- `Project`, `Scope`, `Task` include `Pulse::Publishable` (**after**
+  `SoftDeletable` — the `super` chain depends on this order) and declare
+  `publishes_pulse_events prefix: ..., ignore: [...]`. The ignore lists suppress
+  noise from cached-estimate columns, positioning columns, denormalized state
+  columns, etc. An update touching only ignored columns publishes nothing.
+- `app/state_machines/task_state_machine.rb` — an `after_transition(after_commit:
+  true)` hook publishes `task.transitioned` with `from_state`/`to_state`
+  metadata. The acting user is read from `transition.metadata["user_id"]` and
+  passed as an explicit `user:` override. The initial `new → new` transition is
+  skipped.
+- `Task#publish_pulse_assignment_change` (`after_update` on
+  `saved_change_to_responsible_user_id?`) publishes `task.assigned` and
+  auto-subscribes the new assignee.
+- `Note#publish_pulse_note_event` (`after_create`) publishes `note.created`
+  against the note's parent record (project/scope/task) if that parent is
+  publishable.
+- Creating a publishable record auto-subscribes the current actor
+  (`Pulse::Current.user`).
+
+**Event naming** — Stripe-style `<object>.<past_tense_verb>` dot notation,
+validated against `Pulse::Event::CATALOG` (plus
+`Pulse.config.catalog_extensions`). Each action maps 1:1 to an i18n key under
+`pulse.events.*` in `config/locales/en.yml`. Current catalog:
+`project|scope|task . created|updated|deleted|restored`, `task.transitioned`,
+`task.assigned`, `note.created`.
+
+### Pillar 2 — Orchestration
+
+| File | Role |
+|---|---|
+| `app/models/pulse/event.rb` | Validates action against catalog and `actor_type` against `user/agent/system` (`user` requires a `user` record). `after_create_commit` enqueues `Pulse::FanoutJob`. |
+| `app/jobs/pulse/fanout_job.rb` | Loads the event (warn + skip if gone), asks the configured recipient resolver for candidates, then filters: dedupe, **exclude the actor** (no self-notification), and **re-check Pundit `show?`** per recipient (access-revocation safety; errors count as not visible). Hands survivors to every configured channel. |
+| `app/services/pulse/recipient_resolver.rb` | Default resolver: the subscribable's subscription users. |
+| `app/services/pulse_recipient_resolver.rb` | **Host-owned** subclass (note: top-level, *not* in `Pulse::`). Adds project admins as recipients when a task transitions to `in_review` — the replacement for the old `notify_reviewers!` breadcrumb. |
+
+### Pillar 3 — Notification
+
+| File | Role |
+|---|---|
+| `app/services/pulse/channels/base.rb` | Channel adapter interface: `#deliver(event, recipients)` raises `NotImplementedError`. |
+| `app/services/pulse/channels/in_app.rb` | Creates one `Pulse::Notification` per recipient via `create_or_find_by!` (idempotent). |
+| `app/models/pulse/notification.rb` | `unread`/`read` scopes, `mark_read!`. `after_create_commit` broadcasts the bell partial to `"user_#{user_id}_notifications"` via `Turbo::StreamsChannel` (guarded, rescued, `can_update: false`). |
+| `app/controllers/notifications_controller.rb` | Inbox (`policy_scope` + Pagy, 25/page), `mark_read` (then redirects to the subject via `polymorphic_path`, falling back to the inbox), `mark_all_read`. |
+| `app/views/notifications/` | `_indicator.html.erb` (bell + unread badge, capped "9+"), `_notification.html.erb`, `index.html.erb`. |
+| `app/views/application/_topbar.html.erb` | Renders the indicator and `turbo_stream_from "user_#{current_user.id}_notifications"`. |
+| `app/helpers/notifications_helper.rb` | `notification_text` — i18n lookup by `event.action` with interpolations (`actor`, `subject`, `from_state`, `to_state`, `assignee`) and a generic fallback key. |
+
+Subscribe/unsubscribe UI lives in `SubscribablesController` (subscribe toggle,
+`authorize :show?` on the subject) and `SubscriptionsController` (unsubscribe,
+owner-checked). Currently the manual toggle is only rendered on the Project show
+page; Scope/Task rely on auto-subscription (creator, assignee).
+
+### Data model
+
+Four tables, **unprefixed** (they predate the namespace;
+`Pulse.table_name_prefix` returns `""`):
+
+```
+subscribables  — polymorphic container (subscribable_type/_id), delegated_type
+subscriptions  — user_id + subscribable_id, UNIQUE [user_id, subscribable_id]
+events         — subscribable_id, user_id (nullable), actor_type (default "user"),
+                 actor_label, action, metadata jsonb
+notifications  — event_id + user_id, read_at, UNIQUE [event_id, user_id],
+                 partial index on unread, [user_id, created_at DESC]
+```
+
+`Organization → Team → Project → Scope → Task`: only Project/Scope/Task are
+subscribable (configured, not hardcoded).
+
+### Configuration & host wiring
+
+All app-specific knowledge is declared in **`config/initializers/pulse.rb`**
+(inside `to_prepare` for reloading):
+
+```ruby
+Pulse.configure do |config|
+  config.subscribable_types = %w[Project Scope Task]        # delegated_type list
+  config.channels           = [ "Pulse::Channels::InApp" ]  # class-name strings
+  config.recipient_resolver = "PulseRecipientResolver"      # host subclass
+  # config.catalog_extensions = %w[...]                     # extra event actions
+end
+```
+
+`Pulse.channels` constantizes lazily (dev reloading safety);
+`Pulse.recipient_resolver` accepts a String, `nil` (default resolver), or any
+callable.
+
+Authorization is host-owned: `app/policies/subscription_policy.rb`,
+`notification_policy.rb`, `subscribable_policy.rb`, `event_policy.rb`. The Pulse
+models point at them via `def self.policy_class`, delegating visibility to the
+underlying subject's `show?`.
+
+### Operational notes
+
+- **Cable adapter**: development uses `solid_cable`, *not* `async` — Pulse
+  broadcasts originate in the `bin/jobs` process, and the async adapter is
+  in-process only. Reverting `config/cable.yml` silently kills live bell
+  updates in development.
+- **Backfill**: `bin/rails pulse:backfill_subscribables` creates missing
+  `Subscribable` rows for pre-existing records of all configured types.
+- **Tests**: factories in `spec/factories/pulse.rb`
+  (`pulse_subscribable/subscription/event/notification`); specs under
+  `spec/models/pulse/`, `spec/jobs/pulse/`, `spec/requests/`, `spec/policies/`.
+  Note that Rails 8 transactional tests **do** fire `after_create_commit`, so
+  creating a `Pulse::Event` in a spec enqueues the fan-out job.
+
+---
+
+## 2. Extraction guide: turning Pulse into a gem / Rails engine
+
+Audience: an agent tasked with extracting Pulse. The code was written to make
+this mostly mechanical — the boundary is "everything under `Pulse::` moves,
+everything host-specific already lives outside it."
+
+### 2.1 What moves into the engine (host-agnostic today)
+
+| Current path | Engine path |
+|---|---|
+| `app/models/pulse.rb` | `lib/pulse.rb` (+ `lib/pulse/engine.rb`) |
+| `app/models/pulse/{current,event,notification,subscribable,subscription}.rb` | `app/models/pulse/` |
+| `app/models/concerns/pulse/publishable.rb` | `app/models/concerns/pulse/` |
+| `app/jobs/pulse/fanout_job.rb` | `app/jobs/pulse/` |
+| `app/services/pulse/{publisher,recipient_resolver}.rb`, `app/services/pulse/channels/*` | `app/services/pulse/` |
+| `spec/factories/pulse.rb`, `spec/models/pulse/`, `spec/jobs/pulse/` | engine spec suite (against a dummy app) |
+
+### 2.2 What stays in the host (already outside `Pulse::`)
+
+- `config/initializers/pulse.rb` — becomes the generated installer initializer.
+- `app/services/pulse_recipient_resolver.rb` — host resolver (knows
+  `UserPartyRole`, project admins, `in_review`).
+- All four policies in `app/policies/` — they know the org→team→project
+  hierarchy.
+- Controllers (`notifications_controller.rb`, `subscribables_controller.rb`,
+  `subscriptions_controller.rb`), views (`app/views/notifications/`), helper,
+  routes, topbar integration, `en.yml` keys — extract these as engine
+  *generators/templates* rather than engine-served views, since they use
+  host-specific styling (DaisyUI, iconify) and Pagy.
+- The `include Pulse::Publishable` + `publishes_pulse_events` declarations in
+  `Project`/`Scope`/`Task`, the `task.transitioned` hook in
+  `TaskStateMachine`, `Note#publish_pulse_note_event`, and the
+  `set_pulse_actor` / `set_pulse_agent_actor` before-actions.
+- `lib/tasks/pulse.rake` (or ship it in the engine — it only uses
+  `Pulse.config.subscribable_types`, so it's portable).
+
+### 2.3 Known couplings to break (the actual work)
+
+These are the only places engine-bound code currently assumes Tudla:
+
+1. **Table names** — `Pulse.table_name_prefix` returns `""` because the tables
+   predate the namespace. In the engine, make the prefix configurable
+   (`config.table_name_prefix`, default `"pulse_"`) and have Tudla set `""`.
+   The engine's install migrations should create `pulse_*` tables; Tudla skips
+   them (its tables already exist).
+2. **`User` class** — `Event`, `Subscription`, `Notification`,
+   `RecipientResolver`, and `FanoutJob` reference `User`/`user` associations
+   directly, and `Publisher`/`Event#actor_name` call `user.display_name`.
+   Add `config.user_class` (default `"User"`) and
+   `config.user_display_name_method` (default `:display_name`, or accept a
+   lambda). Use `belongs_to :user, class_name: Pulse.config.user_class` (inside
+   `to_prepare` or a lazy resolver so reloading works).
+3. **Pundit** — `FanoutJob#visible_to?` calls `Pundit.policy!(...).show?`, and
+   the models declare `policy_class` pointing at host constants
+   (`SubscriptionPolicy`, etc.). Replace with a configurable
+   `config.visibility_check` callable (default: the Pundit lambda if Pundit is
+   defined, else `->(*) { true }`) and drop the `policy_class` overrides from
+   engine models — the host reopens/configures them, or the engine exposes
+   `config.policy_classes = { subscription: "...", ... }`.
+4. **`ApplicationJob` / `ApplicationRecord`** — `FanoutJob < ApplicationJob`
+   and models inherit host base classes. In the engine define
+   `Pulse::ApplicationRecord` (abstract) and `Pulse::ApplicationJob`, with
+   `config.parent_job_class` if the host wants Solid Queue settings inherited.
+5. **`SoftDeletable` assumption** — `Publishable#soft_delete/#restore` call
+   `super` and exist purely for Tudla's callback-less soft delete. Guard them:
+   only define the overrides if the including class responds to
+   `soft_delete`/`restore` (e.g. define in an `included do ... if
+   base.method_defined?(:soft_delete)` block), so the concern works in hosts
+   without soft delete.
+6. **Turbo broadcast in `Notification`** — the `after_create_commit` broadcast
+   assumes Turbo, a `"user_#{id}_notifications"` stream name, and a host
+   partial `notifications/indicator`. Move this out of the model into a
+   configurable delivery hook on the InApp channel
+   (`config.in_app_broadcast = ->(notification) { ... }`, default no-op), and
+   let the installer generator wire up the Turbo version.
+7. **i18n keys** — `pulse.events.*` live in the host locale file. Ship engine
+   defaults for the built-in catalog; hosts override per action and add keys
+   for `catalog_extensions`.
+
+Grep check before cutting the gem — these must return no hits inside engine code:
+
+```
+grep -rn "Project\|Scope\|Task\|UserPartyRole\|Organization\|Team" \
+  app/models/pulse* app/models/concerns/pulse app/jobs/pulse app/services/pulse
+```
+
+(Currently clean; keep it that way.)
+
+### 2.4 Suggested engine skeleton
+
+```
+pulse/
+  lib/pulse.rb                    # module + Config (port of app/models/pulse.rb)
+  lib/pulse/engine.rb             # isolate_namespace Pulse
+  lib/pulse/version.rb
+  lib/tasks/pulse.rake
+  app/models/pulse/...            # event, notification, subscribable, subscription, current
+  app/models/concerns/pulse/publishable.rb
+  app/jobs/pulse/fanout_job.rb
+  app/services/pulse/...          # publisher, recipient_resolver, channels/
+  db/migrate/                     # create pulse_* tables (skipped by Tudla)
+  lib/generators/pulse/install/   # initializer, migration copy, optional
+                                  # controllers/views/routes templates
+  config/locales/en.yml           # default pulse.events.* texts
+  spec/dummy/                     # dummy app with a PORO-ish User + one subscribable model
+```
+
+Config surface after extraction (superset of today's `Pulse::Config` struct —
+consider migrating the Struct to a plain class with defaults):
+
+```ruby
+Pulse.configure do |config|
+  config.subscribable_types  = %w[Project Scope Task]
+  config.channels            = [ "Pulse::Channels::InApp" ]
+  config.recipient_resolver  = "PulseRecipientResolver"
+  config.catalog_extensions  = []
+  config.table_name_prefix   = ""                    # new — Tudla override
+  config.user_class          = "User"                # new
+  config.user_display_name_method = :display_name    # new
+  config.visibility_check    = ->(user, subject) { Pundit.policy!(user, subject).show? } # new
+  config.in_app_broadcast    = ->(notification) { ... }  # new — Turbo bell hook
+end
+```
+
+### 2.5 Extraction order of operations
+
+1. In-repo prep (no gem yet): apply §2.3 items 1–6 as refactors inside Tudla;
+   the full spec suite (`bundle exec rspec`, run in Docker) is the safety net.
+   After this, engine-bound code has zero host constants.
+2. Create the engine (`rails plugin new pulse --mountable --database=postgresql
+   --skip-javascript`), move the §2.1 files, add the dummy app, port the specs.
+3. Point Tudla's Gemfile at the engine (`path:` first), delete the moved files,
+   keep the initializer + host resolver + policies + UI. Set
+   `config.table_name_prefix = ""` so existing tables keep working — **no data
+   migration needed**.
+4. Run Tudla's full suite + the engine suite; smoke-test the live pipeline
+   (publish an event from `rails runner`, watch the bell update — remember the
+   solid_cable requirement and the `sleep infinity | bin/dev` detached-boot
+   quirk).
+5. Only then publish/version the gem and switch the Gemfile from `path:` to a
+   released version.
+
+### 2.6 Behavioural invariants to preserve (test these in the engine)
+
+- Event row is created in the domain transaction; fan-out only after commit.
+- Fan-out is idempotent under retries (unique `[event_id, user_id]`).
+- The actor never receives their own notification.
+- Recipients failing the visibility check are silently dropped (revoked access).
+- `actor_type: "user"` requires a user; system events have `user_id: nil` and
+  render as "System" (or `actor_label`).
+- Updates touching only ignored columns publish no event.
+- Unknown actions (outside catalog + extensions) fail validation.
+- Creating a record auto-subscribes the current actor; assignment
+  auto-subscribes the assignee.

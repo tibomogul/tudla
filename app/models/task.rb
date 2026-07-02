@@ -8,7 +8,7 @@ class Task < ApplicationRecord
   belongs_to :scope, optional: true
   belongs_to :responsible_user, optional: true, class_name: "User"
 
-  has_one :subscribable, as: :subscribable, touch: true
+  has_one :subscribable, as: :subscribable, touch: true, dependent: :destroy, class_name: "Pulse::Subscribable"
   has_one :attachable, as: :attachable, dependent: :destroy
   has_many :attachments, through: :attachable
   has_one :notable, as: :notable, dependent: :destroy
@@ -32,6 +32,16 @@ class Task < ApplicationRecord
 
   # Include estimate rollup caching to scopes/projects
   include EstimateCacheable
+
+  # Publish Pulse events (after SoftDeletable so soft_delete/restore overrides
+  # can call super). State changes surface as task.transitioned and assignment
+  # as task.assigned, so both columns are ignored for task.updated.
+  include Pulse::Publishable
+  publishes_pulse_events prefix: :task,
+    ignore: %w[backlog_position today_position scope_position in_today state deleted_at
+               responsible_user_id project_lifecycle_state]
+
+  after_update :publish_pulse_assignment_change, if: :saved_change_to_responsible_user_id?
 
   before_create :inherit_lifecycle_from_project
 
@@ -91,6 +101,20 @@ class Task < ApplicationRecord
 
   def inherit_lifecycle_from_project
     self.project_lifecycle_state = project.lifecycle_state if project
+  end
+
+  # Assignment is its own event (not a task.updated) and the new assignee is
+  # auto-subscribed so they see subsequent transitions on their task.
+  def publish_pulse_assignment_change
+    return if responsible_user_id.blank?
+
+    previous_id = saved_change_to_responsible_user_id.first
+    publish_pulse_event("task.assigned", metadata: {
+      "previous_user_id" => previous_id,
+      "responsible_user_id" => responsible_user_id,
+      "responsible_user_name" => responsible_user&.display_name
+    })
+    subscribe(responsible_user)
   end
 
   def broadcast_task_update
