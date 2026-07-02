@@ -53,8 +53,9 @@ class McpController < ApplicationController
     auth_header = request.headers["Authorization"]
     if auth_header&.start_with?("Bearer ")
       token = auth_header.sub("Bearer ", "")
-      @mcp_user = ApiToken.authenticate(token)
-      set_pulse_agent_actor(token) if @mcp_user
+      api_token = ApiToken.authenticate_token(token)
+      @mcp_user = api_token&.user
+      set_pulse_agent_actor(api_token) if api_token
       Rails.logger.info "MCP Auth: User #{@mcp_user&.id || 'nil'} (token #{@mcp_user ? 'valid' : 'invalid'})"
     else
       @mcp_user = nil
@@ -64,9 +65,9 @@ class McpController < ApplicationController
 
   # Pulse events published from MCP tool calls are attributed to the token's
   # user but flagged as agent activity, labeled with the token name.
-  def set_pulse_agent_actor(token)
+  def set_pulse_agent_actor(api_token)
     Pulse::Current.user = @mcp_user
     Pulse::Current.actor_type = "agent"
-    Pulse::Current.actor_label = ApiToken.active.find_by(token: token)&.name
+    Pulse::Current.actor_label = api_token.name
   end
 end

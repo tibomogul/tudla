@@ -76,6 +76,16 @@ RSpec.describe Pulse::Publishable, type: :model do
       expect { task.restore }
         .to change { task.subscribable.events.where(action: "task.restored").count }.by(1)
     end
+
+    it "does not let a publish failure break soft_delete or restore" do
+      task = create(:task, project: create(:project, team: team))
+      allow(Pulse::Publisher).to receive(:publish).and_raise(StandardError, "boom")
+
+      expect { task.soft_delete }.not_to raise_error
+      expect(task.reload).to be_deleted
+      expect { task.restore }.not_to raise_error
+      expect(task.reload).not_to be_deleted
+    end
   end
 
   describe "task.assigned" do

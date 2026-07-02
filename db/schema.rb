@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_02_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_02_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -346,7 +346,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_000003) do
     t.bigint "subscribable_id", null: false
     t.string "subscribable_type", null: false
     t.datetime "updated_at", null: false
-    t.index ["subscribable_type", "subscribable_id"], name: "index_subscribables_on_subscribable"
+    t.index ["subscribable_type", "subscribable_id"], name: "index_subscribables_on_subscribable", unique: true
   end
 
   create_table "subscriptions", force: :cascade do |t|

@@ -48,6 +48,14 @@ RSpec.describe Pulse::FanoutJob, type: :job do
     expect(subscriber.notifications.count).to eq(1)
   end
 
+  it "skips soft-deleted recipients" do
+    project.subscribe(subscriber)
+    subscriber.soft_delete
+    event = publish_event
+
+    expect { described_class.perform_now(event.id) }.not_to change(Pulse::Notification, :count)
+  end
+
   it "skips recipients who can no longer see the subject" do
     outsider = create(:user) # subscribed but holds no role in the org
     project.subscribe(outsider)

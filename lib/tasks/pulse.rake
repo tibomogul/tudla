@@ -5,7 +5,7 @@ namespace :pulse do
       klass = type.constantize
       created = 0
       klass.where.missing(:subscribable).find_each do |record|
-        Pulse::Subscribable.create!(subscribable: record)
+        Pulse::Subscribable.create_or_find_by!(subscribable: record)
         created += 1
       end
       puts "#{type}: created #{created} subscribable rows."

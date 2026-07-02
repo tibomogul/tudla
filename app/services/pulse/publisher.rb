@@ -11,7 +11,7 @@ module Pulse
       resolved_label = actor_label || Pulse::Current.actor_label
 
       Pulse::Event.create!(
-        subscribable: Pulse::Subscribable.find_or_create_by!(subscribable: subject),
+        subscribable: Pulse::Subscribable.create_or_find_by!(subscribable: subject),
         user: actor_user,
         actor_type: actor_user ? resolved_type : "system",
         actor_label: resolved_label,
