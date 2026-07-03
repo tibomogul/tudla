@@ -37,4 +37,23 @@ RSpec.describe "Pulse event catalog coverage" do
         .to be(true), "missing i18n key pulse.events.#{action}"
     end
   end
+
+  # A template referencing an interpolation the helper doesn't pass raises
+  # I18n::MissingInterpolationArgument at render time, for every viewer of
+  # that notification.
+  it "only uses interpolation variables NotificationsHelper supplies" do
+    supplied = %w[actor subject from_state to_state assignee]
+    known_actions.each do |action|
+      next unless I18n.exists?("pulse.events.#{action}")
+
+      unsupplied = I18n.t("pulse.events.#{action}").scan(/%\{(\w+)\}/).flatten.uniq - supplied
+      expect(unsupplied).to be_empty,
+        "pulse.events.#{action} uses interpolation(s) the helper never passes: #{unsupplied.join(', ')}"
+    end
+
+    fallback_unsupplied =
+      I18n.t("pulse.events.fallback").scan(/%\{(\w+)\}/).flatten.uniq - %w[actor action subject]
+    expect(fallback_unsupplied).to be_empty,
+      "pulse.events.fallback uses interpolation(s) the helper never passes: #{fallback_unsupplied.join(', ')}"
+  end
 end

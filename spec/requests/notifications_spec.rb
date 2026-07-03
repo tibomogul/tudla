@@ -37,6 +37,9 @@ RSpec.describe "/notifications", type: :request do
 
       expect(notification.reload.read?).to be true
       expect(response).to redirect_to(project_path(project))
+      # 303, not 302: fetch preserves PATCH across a 302, so Turbo would
+      # re-PATCH the subject URL and land in its update action.
+      expect(response).to have_http_status(:see_other)
     end
 
     it "falls back to the inbox when the subject has been soft-deleted" do
@@ -69,6 +72,7 @@ RSpec.describe "/notifications", type: :request do
       expect(mine.each(&:reload).map(&:read?)).to all(be true)
       expect(other.reload.read?).to be false
       expect(response).to redirect_to(notifications_path)
+      expect(response).to have_http_status(:see_other)
     end
 
     it "re-broadcasts the bell indicator (update_all fires no callbacks)" do
