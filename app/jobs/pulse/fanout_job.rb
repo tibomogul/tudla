@@ -24,22 +24,23 @@ module Pulse
     # Soft-deleted users are filtered here (not in the resolver) so the rule
     # also covers custom recipient resolvers.
     def eligible_recipients(event)
-      Pulse.recipient_resolver.call(event).uniq.reject do |recipient|
-        recipient == event.user || recipient.deleted? || !visible_to?(recipient, event)
+      candidates = Pulse.recipient_resolver.call(event).uniq.reject do |recipient|
+        recipient == event.user || recipient.deleted?
       end
-    end
+      return [] if candidates.empty?
 
-    # Access-revocation safety: never notify a user who can no longer see the
-    # underlying subject. Errors count as "not visible".
-    def visible_to?(recipient, event)
       subject = event.subscribable.subscribable
-      return false unless subject
+      return [] unless subject
 
-      Pundit.policy!(recipient, subject).show?
-    rescue StandardError => e
-      Rails.logger.error("[Pulse::FanoutJob] Visibility check failed for user ##{recipient.id} " \
-                         "on event ##{event.id}: #{e.class}: #{e.message}")
-      false
+      # Access-revocation safety: never notify a user who can no longer see
+      # the underlying subject. A filter failure counts as "not visible".
+      begin
+        Pulse.visibility_filter.call(subject, candidates)
+      rescue StandardError => e
+        Rails.logger.error("[Pulse::FanoutJob] Visibility filtering failed for event ##{event.id}: " \
+                           "#{e.class}: #{e.message}")
+        []
+      end
     end
   end
 end

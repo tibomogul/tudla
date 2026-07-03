@@ -7,5 +7,6 @@ Rails.application.config.to_prepare do
     config.subscribable_types = %w[Project Scope Task]
     config.channels = [ "Pulse::Channels::InApp" ]
     config.recipient_resolver = "PulseRecipientResolver"
+    config.visibility_filter = "PulseVisibilityFilter"
   end
 end

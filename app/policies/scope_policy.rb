@@ -6,8 +6,8 @@ class ScopePolicy < ApplicationPolicy
     @scope = scope
     if scope.instance_of? ::Scope
       @project_role = UserPartyRole.where(user: user, party: scope.project).first&.role
-      @team_role = UserPartyRole.where(user: user, party: scope.project.team).first&.role
-      @organization_role = UserPartyRole.where(user: user, party: scope.project.team.organization).first&.role
+      @team_role = UserPartyRole.where(user: user, party: scope.project.team).first&.role if scope.project.team
+      @organization_role = UserPartyRole.where(user: user, party: scope.project.team&.organization).first&.role if scope.project.team&.organization
     end
   end
 
