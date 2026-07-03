@@ -10,8 +10,11 @@ module Pulse
         (actor_user == Pulse::Current.user ? Pulse::Current.resolved_actor_type : "user")
       resolved_label = actor_label || Pulse::Current.actor_label
 
+      # pulse_subscribable reuses the loaded association (creating the
+      # container only if it's genuinely missing) — create_or_find_by! here
+      # would issue a conflicting INSERT + savepoint on every publish.
       Pulse::Event.create!(
-        subscribable: Pulse::Subscribable.create_or_find_by!(subscribable: subject),
+        subscribable: subject.pulse_subscribable,
         user: actor_user,
         actor_type: actor_user ? resolved_type : "system",
         actor_label: resolved_label,

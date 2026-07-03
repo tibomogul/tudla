@@ -14,7 +14,10 @@ class NotificationsController < ApplicationController
     notification = policy_scope(Pulse::Notification).find(params[:id])
     authorize notification
     notification.mark_read!
-    redirect_to subject_path_for(notification)
+    # 303: this arrives as a real PATCH (Turbo link), and fetch preserves the
+    # method when following a 302 — the browser would re-PATCH the subject's
+    # URL and hit its update action instead of showing it.
+    redirect_to subject_path_for(notification), status: :see_other
   end
 
   def mark_all_read
@@ -22,7 +25,7 @@ class NotificationsController < ApplicationController
     policy_scope(Pulse::Notification).unread.update_all(read_at: Time.current)
     # update_all fires no callbacks, so refresh the bell for other open tabs.
     Pulse::Notification.broadcast_indicator_for(current_user)
-    redirect_to notifications_path
+    redirect_to notifications_path, status: :see_other
   end
 
   private
