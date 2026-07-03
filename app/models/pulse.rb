@@ -16,7 +16,8 @@ module Pulse
     ""
   end
 
-  Config = Struct.new(:subscribable_types, :channels, :recipient_resolver, :catalog_extensions)
+  Config = Struct.new(:subscribable_types, :channels, :recipient_resolver, :catalog_extensions,
+                      :visibility_filter)
 
   def self.config
     @config ||= Config.new([], [ "Pulse::Channels::InApp" ], nil, [])
@@ -37,6 +38,14 @@ module Pulse
     when String then resolver.constantize.new
     when nil then Pulse::RecipientResolver.new
     else resolver
+    end
+  end
+
+  def self.visibility_filter
+    case (filter = config.visibility_filter)
+    when String then filter.constantize.new
+    when nil then Pulse::VisibilityFilter.new
+    else filter
     end
   end
 end

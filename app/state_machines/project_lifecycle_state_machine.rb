@@ -29,19 +29,12 @@ class ProjectLifecycleStateMachine
     model.update_columns(updates)
     model.propagate_lifecycle_to_children!
 
-    # Publish project.transitioned to subscribers. Strict (not "safely"): this
-    # callback runs inside the transition's transaction, so a publish failure
-    # rolls the whole transition back — same outbox semantics as the
+    # Publish project.transitioned to subscribers. Strict (safely: false):
+    # this callback runs inside the transition's transaction, so a publish
+    # failure rolls the whole transition back — same outbox semantics as the
     # create/update publishes.
-    previous = model.project_lifecycle_transitions
-      .where("sort_key < ?", transition.sort_key)
-      .order(:sort_key).last
-    actor = User.active.find_by(id: transition.metadata["user_id"]) if transition.metadata["user_id"]
-    model.publish_pulse_event("project.transitioned",
-      metadata: {
-        "from_state" => previous&.to_state || "active",
-        "to_state" => to_state
-      },
-      **(actor ? { user: actor } : {}))
+    PulseTransitionPublishing.publish_transition(model, transition,
+      action: "project.transitioned", initial: "active",
+      transitions: :project_lifecycle_transitions, safely: false)
   end
 end

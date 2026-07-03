@@ -56,17 +56,18 @@ no-ops.
   `publishes_pulse_events prefix: ..., ignore: [...]`. The ignore lists suppress
   noise from cached-estimate columns, positioning columns, denormalized state
   columns, etc. An update touching only ignored columns publishes nothing.
-- `app/state_machines/task_state_machine.rb` — an `after_transition(after_commit:
-  true)` hook publishes `task.transitioned` with `from_state`/`to_state`
-  metadata. The acting user is read from `transition.metadata["user_id"]` and
-  passed as an explicit `user:` override. The initial `new → new` transition is
-  skipped. Published via `publish_pulse_event_safely` — the transition is
-  already committed, so a publish failure is logged, never raised.
-- `app/state_machines/project_lifecycle_state_machine.rb` publishes
-  `project.transitioned` (strictly — its hook runs inside the transition's
-  transaction) and `app/state_machines/project_risk_state_machine.rb` publishes
-  `project.risk_changed` (safely — its hook runs after commit), both with
-  `from_state`/`to_state` metadata and the same `user_id` actor resolution.
+- State machines publish via the shared **`PulseTransitionPublishing`** mixin
+  (`app/state_machines/pulse_transition_publishing.rb`, host-owned): it derives
+  `from_state`/`to_state` metadata, skips the machine's initial self-transition,
+  and resolves the acting user from `transition.metadata["user_id"]` (passed as
+  an explicit `user:` override; `Pulse::Current` as fallback).
+  `TaskStateMachine` and `ProjectRiskStateMachine` use the
+  `publishes_pulse_transitions action:, initial:, transitions:` macro, which
+  installs an `after_transition(after_commit: true)` hook publishing safely —
+  the transition is already committed, so a publish failure is logged, never
+  raised. `ProjectLifecycleStateMachine` calls
+  `PulseTransitionPublishing.publish_transition(..., safely: false)` from its
+  synchronous hook — strictly, inside the transition's transaction.
 - `Task#publish_pulse_assignment_change` (`after_save` on
   `saved_change_to_responsible_user_id?`, so it also fires for tasks created
   with an assignee) publishes `task.assigned` and auto-subscribes the new
@@ -95,7 +96,9 @@ production.
 | File | Role |
 |---|---|
 | `app/models/pulse/event.rb` | Validates action against catalog and `actor_type` against `user/agent/system` (`user` requires a `user` record). `after_create_commit` enqueues `Pulse::FanoutJob`. |
-| `app/jobs/pulse/fanout_job.rb` | Loads the event (warn + skip if gone), asks the configured recipient resolver for candidates, then filters: dedupe, **exclude the actor** (no self-notification), and **re-check Pundit `show?`** per recipient (access-revocation safety; errors count as not visible). Hands survivors to every configured channel. |
+| `app/jobs/pulse/fanout_job.rb` | Loads the event (warn + skip if gone), asks the configured recipient resolver for candidates, then filters: dedupe, **exclude the actor** (no self-notification), and **re-check visibility** via the configured visibility filter (access-revocation safety; a filter failure counts as not visible). Hands survivors to every configured channel. |
+| `app/services/pulse/visibility_filter.rb` | Default visibility gate: Pundit `show?` per recipient. |
+| `app/services/pulse_visibility_filter.rb` | **Host-owned** batched replacement: one `UserPartyRole` query for the whole recipient set (project/team/org membership + task ownership), mirroring `#show?` of the subject policies. `spec/services/pulse_visibility_filter_spec.rb` guards the agreement. |
 | `app/services/pulse/recipient_resolver.rb` | Default resolver: the subscribable's subscription users. |
 | `app/services/pulse_recipient_resolver.rb` | **Host-owned** subclass (note: top-level, *not* in `Pulse::`). Adds project admins (admin role on the project, its team, or its organization — same semantics as `ProjectPolicy#admin_on_project_scope?`) as recipients when a task transitions to `in_review` — the replacement for the old `notify_reviewers!` breadcrumb. |
 
@@ -104,7 +107,7 @@ production.
 | File | Role |
 |---|---|
 | `app/services/pulse/channels/base.rb` | Channel adapter interface: `#deliver(event, recipients)` raises `NotImplementedError`. |
-| `app/services/pulse/channels/in_app.rb` | Creates one `Pulse::Notification` per recipient via `create_or_find_by!` (idempotent). |
+| `app/services/pulse/channels/in_app.rb` | Creates one `Pulse::Notification` per recipient in a single `insert_all` (`ON CONFLICT DO NOTHING` via the unique index — idempotent), then broadcasts the bell explicitly for rows actually inserted (`insert_all` skips AR callbacks). |
 | `app/models/pulse/notification.rb` | `unread`/`read` scopes, `mark_read!`. `after_create_commit` broadcasts the bell partial to `"user_#{user_id}_notifications"` via `Turbo::StreamsChannel` (guarded, rescued, `can_update: false`). |
 | `app/controllers/notifications_controller.rb` | Inbox (`policy_scope` + Pagy, 25/page), `mark_read` (then redirects to the subject via `polymorphic_path`, falling back to the inbox), `mark_all_read`. |
 | `app/views/notifications/` | `_indicator.html.erb` (bell + unread badge, capped "9+"), `_notification.html.erb`, `index.html.erb`. |
@@ -143,13 +146,14 @@ Pulse.configure do |config|
   config.subscribable_types = %w[Project Scope Task]        # delegated_type list
   config.channels           = [ "Pulse::Channels::InApp" ]  # class-name strings
   config.recipient_resolver = "PulseRecipientResolver"      # host subclass
+  config.visibility_filter  = "PulseVisibilityFilter"       # batched host filter
   # config.catalog_extensions = %w[...]                     # extra event actions
 end
 ```
 
 `Pulse.channels` constantizes lazily (dev reloading safety);
-`Pulse.recipient_resolver` accepts a String, `nil` (default resolver), or any
-callable.
+`Pulse.recipient_resolver` and `Pulse.visibility_filter` each accept a String,
+`nil` (default implementation), or any object with the matching `call`.
 
 Authorization is host-owned: `app/policies/subscription_policy.rb`,
 `notification_policy.rb`, `subscribable_policy.rb`, `event_policy.rb`. The Pulse
@@ -194,6 +198,10 @@ everything host-specific already lives outside it."
 - `config/initializers/pulse.rb` — becomes the generated installer initializer.
 - `app/services/pulse_recipient_resolver.rb` — host resolver (knows
   `UserPartyRole`, project admins, `in_review`).
+- `app/services/pulse_visibility_filter.rb` — host visibility filter (knows
+  the org→team→project hierarchy and task ownership).
+- `app/state_machines/pulse_transition_publishing.rb` — host mixin for
+  Statesman machines (knows `User` and the transition-table conventions).
 - All four policies in `app/policies/` — they know the org→team→project
   hierarchy.
 - Controllers (`notifications_controller.rb`, `subscribables_controller.rb`,
@@ -202,8 +210,8 @@ everything host-specific already lives outside it."
   *generators/templates* rather than engine-served views, since they use
   host-specific styling (DaisyUI, iconify) and Pagy.
 - The `include Pulse::Publishable` + `publishes_pulse_events` declarations in
-  `Project`/`Scope`/`Task`, the `task.transitioned` hook in
-  `TaskStateMachine`, `Note#publish_pulse_note_event`, and the
+  `Project`/`Scope`/`Task`, the `publishes_pulse_transitions` declarations in
+  the state machines, `Note#publish_pulse_note_event`, and the
   `set_pulse_actor` / `set_pulse_agent_actor` before-actions.
 - `lib/tasks/pulse.rake` (or ship it in the engine — it only uses
   `Pulse.config.subscribable_types`, so it's portable).
@@ -224,12 +232,12 @@ These are the only places engine-bound code currently assumes Tudla:
    `config.user_display_name_method` (default `:display_name`, or accept a
    lambda). Use `belongs_to :user, class_name: Pulse.config.user_class` (inside
    `to_prepare` or a lazy resolver so reloading works).
-3. **Pundit** — `FanoutJob#visible_to?` calls `Pundit.policy!(...).show?`, and
-   the models declare `policy_class` pointing at host constants
-   (`SubscriptionPolicy`, etc.). Replace with a configurable
-   `config.visibility_check` callable (default: the Pundit lambda if Pundit is
-   defined, else `->(*) { true }`) and drop the `policy_class` overrides from
-   engine models — the host reopens/configures them, or the engine exposes
+3. **Pundit** — fan-out visibility is already configurable
+   (`config.visibility_filter`; the engine default `Pulse::VisibilityFilter`
+   still assumes Pundit — make it degrade to `->(*) { true }` when Pundit is
+   undefined). Remaining work: the models declare `policy_class` pointing at
+   host constants (`SubscriptionPolicy`, etc.) — drop those overrides from
+   engine models; the host reopens/configures them, or the engine exposes
    `config.policy_classes = { subscription: "...", ... }`.
 4. **`ApplicationJob` / `ApplicationRecord`** — `FanoutJob < ApplicationJob`
    and models inherit host base classes. In the engine define
@@ -291,7 +299,7 @@ Pulse.configure do |config|
   config.table_name_prefix   = ""                    # new — Tudla override
   config.user_class          = "User"                # new
   config.user_display_name_method = :display_name    # new
-  config.visibility_check    = ->(user, subject) { Pundit.policy!(user, subject).show? } # new
+  config.visibility_filter   = "PulseVisibilityFilter" # already implemented in-repo
   config.in_app_broadcast    = ->(notification) { ... }  # new — Turbo bell hook
 end
 ```
