@@ -1,4 +1,4 @@
 web: bin/rails server -b 0.0.0.0
-css: bin/rails tailwindcss:watch
+css: bin/rails tailwindcss:watch[always]
 que: bin/jobs
 mai: mailcatcher --foreground --ip=0.0.0.0
