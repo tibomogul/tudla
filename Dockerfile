@@ -159,12 +159,6 @@ RUN rbenv install ${RUBY_VERSION} \
 
 RUN echo 'gem: --no-document' >> /home/${USER_NAME}/.gemrc
 
-# enable libfaketime
-# Add the FAKETIME settings in the .env file
-ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
-# RUN echo 'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1' \
-#   >> /home/${USER_NAME}/.bashrc
-
 ENV APP_DIR=app
 
 RUN mkdir /home/$USER_NAME/${APP_DIR}
