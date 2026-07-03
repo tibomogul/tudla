@@ -97,7 +97,7 @@ production.
 | `app/models/pulse/event.rb` | Validates action against catalog and `actor_type` against `user/agent/system` (`user` requires a `user` record). `after_create_commit` enqueues `Pulse::FanoutJob`. |
 | `app/jobs/pulse/fanout_job.rb` | Loads the event (warn + skip if gone), asks the configured recipient resolver for candidates, then filters: dedupe, **exclude the actor** (no self-notification), and **re-check Pundit `show?`** per recipient (access-revocation safety; errors count as not visible). Hands survivors to every configured channel. |
 | `app/services/pulse/recipient_resolver.rb` | Default resolver: the subscribable's subscription users. |
-| `app/services/pulse_recipient_resolver.rb` | **Host-owned** subclass (note: top-level, *not* in `Pulse::`). Adds project admins as recipients when a task transitions to `in_review` — the replacement for the old `notify_reviewers!` breadcrumb. |
+| `app/services/pulse_recipient_resolver.rb` | **Host-owned** subclass (note: top-level, *not* in `Pulse::`). Adds project admins (admin role on the project, its team, or its organization — same semantics as `ProjectPolicy#admin_on_project_scope?`) as recipients when a task transitions to `in_review` — the replacement for the old `notify_reviewers!` breadcrumb. |
 
 ### Pillar 3 — Notification
 

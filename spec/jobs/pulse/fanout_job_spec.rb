@@ -88,5 +88,37 @@ RSpec.describe Pulse::FanoutJob, type: :job do
 
       expect(admin.notifications.map(&:event)).to include(event)
     end
+
+    it "treats team and organization admins as reviewers (ProjectPolicy semantics)" do
+      team_admin = create(:user)
+      org_admin = create(:user)
+      UserPartyRole.create!(user: team_admin, party: team, role: "admin")
+      UserPartyRole.create!(user: org_admin, party: organization, role: "admin")
+      task = create(:task, project: project, responsible_user: actor,
+                           unassisted_estimate: 8, ai_assisted_estimate: 4)
+      task.state_machine.transition_to!(:in_progress, user_id: actor.id)
+      task.state_machine.transition_to!(:in_review, user_id: actor.id)
+
+      event = task.subscribable.events.where(action: "task.transitioned")
+        .find { |e| e.metadata["to_state"] == "in_review" }
+      described_class.perform_now(event.id)
+
+      expect(team_admin.notifications.map(&:event)).to include(event)
+      expect(org_admin.notifications.map(&:event)).to include(event)
+    end
+  end
+
+  describe "policy errors during the visibility check" do
+    it "still notifies subscribers of a task whose project has no team" do
+      teamless_project = create(:project, team: nil)
+      UserPartyRole.create!(user: subscriber, party: teamless_project, role: "member")
+      task = create(:task, project: teamless_project)
+      task.subscribe(subscriber)
+      event = publish_event(subject: task, action: "task.updated")
+
+      expect {
+        described_class.perform_now(event.id)
+      }.to change { subscriber.notifications.count }.by(1)
+    end
   end
 end

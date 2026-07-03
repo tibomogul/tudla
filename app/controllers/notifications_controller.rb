@@ -2,9 +2,11 @@ class NotificationsController < ApplicationController
   def index
     authorize Pulse::Notification, :index?
     scoped = policy_scope(Pulse::Notification)
-      .includes(event: { subscribable: :subscribable })
-      .order(created_at: :desc)
-    @pagy, @notifications = pagy(:offset, scoped, limit: 25)
+    # The list only renders notification_text (event actor + metadata); the
+    # subject itself is resolved per record in mark_read.
+    @any_unread = scoped.unread.exists?
+    @pagy, @notifications = pagy(:offset,
+      scoped.includes(event: :user).order(created_at: :desc), limit: 25)
   end
 
   # Clicking a notification both marks it read and navigates to its subject.
@@ -18,6 +20,8 @@ class NotificationsController < ApplicationController
   def mark_all_read
     authorize Pulse::Notification, :mark_all_read?
     policy_scope(Pulse::Notification).unread.update_all(read_at: Time.current)
+    # update_all fires no callbacks, so refresh the bell for other open tabs.
+    Pulse::Notification.broadcast_indicator_for(current_user)
     redirect_to notifications_path
   end
 

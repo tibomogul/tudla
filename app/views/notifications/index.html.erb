@@ -1,7 +1,8 @@
 <div class="mx-auto max-w-2xl">
   <div class="mb-4 flex items-center justify-between">
     <h1 class="text-xl font-semibold">Notifications</h1>
-    <% if @notifications.any? { |n| !n.read? } %>
+    <%# Based on the full unread set — unread items may sit on later pages. %>
+    <% if @any_unread %>
       <%= link_to mark_all_read_notifications_path, data: { turbo_method: :patch }, class: "btn btn-soft btn-sm" do %>
         <span class="iconify lucide--check-check size-4"></span>
         Mark all as read

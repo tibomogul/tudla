@@ -70,5 +70,27 @@ RSpec.describe "/notifications", type: :request do
       expect(other.reload.read?).to be false
       expect(response).to redirect_to(notifications_path)
     end
+
+    it "re-broadcasts the bell indicator (update_all fires no callbacks)" do
+      create_notification
+      allow(Pulse::Notification).to receive(:broadcast_indicator_for)
+
+      patch mark_all_read_notifications_path
+
+      expect(Pulse::Notification).to have_received(:broadcast_indicator_for).with(user)
+    end
+  end
+
+  describe "'Mark all as read' visibility" do
+    it "is offered while any notification is unread and hidden once all are read" do
+      notification = create_notification
+
+      get notifications_path
+      expect(response.body).to include(mark_all_read_notifications_path)
+
+      notification.mark_read!
+      get notifications_path
+      expect(response.body).not_to include(mark_all_read_notifications_path)
+    end
   end
 end

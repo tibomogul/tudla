@@ -121,7 +121,7 @@ class Task < ApplicationRecord
     else
       publish_pulse_event("task.unassigned", metadata: {
         "previous_user_id" => previous_id,
-        "previous_user_name" => User.find_by(id: previous_id)&.display_name
+        "previous_user_name" => User.active.find_by(id: previous_id)&.display_name
       })
     end
   end
