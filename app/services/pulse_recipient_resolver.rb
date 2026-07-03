@@ -17,13 +17,16 @@ class PulseRecipientResolver < Pulse::RecipientResolver
 
   private
 
+  # "Project admin" follows ProjectPolicy#admin_on_project_scope? semantics:
+  # an admin role on the project itself, its team, or its organization.
   def reviewer_users(event)
     task = event.subscribable.subscribable
     project = task.try(:project)
     return [] unless project
 
+    parties = [ project, project.team, project.team&.organization ].compact
     User.active.joins(:user_party_roles)
-        .where(user_party_roles: { party: project, role: "admin" })
-        .to_a
+        .where(user_party_roles: { party: parties, role: "admin" })
+        .distinct.to_a
   end
 end

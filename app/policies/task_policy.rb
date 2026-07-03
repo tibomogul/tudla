@@ -7,8 +7,8 @@ class TaskPolicy < ApplicationPolicy
     if task.instance_of? Task
       if task.project.present?
         @project_role = UserPartyRole.where(user: user, party: task.project).first&.role
-        @team_role = UserPartyRole.where(user: user, party: task.project.team).first&.role
-        @organization_role = UserPartyRole.where(user: user, party: task.project.team.organization).first&.role
+        @team_role = UserPartyRole.where(user: user, party: task.project.team).first&.role if task.project.team
+        @organization_role = UserPartyRole.where(user: user, party: task.project.team&.organization).first&.role if task.project.team&.organization
       end
     end
   end
@@ -61,7 +61,7 @@ class TaskPolicy < ApplicationPolicy
         .pluck(:party_id)
       project_ids = Project.active.where(team_id: team_ids).pluck(:id)
       project_ids |= UserPartyRole.where(user: user, party_type: "Project").pluck(:party_id)
-      
+
       # Return tasks the user owns OR tasks in their accessible projects
       scope.active.where("responsible_user_id = ? OR project_id IN (?)", user.id, project_ids)
     end

@@ -26,7 +26,7 @@ class ProjectRiskStateMachine
     # Skip the machine's initial green→green transition.
     next if from_state == transition.to_state.to_s
 
-    actor = User.find_by(id: transition.metadata["user_id"]) if transition.metadata["user_id"]
+    actor = User.active.find_by(id: transition.metadata["user_id"]) if transition.metadata["user_id"]
 
     model.publish_pulse_event_safely("project.risk_changed",
       metadata: {
