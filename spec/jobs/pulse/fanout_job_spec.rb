@@ -108,6 +108,31 @@ RSpec.describe Pulse::FanoutJob, type: :job do
     end
   end
 
+  describe "badge broadcasts" do
+    it "passes one precomputed unread count per recipient (total, not just this event)" do
+      project.subscribe(subscriber)
+      create(:pulse_notification, user: subscriber) # pre-existing unread from another event
+      event = publish_event
+      allow(Pulse::Notification).to receive(:broadcast_indicator_for)
+
+      described_class.perform_now(event.id)
+
+      expect(Pulse::Notification).to have_received(:broadcast_indicator_for)
+        .with(subscriber, unread_count: 2)
+    end
+
+    it "does not re-broadcast on a retry that inserts nothing" do
+      project.subscribe(subscriber)
+      event = publish_event
+      described_class.perform_now(event.id)
+
+      allow(Pulse::Notification).to receive(:broadcast_indicator_for)
+      described_class.perform_now(event.id)
+
+      expect(Pulse::Notification).not_to have_received(:broadcast_indicator_for)
+    end
+  end
+
   describe "policy errors during the visibility check" do
     it "still notifies subscribers of a task whose project has no team" do
       teamless_project = create(:project, team: nil)

@@ -15,9 +15,19 @@ module Pulse
           returning: [ :user_id ]
         )
         inserted_ids = inserted.rows.flatten.to_set
+        return if inserted_ids.empty?
+
+        # One grouped COUNT for every badge; without it each broadcast render
+        # would run its own per-user unread COUNT inside the indicator partial.
+        unread_counts = Pulse::Notification.unread.where(user_id: inserted_ids.to_a)
+          .group(:user_id).count
 
         recipients.each do |recipient|
-          Pulse::Notification.broadcast_indicator_for(recipient) if inserted_ids.include?(recipient.id)
+          next unless inserted_ids.include?(recipient.id)
+
+          Pulse::Notification.broadcast_indicator_for(
+            recipient, unread_count: unread_counts.fetch(recipient.id, 0)
+          )
         end
       end
     end

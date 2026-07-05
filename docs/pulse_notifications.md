@@ -107,7 +107,8 @@ production.
 | File | Role |
 |---|---|
 | `app/services/pulse/channels/base.rb` | Channel adapter interface: `#deliver(event, recipients)` raises `NotImplementedError`. |
-| `app/services/pulse/channels/in_app.rb` | Creates one `Pulse::Notification` per recipient in a single `insert_all` (`ON CONFLICT DO NOTHING` via the unique index — idempotent), then broadcasts the bell explicitly for rows actually inserted (`insert_all` skips AR callbacks). |
+| `app/services/pulse/channels/in_app.rb` | Creates one `Pulse::Notification` per recipient in a single `insert_all` (`ON CONFLICT DO NOTHING` via the unique index — idempotent), then broadcasts the bell explicitly for rows actually inserted (`insert_all` skips AR callbacks). Badge counts for all recipients come from one grouped `COUNT` and are passed into each broadcast render — the indicator partial only runs its own (capped) `COUNT` when no precomputed count is given (topbar render, single-notification broadcasts). |
+| `app/jobs/pulse/retention_job.rb` | Daily pruning (`config/recurring.yml`, 3am): read notifications after 30 days, unread after 90, then events older than 90 days with no remaining notifications. Batched `delete_all` — safe because notifications have no destroy callbacks and events are only removed once childless. |
 | `app/models/pulse/notification.rb` | `unread`/`read` scopes, `mark_read!`. `after_create_commit` broadcasts the bell partial to `"user_#{user_id}_notifications"` via `Turbo::StreamsChannel` (guarded, rescued, `can_update: false`). |
 | `app/controllers/notifications_controller.rb` | Inbox (`policy_scope` + Pagy, 25/page), `mark_read` (then redirects to the subject via `polymorphic_path`, falling back to the inbox), `mark_all_read`. |
 | `app/views/notifications/` | `_indicator.html.erb` (bell + unread badge, capped "9+"), `_notification.html.erb`, `index.html.erb`. |
@@ -168,6 +169,11 @@ underlying subject's `show?`.
   updates in development.
 - **Backfill**: `bin/rails pulse:backfill_subscribables` creates missing
   `Subscribable` rows for pre-existing records of all configured types.
+- **Retention**: fan-out on write grows `notifications` as events × recipients.
+  `Pulse::RetentionJob` (scheduled daily in `config/recurring.yml`, production
+  block) prunes read notifications after 30 days, unread after 90, and
+  notification-less events after 90. Deleted unread rows are not re-broadcast;
+  the badge corrects on the user's next page load.
 - **Tests**: factories in `spec/factories/pulse.rb`
   (`pulse_subscribable/subscription/event/notification`); specs under
   `spec/models/pulse/`, `spec/jobs/pulse/`, `spec/requests/`, `spec/policies/`.

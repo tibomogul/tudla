@@ -26,14 +26,17 @@ module Pulse
     # no instances to fire callbacks on. Guarded like the other model
     # broadcasts: skip when ActionCable isn't available (tests, rake) and
     # never let a broadcast failure break the caller.
-    def self.broadcast_indicator_for(user)
+    # unread_count: pass a precomputed badge count when fanning out to many
+    # users (Pulse::Channels::InApp batches them in one grouped query); when
+    # nil the indicator partial runs its own capped COUNT for this user.
+    def self.broadcast_indicator_for(user, unread_count: nil)
       return unless ActionCable.server.pubsub.respond_to?(:broadcast)
 
       Turbo::StreamsChannel.broadcast_replace_to(
         "user_#{user.id}_notifications",
         target: "notifications_indicator",
         partial: "notifications/indicator",
-        locals: { user: user, can_update: false }
+        locals: { user: user, can_update: false, unread_count: unread_count }
       )
     rescue => e
       Rails.logger.error "Pulse::Notification broadcast failed: #{e.message}"

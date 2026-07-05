@@ -1,9 +1,12 @@
 <%# Rendered from the topbar AND from Pulse::Notification broadcasts, where no
-    Devise context exists — locals only (user:, can_update:), never current_user. %>
+    Devise context exists — locals only (user:, can_update:), never current_user.
+    Fan-out broadcasts pass unread_count precomputed (one grouped query for all
+    recipients); the fallback COUNT is capped at 10 because the badge never
+    shows more than "9+". %>
 <div id="notifications_indicator">
   <%= link_to notifications_path, class: "btn btn-ghost btn-sm btn-circle indicator", title: "Notifications" do %>
     <span class="iconify lucide--bell size-4.5"></span>
-    <% unread_count = user.notifications.unread.count %>
+    <% unread_count = local_assigns[:unread_count] || user.notifications.unread.limit(10).count %>
     <% if unread_count > 0 %>
       <span class="indicator-item badge badge-error badge-xs text-base-100"><%= unread_count > 9 ? "9+" : unread_count %></span>
     <% end %>
